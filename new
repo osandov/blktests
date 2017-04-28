@@ -1,0 +1,157 @@
+#!/bin/bash
+#
+# Copyright (C) 2017 Omar Sandoval
+#
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+set -e
+
+. common/rc
+
+prompt_yes_no() {
+	if [[ $2 =~ ^[Yy] ]]; then
+		local default=0
+		local prompt="$1 [Y/n] "
+	else
+		local default=1
+		local prompt="$1 [y/N] "
+	fi
+
+	local yn
+	read -n 1 -p "${prompt}" yn
+	if [[ -n "${yn}" ]]; then
+		echo
+	fi
+	if [[ "${yn}" =~ ^[Yy] ]]; then
+		return 0
+	elif [[ "${yn}" =~ ^[Nn] ]]; then
+		return 1
+	else
+		return $default
+	fi
+}
+
+echo "Available test categories:"
+while IFS= read -r -d '' category; do
+	if [[ $category != meta ]]; then
+		echo "    ${category}"
+	fi
+done < <(find tests -mindepth 1 -maxdepth 1 -type d -printf '%P\0')
+
+read -r -p "Category for new test: " category
+
+if [[ -z $category ]]; then
+	exit 1
+fi
+
+if [[ $category =~ [[:space:]] ]]; then
+	_error "category name must not contain whitespace"
+fi
+
+if [[ ! -e tests/${category} ]]; then
+	if ! prompt_yes_no "Category does not exist; create it?"; then
+		exit 1
+	fi
+	mkdir -p "tests/${category}"
+	cat << EOF > "tests/${category}/category"
+#!/bin/bash
+#
+# TODO: provide a brief description of the category here.
+#
+# Copyright (C) $(date +%Y) TODO YOUR NAME HERE
+#
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+. common/rc
+
+prepare() {
+	# TODO: if this category has any extra requirements, fill this in.
+	return 0
+}
+
+prepare_device() {
+	# TODO: if this category has any requirements for the devices it can
+	# run on, fill this in.
+	return 0
+}
+EOF
+	echo "Created tests/${category}/category"
+fi
+
+for ((i = 1; ; i++)); do
+	seq="$(printf "%03d" $i)"
+	test_name="${category}/${seq}"
+	if [[ ! -e tests/${test_name} ]]; then
+		break
+	fi
+done
+
+cat << EOF > "tests/${test_name}"
+#!/bin/bash
+#
+# TODO: provide a brief description of the test here, i.e., what it tests and
+# how. If this is a regression test, be sure to reference the patch or commit
+# it tests. See Documentation/writing-tests.md for more information.
+#
+# Copyright (C) $(date +%Y) TODO YOUR NAME HERE
+#
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+# TODO: if this test shouldn't be run by default, remove the "auto" group. If
+# this test runs quickly, add it to the "quick" group. Add any other groups
+# describing what functionality this tests.
+TEST_GROUPS=($category auto)
+
+# TODO: if this test has any extra requirements, define prepare(). If this test
+# has specific requirements for the device it runs on, define prepare_device().
+
+# TODO: if this test requires a device, rename this to test_device().
+test() {
+	echo "Running \${TEST_NAME}"
+
+	# TODO: fill in the test case.
+
+	echo "Test complete"
+}
+EOF
+chmod +x "tests/${test_name}"
+echo "Created tests/${test_name}"
+
+cat << EOF > "tests/${test_name}.out"
+Running ${test_name}
+Test complete
+EOF
+echo "Created tests/${test_name}.out"

@@ -1,0 +1,76 @@
+#!/bin/bash
+#
+# Testing framework tests.
+#
+# Copyright (C) 2017 Omar Sandoval
+#
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+. common/rc
+
+prepare() {
+	if [[ -v META_PREPARE_SHOULD_FAIL ]]; then
+		SKIP_REASON="META_PREPARE_SHOULD_FAIL"
+		return 1
+	fi
+	return 0
+}
+
+prepare_device() {
+	if [[ -v META_PREPARE_DEVICE_SHOULD_FAIL ]]; then
+		SKIP_REASON="META_PREPARE_DEVICE_SHOULD_FAIL"
+		return 1
+	fi
+	return 0
+}
+
+fake_bug_on() {
+	cat << "EOF" > "$TMPDIR/dmesg"
+------------[ cut here ]------------
+kernel BUG at block/blk-core.c:3490!
+invalid opcode: 0000 [#1] PREEMPT SMP
+Modules linked in:
+CPU: 0 PID: 1 Comm: swapper/0 Not tainted 4.11.0-rc8-dirty #40
+Hardware name: QEMU Standard PC (i440FX + PIIX, 1996), BIOS 1.10.2-20170228_101828-anatol 04/01/2014
+task: ffff88007c864c80 task.stack: ffffc9000031c000
+RIP: 0010:blk_dev_init+0x4/0x6
+RSP: 0000:ffffc9000031fe70 EFLAGS: 00010282
+RAX: ffff88007c9f4000 RBX: 0000000000000000 RCX: ffff88007c9f47f8
+RDX: ffff88007c9f47f8 RSI: 0000000000000000 RDI: ffff88007c9c8b40
+RBP: ffffc9000031fe70 R08: ffff88007c9c8b00 R09: 0000000000000000
+R10: ffff88007c9c8b00 R11: 0000000000000000 R12: 0000000000000078
+R13: 0000000000000000 R14: ffffffff81d318ee R15: 0000000000000000
+FS:  0000000000000000(0000) GS:ffff88007fc00000(0000) knlGS:0000000000000000
+CS:  0010 DS: 0000 ES: 0000 CR0: 0000000080050033
+CR2: 0000000000000000 CR3: 0000000001c09000 CR4: 00000000000006f0
+DR0: 0000000000000000 DR1: 0000000000000000 DR2: 0000000000000000
+DR3: 0000000000000000 DR6: 00000000fffe0ff0 DR7: 0000000000000400
+Call Trace:
+ genhd_device_init+0x4b/0x76
+ ? blk_mq_init+0x4e/0x4e
+ do_one_initcall+0x52/0x1a0
+ ? set_debug_rodata+0x12/0x12
+ kernel_init_freeable+0x176/0x1fe
+ ? rest_init+0x90/0x90
+ kernel_init+0xe/0x100
+ ret_from_fork+0x2c/0x40
+Code: 41 b9 01 00 00 00 41 b8 08 00 00 00 b9 2c 00 00 00 48 c7 c6 97 d1 9e 81 48 89 df e8 81 54 3d ff 5a 48 8b 5d f8 c9 c3 55 48 89 e5 <0f> 0b 48 8b 05 bd ba 19 00 55 48 89 e5 48 ff c8 48 89 05 47 a0
+RIP: blk_dev_init+0x4/0x6 RSP: ffffc9000031fe70
+---[ end trace d9ab35f734a89f58 ]---
+EOF
+
+	cat "$TMPDIR/dmesg" | while IFS= read -r line; do
+		echo "$line" >> /dev/kmsg
+	done
+}
