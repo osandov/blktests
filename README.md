@@ -24,10 +24,11 @@ And as root, run the default set of tests with `./check`.
 Note that these tests are destructive, so don't add anything to the `TEST_DEVS`
 array containing data that you want to keep.
 
-[Documentation/running-tests.md] has more detailed information on configuration
-and running tests.
+See [here](Documentation/running-tests.md) for more detailed information on
+configuration and running tests.
 
 ## Adding Tests
 
-The `./new` script creates a new test from a template.
-[Documentation/writing-tests.md] has more information on how to write a test.
+The `./new` script creates a new test from a template. See
+[here](Documentation/writing-tests.md) for more information on how to write
+tests.
