@@ -1,6 +1,6 @@
 #!/bin/bash
 #
-# Common helper functions.
+# Loop device tests.
 #
 # Copyright (C) 2017 Omar Sandoval
 #
@@ -17,33 +17,12 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-_warning() {
-	echo "$0: $@" >&2
+. common/rc
+
+prepare() {
+	_have_loop
 }
 
-_error() {
-	echo "$0: $@" >&2
-	exit 1
-}
-
-_have_module() {
-	if modprobe -n "$1"; then
-		return 0
-	else
-		SKIP_REASON="$1 module is not available"
-		return 1
-	fi
-}
-
-_have_program() {
-	if command -v "$1" >/dev/null 2>&1; then
-		return 0
-	else
-		SKIP_REASON="$1 is not available"
-		return 1
-	fi
-}
-
-_have_loop() {
-	_have_module loop && _have_program losetup
+prepare_device() {
+	return 0
 }

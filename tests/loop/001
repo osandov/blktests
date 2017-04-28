@@ -1,6 +1,7 @@
 #!/bin/bash
 #
-# Common helper functions.
+# Test loop device paritition scanning. Regression test for commit e02898b42380
+# ("loop: fix LO_FLAGS_PARTSCAN hang").
 #
 # Copyright (C) 2017 Omar Sandoval
 #
@@ -17,33 +18,22 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-_warning() {
-	echo "$0: $@" >&2
-}
+TEST_GROUPS=(loop auto)
 
-_error() {
-	echo "$0: $@" >&2
-	exit 1
-}
+test() {
+	echo "Running ${TEST_NAME}"
 
-_have_module() {
-	if modprobe -n "$1"; then
-		return 0
-	else
-		SKIP_REASON="$1 module is not available"
-		return 1
-	fi
-}
+	truncate -s 1M "$TMPDIR/img"
+	cat <<- EOF | sfdisk "$TMPDIR/img" >>"$FULL"
+	label: dos
+	start=1, size=1000, type=83
+	start=1001, size=1000, type=83
+	EOF
 
-_have_program() {
-	if command -v "$1" >/dev/null 2>&1; then
-		return 0
-	else
-		SKIP_REASON="$1 is not available"
-		return 1
-	fi
-}
+	loop_device="$(losetup -P -f --show "$TMPDIR/img")"
+	lsblk -ln "$loop_device" | wc -l
 
-_have_loop() {
-	_have_module loop && _have_program losetup
+	losetup -d "$loop_device"
+	rm "$TMPDIR/img"
+	echo "Test complete"
 }
