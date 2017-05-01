@@ -1,0 +1,67 @@
+#!/bin/bash
+#
+# Stress test device hotplugging. Deletes and rescans several scsi-debug
+# devices in parallel. Regression test for commit 165a5e22fafb ("block: Move
+# bdi_unregister() to del_gendisk()").
+#
+# Copyright (C) 2017 Omar Sandoval
+#
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+TEST_GROUPS=(block auto quick hotplug)
+
+prepare() {
+	_have_scsi_debug
+}
+
+stress_scsi_debug() {
+	modprobe -r scsi_debug
+	modprobe scsi_debug "$@"
+
+	targets=()
+	for host in /sys/class/scsi_host/*; do
+		if [[ "$(cat "${host}/proc_name")" = scsi_debug ]]; then
+			host="$(basename "${host}")"
+			for target in "/sys/class/scsi_device/${host#host}:"*; do
+				targets+=("$(basename "${target}")")
+			done
+		fi
+	done
+
+	for target in "${targets[@]}"; do
+		(
+		host="${target%%:*}"
+		scan="${target#*:}"
+		scan="${scan//:/ }"
+		for ((i = 0; i < 100; i++)); do
+			echo "${scan}" > "/sys/class/scsi_host/host${host}/scan"
+			echo 1 > "/sys/class/scsi_device/${target}/device/delete"
+		done
+		) &
+	done
+	wait
+	modprobe -r scsi_debug
+}
+
+test() {
+	echo "Running ${TEST_NAME}"
+
+	echo "Stressing sd"
+	stress_scsi_debug add_host=4 num_tgts=1 ptype=0
+
+	echo "Stressing sr"
+	stress_scsi_debug add_host=4 num_tgts=1 ptype=5
+
+	echo "Test complete"
+}
