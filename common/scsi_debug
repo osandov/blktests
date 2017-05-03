@@ -1,6 +1,6 @@
 #!/bin/bash
 #
-# Common helper functions.
+# scsi_debug helper functions.
 #
 # Copyright (C) 2017 Omar Sandoval
 #
@@ -17,43 +17,29 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-_warning() {
-	echo "$0: $@" >&2
+_have_scsi_debug() {
+	_have_module scsi_debug
 }
 
-_error() {
-	echo "$0: $@" >&2
-	exit 1
-}
-
-_have_module() {
-	if modprobe -n "$1"; then
-		return 0
-	else
-		SKIP_REASON="$1 module is not available"
+_get_scsi_debug_dev() {
+	modprobe -r scsi_debug
+	if ! modprobe scsi_debug; then
 		return 1
 	fi
+
+	local dev
+	for dev in /sys/block/sd*; do
+		if [[ "$(cat "${dev}/device/model")" =~ ^scsi_debug[[:space:]]*$ ]]; then
+			SCSI_DEBUG_NAME="${dev#/sys/block}"
+			SCSI_DEBUG_DEV="/dev/${SCSI_DEBUG_NAME}"
+			return 0
+		fi
+	done
+
+	echo "Could not get scsi_debug device" >&2
+	return 1
 }
 
-_have_program() {
-	if command -v "$1" >/dev/null 2>&1; then
-		return 0
-	else
-		SKIP_REASON="$1 is not available"
-		return 1
-	fi
-}
-
-_have_loop() {
-	_have_module loop && _have_program losetup
-}
-
-_have_blktrace() {
-	# CONFIG_BLK_DEV_IO_TRACE might still be disabled, but this is easier
-	# to check. We can fix it if someone complains.
-	if [[ ! -d /sys/kernel/debug/block ]]; then
-		SKIP_REASON="CONFIG_DEBUG_FS is not enabled"
-		return 1
-	fi
-	_have_program blktrace
+_put_scsi_debug_dev() {
+	modprobe -r scsi_debug
 }

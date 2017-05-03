@@ -1,6 +1,7 @@
 #!/bin/bash
 #
-# Common helper functions.
+# Test debugfs interaction with blktrace. Removes a device while blktrace is
+# still running.
 #
 # Copyright (C) 2017 Omar Sandoval
 #
@@ -17,43 +18,33 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-_warning() {
-	echo "$0: $@" >&2
+. common/scsi_debug
+
+TEST_GROUPS=(block auto quick blktrace hotplug)
+
+prepare() {
+	_have_blktrace && _have_scsi_debug
 }
 
-_error() {
-	echo "$0: $@" >&2
-	exit 1
-}
+test() {
+	echo "Running ${TEST_NAME}"
 
-_have_module() {
-	if modprobe -n "$1"; then
-		return 0
-	else
-		SKIP_REASON="$1 module is not available"
+	if ! _get_scsi_debug_dev; then
 		return 1
 	fi
-}
 
-_have_program() {
-	if command -v "$1" >/dev/null 2>&1; then
-		return 0
-	else
-		SKIP_REASON="$1 is not available"
-		return 1
+	blktrace -D "$TMP_DIR" "$SCSI_DEBUG_DEV" >"$FULL" 2>&1 &
+	sleep 0.5
+	echo 1 > "/sys/block/${SCSI_DEBUG_NAME}/device/delete"
+	if [[ ! -d /sys/kernel/debug/block/${SCSI_DEBUG_NAME} ]]; then
+		echo "debugfs directory deleted with blktrace active"
 	fi
-}
-
-_have_loop() {
-	_have_module loop && _have_program losetup
-}
-
-_have_blktrace() {
-	# CONFIG_BLK_DEV_IO_TRACE might still be disabled, but this is easier
-	# to check. We can fix it if someone complains.
-	if [[ ! -d /sys/kernel/debug/block ]]; then
-		SKIP_REASON="CONFIG_DEBUG_FS is not enabled"
-		return 1
+	{ kill $!; wait; } >/dev/null 2>/dev/null
+	if [[ -d /sys/kernel/debug/block/${SCSI_DEBUG_NAME} ]]; then
+		echo "debugfs directory leaked"
 	fi
-	_have_program blktrace
+
+	_put_scsi_debug_dev
+
+	echo "Test complete"
 }
