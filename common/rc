@@ -44,6 +44,10 @@ _have_program() {
 	fi
 }
 
+_have_fio() {
+	_have_program fio
+}
+
 _have_loop() {
 	_have_module loop && _have_program losetup
 }
