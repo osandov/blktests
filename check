@@ -220,6 +220,8 @@ _call_test() {
 	TEST_RUN[date]="$(date "+%F %T")"
 
 	mkdir -p "$(dirname "$seqres")"
+	# Remove leftovers from last time.
+	rm -f "${seqres}" "${seqres}."*
 
 	if [[ -w /dev/kmsg ]]; then
 		local dmesg_marker="run blktests $TEST_NAME at ${TEST_RUN[date]}"
@@ -241,9 +243,6 @@ _call_test() {
 	rm -f "${seqres}.runtime"
 
 	rm -rf "$TMPDIR"
-
-	# Remove leftovers from last time.
-	rm -f "${seqres}" "${seqres}.out.bad" "${seqres}.dmesg"
 
 	if ! diff "tests/${TEST_NAME}.out" "${seqres}.out" >/dev/null; then
 		mv "${seqres}.out" "${seqres}.out.bad"
