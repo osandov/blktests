@@ -23,6 +23,10 @@ prepare() {
 	_have_fio
 }
 
+prepare_device() {
+	_test_dev_can_discard
+}
+
 test_device() {
 	echo "Running ${TEST_NAME}"
 

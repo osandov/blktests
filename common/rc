@@ -61,3 +61,11 @@ _have_blktrace() {
 	fi
 	_have_program blktrace
 }
+
+_test_dev_can_discard() {
+	if [[ $(cat "${TEST_DEV_SYSFS}/queue/discard_max_bytes") -eq 0 ]]; then
+		SKIP_REASON="$TEST_DEV does not support discard"
+		return 1
+	fi
+	return 0
+}
