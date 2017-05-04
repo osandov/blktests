@@ -317,7 +317,7 @@ _run_category() {
 	while IFS= read -r -d '' seq; do
 		( _run_test "${category}/${seq}" )
 	done < <(find "tests/${category}" -mindepth 1 -maxdepth 1 -type f \
-		 -not -name '*.out' -not -name category -printf '%P\0' | sort -z)
+		 -name '[0-9][0-9][0-9]' -printf '%P\0' | sort -z)
 }
 
 if [[ $EUID -ne 0 ]]; then
