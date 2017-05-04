@@ -20,7 +20,7 @@
 TEST_GROUPS=(meta)
 
 prepare_device() {
-	SKIP_REASON="(╯°□°）╯︵ $TEST_DEV ┻━┻"
+	SKIP_REASON="(╯°□°)╯︵ $TEST_DEV ┻━┻"
 	return 1
 }
 

@@ -20,7 +20,7 @@
 TEST_GROUPS=(meta)
 
 prepare() {
-	SKIP_REASON="(╯°□°）╯︵ ┻━┻"
+	SKIP_REASON="(╯°□°)╯︵ ┻━┻"
 	return 1
 }
 
