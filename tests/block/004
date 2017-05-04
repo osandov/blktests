@@ -26,8 +26,9 @@ prepare() {
 test_device() {
 	echo "Running ${TEST_NAME}"
 
-	fio --output=/dev/null --bs=4k --rw=randwrite --norandommap --fsync=1 \
-		--number_ios=256 --numjobs=64 --name=flushes --filename="$TEST_DEV"
+	fio --bs=4k --rw=randwrite --norandommap --fsync=1 \
+		--number_ios=256 --numjobs=64 --name=flushes \
+		--filename="$TEST_DEV" >>"$FULL"
 
 	echo "Test complete"
 }

@@ -26,8 +26,9 @@ prepare() {
 test_device() {
 	echo "Running ${TEST_NAME}"
 
-	fio --output=/dev/null --bsrange=4k-4g --rw=randtrim --norandommap \
-		--name=discards --filename="$TEST_DEV" --runtime=10s --time_based=1
+	fio --bsrange=4k-4g --rw=randtrim --norandommap \
+		--name=discards --filename="$TEST_DEV" --runtime=10s \
+		--time_based=1 >>"$FULL"
 
 	echo "Test complete"
 }
