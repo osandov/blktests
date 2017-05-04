@@ -92,14 +92,48 @@ if [[ ! -v TEST_DEVS ]]; then
 	_error "\$TEST_DEVS not defined in ./config"
 fi
 
-for test_dev in "${TEST_DEVS[@]}"; do
-	if [[ ! -e $test_dev ]]; then
-		_error "${test_dev} does not exist"
-	elif [[ ! -b $test_dev ]]; then
-		_error "${test_dev} is not a block device"
-	fi
-done
-unset test_dev
+_find_sysfs_dir() {
+	local test_dev="$1"
+	local major=$((0x$(stat -L -c '%t' "$test_dev")))
+	local minor=$((0x$(stat -L -c '%T' "$test_dev")))
+	local dev="$major:$minor"
+
+	local block_dir part_dir
+	for block_dir in /sys/block/*; do
+		if [[ $(cat "${block_dir}/dev") = $dev ]]; then
+			echo "$block_dir"
+			return
+		fi
+		for part_dir in "$block_dir"/*; do
+			if [[ -r ${part_dir}/dev && $(cat "${part_dir}/dev") = $dev ]]; then
+				echo "$block_dir"
+				return
+			fi
+		done
+	done
+
+	return 1
+}
+
+declare -A TEST_DEV_SYSFS_DIRS
+_check_test_devs() {
+	local test_dev
+
+	for test_dev in "${TEST_DEVS[@]}"; do
+		if [[ ! -e $test_dev ]]; then
+			_error "${test_dev} does not exist"
+		elif [[ ! -b $test_dev ]]; then
+			_error "${test_dev} is not a block device"
+		fi
+
+		local sysfs_dir="$(_find_sysfs_dir "$test_dev")"
+		if [[ $? -ne 0 ]]; then
+			_error "could not find sysfs directory for ${test_dev}"
+		fi
+		TEST_DEV_SYSFS_DIRS["$test_dev"]="$sysfs_dir"
+	done
+}
+_check_test_devs
 
 _check_dmesg() {
 	local dmesg_marker="$1"
@@ -364,6 +398,7 @@ _run_test() {
 		fi
 
 		for TEST_DEV in "${CATEGORY_TEST_DEVS[@]}"; do
+			TEST_DEV_SYSFS="${TEST_DEV_SYSFS_DIRS["$TEST_DEV"]}"
 			local test_dev="$(basename "$TEST_DEV")"
 			if declare -fF prepare_device >/dev/null && ! prepare_device; then
 				printf '%s => %s ... [not run]\n    %s\n' "$TEST_NAME" "$test_dev" "$SKIP_REASON"
