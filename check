@@ -235,8 +235,10 @@ _call_test() {
 	fi
 
 	TIMEFORMAT="%Rs"
-	TEST_RUN[runtime]="$(time ( "$test_func" >"${seqres}.out" 2>&1 ) 2>&1)"
+	{ time "$test_func" >"${seqres}.out" 2>&1; } 2>"${seqres}.runtime"
 	TEST_RUN[exit_status]=$?
+	TEST_RUN[runtime]="$(cat "${seqres}.runtime")"
+	rm -f "${seqres}.runtime"
 
 	rm -rf "$TMPDIR"
 
