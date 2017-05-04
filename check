@@ -92,72 +92,195 @@ if [[ ! -v TEST_DEVS ]]; then
 	_error "\$TEST_DEVS not defined in ./config"
 fi
 
-for TEST_DEV in "${TEST_DEVS[@]}"; do
-	if [[ ! -e $TEST_DEV ]]; then
-		_error "${TEST_DEV} does not exist"
-	elif [[ ! -b $TEST_DEV ]]; then
-		_error "${TEST_DEV} is not a block device"
+for test_dev in "${TEST_DEVS[@]}"; do
+	if [[ ! -e $test_dev ]]; then
+		_error "${test_dev} does not exist"
+	elif [[ ! -b $test_dev ]]; then
+		_error "${test_dev} is not a block device"
 	fi
 done
+unset test_dev
+
+_check_dmesg() {
+	local dmesg_marker="$1"
+	local seqres="${RESULTS_DIR}/${TEST_NAME}"
+
+	if [[ $CHECK_DMESG -eq 0 ]]; then
+		return 0
+	fi
+
+	dmesg | bash -c "$DMESG_FILTER" | grep -A 9999 "$dmesg_marker" >"${seqres}.dmesg"
+	grep -q -e "kernel BUG at" \
+	     -e "WARNING:" \
+	     -e "BUG:" \
+	     -e "Oops:" \
+	     -e "possible recursive locking detected" \
+	     -e "Internal error" \
+	     -e "INFO: suspicious RCU usage" \
+	     -e "INFO: possible circular locking dependency detected" \
+	     -e "general protection fault:" \
+	     "${seqres}.dmesg"
+	if [[ $? -eq 0 ]]; then
+		return 1
+	else
+		rm -f "${seqres}.dmesg"
+		return 0
+	fi
+}
+
+# Associative arrays are local by default. declare -g was added in 4.2, but it
+# was apparently broken for associative arrays initially.
+declare -A LAST_TEST_RUN
+declare -A TEST_RUN
+
+_read_last_test_run() {
+	local seqres="${RESULTS_DIR}/${TEST_NAME}"
+
+	LAST_TEST_RUN[date]=""
+	LAST_TEST_RUN[status]=""
+	LAST_TEST_RUN[reason]=""
+	LAST_TEST_RUN[exit_status]=""
+	LAST_TEST_RUN[runtime]=""
+
+	if [[ ! -e $seqres ]]; then
+		return
+	fi
+
+	local key value
+	while IFS=$'\t' read -r key value; do
+		LAST_TEST_RUN["$key"]="$value"
+	done <"$seqres"
+}
+
+_write_test_run() {
+	local key value
+	for key in "${!TEST_RUN[@]}"; do
+		value="${TEST_RUN["$key"]}"
+		printf '%s\t%s\n' "$key" "$value" >>"$seqres"
+	done
+}
+
+_output_last_test_run() {
+	if [[ -v TEST_DEV ]]; then
+		echo "$TEST_NAME => $(basename "$TEST_DEV") ..."
+	else
+		echo "$TEST_NAME ..."
+	fi
+
+	local key value
+	while IFS= read -r key; do
+		if [[ $key =~ ^date|status|reason|exit_status$ ]]; then
+			continue
+		fi
+		value="${LAST_TEST_RUN["$key"]}"
+		echo "    ${key} ${value} ..."
+	done < <(printf '%s\n' "${!LAST_TEST_RUN[@]}" | sort)
+}
+
+_output_test_run() {
+	# -4 for date, status, reason, and exit_status, which we don't output,
+	# +1 for the test name.
+	tput cuu $((${#LAST_TEST_RUN[@]} - 3))
+
+	if [[ -v TEST_DEV ]]; then
+		echo "$TEST_NAME => $(basename "$TEST_DEV") ... [${TEST_RUN[status]}ed]"
+	else
+		echo "$TEST_NAME ... [${TEST_RUN[status]}ed]"
+	fi
+
+	local key last_value value
+	while IFS= read -r key; do
+		if [[ $key =~ ^date|status|reason|exit_status$ ]]; then
+			continue
+		fi
+		last_value="${LAST_TEST_RUN["$key"]}"
+		value="${TEST_RUN["$key"]}"
+		echo "    ${key} ${last_value} ... ${value}"
+	done < <(printf '%s\n' "${!LAST_TEST_RUN[@]}" | sort)
+
+	while IFS= read -r key; do
+		# [[ -v array[key] ]] was added in Bash 4.3. Do it this ugly
+		# way to support older versions.
+		if [[ -n ${LAST_TEST_RUN["$key"]} || ${LAST_TEST_RUN["$key"]-unset} != unset ]]; then
+			continue
+		fi
+		value="${TEST_RUN["$key"]}"
+		echo "    ${key} ... ${value}"
+	done < <(printf '%s\n' "${!TEST_RUN[@]}" | sort)
+}
 
 _call_test() {
 	local test_func="$1"
 	local seqres="${RESULTS_DIR}/${TEST_NAME}"
-	local fail
-	local elapsed
 	FULL="${seqres}.full"
+
+	_read_last_test_run
+	_output_last_test_run
+
+	TEST_RUN[date]="$(date "+%F %T")"
 
 	mkdir -p "$(dirname "$seqres")"
 
 	if [[ -w /dev/kmsg ]]; then
-		local dmesg_marker="run blktests $TEST_NAME at $(date "+%F %T")"
+		local dmesg_marker="run blktests $TEST_NAME at ${TEST_RUN[date]}"
 		echo "$dmesg_marker" >> /dev/kmsg
 	else
+		local dmesg_marker=""
 		CHECK_DMESG=0
 	fi
 
 	TMPDIR="$(mktemp --tmpdir -d "blktests.${category}.${seq}.XXX")"
 	if [[ $? -ne 0 ]]; then
-		retur
+		return
 	fi
 
-	TIMEFORMAT="%R"
-	elapsed="$(time ( "$test_func" >"${seqres}.out" 2>&1 ) 2>&1)"
-	local exit_status=$?
+	TIMEFORMAT="%Rs"
+	TEST_RUN[runtime]="$(time ( "$test_func" >"${seqres}.out" 2>&1 ) 2>&1)"
+	TEST_RUN[exit_status]=$?
 
 	rm -rf "$TMPDIR"
 
+	# Remove leftovers from last time.
+	rm -f "${seqres}" "${seqres}.out.bad" "${seqres}.dmesg"
+
 	if ! diff "tests/${TEST_NAME}.out" "${seqres}.out" >/dev/null; then
 		mv "${seqres}.out" "${seqres}.out.bad"
-		printf '[failed]\n'
-		diff -u "tests/${TEST_NAME}.out" "${seqres}.out.bad" | awk "
-		{
-			if (NR > 10) {
-				print \"    ...\"
-				print \"    (Run 'diff -u tests/${TEST_NAME}.out ${seqres}.out.bad' to see the entire diff)\"
-				exit
-			}
-			print \"    \" \$0
-		}"
-		fail=out
-	elif [[ $exit_status -ne 0 ]]; then
-		echo "$exit_status" > "${seqres}.exitstatus"
-		printf '[failed]\n    exited with status %d\n' $exit_status
-		fail=exit
-	elif [[ $CHECK_DMESG -ne 0 ]]; then
-		dmesg | bash -c "$DMESG_FILTER" | grep -A 9999 "$dmesg_marker" >"${seqres}.dmesg"
-		grep -q -e "kernel BUG at" \
-		     -e "WARNING:" \
-		     -e "BUG:" \
-		     -e "Oops:" \
-		     -e "possible recursive locking detected" \
-		     -e "Internal error" \
-		     -e "INFO: suspicious RCU usage" \
-		     -e "INFO: possible circular locking dependency detected" \
-		     -e "general protection fault:" \
-		     "${seqres}.dmesg"
-		if [[ $? -eq 0 ]]; then
-			printf '[failed]\n    something found in dmesg:\n'
+		TEST_RUN[status]=fail
+		TEST_RUN[reason]=output
+	elif [[ ${TEST_RUN[exit_status]} -ne 0 ]]; then
+		TEST_RUN[status]=fail
+		TEST_RUN[reason]=exit
+	elif ! _check_dmesg "$dmesg_marker"; then
+		TEST_RUN[status]=fail
+		TEST_RUN[reason]=dmesg
+	else
+		TEST_RUN[status]=pass
+	fi
+	rm -f "${seqres}.out"
+
+	_write_test_run
+	_output_test_run
+
+	if [[ ${TEST_RUN[status]} = pass ]]; then
+		return 0
+	else
+		case "${TEST_RUN[reason]}" in
+		output)
+			diff -u "tests/${TEST_NAME}.out" "${seqres}.out.bad" | awk "
+			{
+				if (NR > 10) {
+					print \"    ...\"
+					print \"    (Run 'diff -u tests/${TEST_NAME}.out ${seqres}.out.bad' to see the entire diff)\"
+					exit
+				}
+				print \"    \" \$0
+			}"
+			;;
+		exit)
+			echo "    exited with status ${TEST_RUN[exit_status]}"
+			;;
+		dmesg)
+			echo "    something found in dmesg:"
 			awk "
 			{
 				if (NR > 10) {
@@ -166,23 +289,9 @@ _call_test() {
 					exit
 				}
 				print \"    \" \$0
-			}" < "${seqres}.dmesg"
-			fail=dmesg
-		else
-			rm -f "${seqres}.dmesg"
-		fi
-	fi
-	rm -f "${seqres}.out"
-
-	if [[ -z "$fail" ]]; then
-		printf '%.1fs\n' "$elapsed"
-		echo "${TEST_NAME} pass ${elapsed}" >> "${RESULTS_DIR}/log"
-		return 0
-	else
-		if [[ -e $FULL ]]; then
-			echo "    (There may be more information in $FULL)"
-		fi
-		echo "${TEST_NAME} fail ${fail}" >> "${RESULTS_DIR}/log"
+			}" "${seqres}.dmesg"
+			;;
+		esac
 		return 1
 	fi
 }
@@ -239,31 +348,24 @@ _run_test() {
 		return
 	fi
 
-	if declare -fF prepare >/dev/null && ! prepare; then
-		printf '%s [not run]\n    %s\n' "$TEST_NAME" "$SKIP_REASON"
-		return
-	fi
-
 	if declare -fF test >/dev/null; then
-		local last_time="$(grep "^$TEST_NAME pass" results.last/nodev/log 2>/dev/null | cut -d' ' -f3)"
-		if [[ -z $last_time ]]; then
-			printf '%s ... ' "$TEST_NAME"
-		else
-			printf '%s %.1fs ... ' "$TEST_NAME" "$last_time"
+		if declare -fF prepare >/dev/null && ! prepare; then
+			printf '%s ... [not run]\n    %s\n' "$TEST_NAME" "$SKIP_REASON"
+			return
 		fi
+
 		RESULTS_DIR="results/nodev"
 		_call_test test
 	else
+		if declare -fF prepare >/dev/null && ! prepare; then
+			printf '%s => * ... [not run]\n    %s\n' "$TEST_NAME" "$SKIP_REASON"
+			return
+		fi
+
 		for TEST_DEV in "${CATEGORY_TEST_DEVS[@]}"; do
-			local test_dev="$(basename "${TEST_DEV}")"
-			local last_time="$(grep "^$TEST_NAME pass" "results.last/${test_dev}/log" 2>/dev/null | cut -d' ' -f3)"
-			if [[ -z $last_time ]]; then
-				printf '%s => %s ... ' "$TEST_NAME" "$test_dev"
-			else
-				printf '%s => %s %.1fs ... ' "$TEST_NAME" "$test_dev" "$last_time"
-			fi
+			local test_dev="$(basename "$TEST_DEV")"
 			if declare -fF prepare_device >/dev/null && ! prepare_device; then
-				printf '[not run]\n    %s\n' "$SKIP_REASON"
+				printf '%s => %s ... [not run]\n    %s\n' "$TEST_NAME" "$test_dev" "$SKIP_REASON"
 				continue
 			fi
 			RESULTS_DIR="results/${test_dev}"
@@ -302,9 +404,10 @@ _run_category() {
 	fi
 
 	declare -a CATEGORY_TEST_DEVS
-	for TEST_DEV in "${TEST_DEVS[@]}"; do
+	local test_dev
+	for test_dev in "${TEST_DEVS[@]}"; do
 		if prepare_device; then
-			CATEGORY_TEST_DEVS+=("$TEST_DEV")
+			CATEGORY_TEST_DEVS+=("$test_dev")
 		fi
 	done
 	if [[ ${#CATEGORY_TEST_DEVS} -eq 0 ]]; then
@@ -322,11 +425,6 @@ _run_category() {
 
 if [[ $EUID -ne 0 ]]; then
 	_error "must be run as root"
-fi
-
-if [[ -d results ]]; then
-	rm -rf results.last
-	mv results results.last
 fi
 
 while IFS= read -r -d '' category; do
