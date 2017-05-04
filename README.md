@@ -10,6 +10,7 @@ The dependencies are minimal, but make sure you have them installed:
 
 - bash
 - GNU coreutils
+- GNU awk
 - util-linux
 - fio
 
