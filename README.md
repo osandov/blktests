@@ -30,6 +30,5 @@ configuration and running tests.
 
 ## Adding Tests
 
-The `./new` script creates a new test from a template. See
-[here](Documentation/writing-tests.md) for more information on how to write
-tests.
+The `./new` script creates a new test from a template. The generated template
+contains more detailed documentation.
