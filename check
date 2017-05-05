@@ -345,7 +345,6 @@ _should_run_test() {
 	for group in "${TEST_GROUPS[@]}"; do
 		if [[ -n ${INCLUDE_GROUPS[$group]} ]]; then
 			ret=0
-			break
 		fi
 		if [[ -n ${EXCLUDE_GROUPS[$group]} ]]; then
 			return 1
