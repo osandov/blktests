@@ -17,81 +17,6 @@
 
 . common/rc
 
-usage () {
-	USAGE_STRING="\
-usage: $0 [-g group] [-x exclude_group] [test...]
-       $0 -h
-
-Test groups:
-  -g group    run tests belonging to this group; may be specified multiple
-              times
-  -x group    don't run tests belonging to this group; takes precedence over
-              -g, may be specified multiple times
-
-Miscellaneous:
-  -h    display this help message and exit
-
-Examples:
-Run the default set of tests, i.e., the \"auto\" group:
-    ./check
-Run all NVMe and SCSI tests except for those that involve discard:
-    ./check -g nvme -g scsi -x discard
-Run two specific tests:
-    ./check block/001 block/002
-Run a specific test in addition to the default set of tests:
-    ./check -g auto block/003"
-
-	case "$1" in
-		out)
-			echo "$USAGE_STRING"
-			exit 0
-			;;
-		err)
-			echo "$USAGE_STRING" >&2
-			exit 1
-			;;
-	esac
-}
-
-declare -A INCLUDE_GROUPS
-declare -A EXCLUDE_GROUPS
-declare -A TESTS
-
-while getopts "g:x:h" OPT; do
-	case "$OPT" in
-		g)
-			INCLUDE_GROUPS["$OPTARG"]=1
-			;;
-		x)
-			EXCLUDE_GROUPS["$OPTARG"]=1
-			;;
-		h)
-			usage out;
-			;;
-		*)
-			usage err;
-			;;
-	esac
-done
-
-shift $((OPTIND - 1))
-
-for test in "$@"; do
-	TESTS["$test"]=1
-done
-
-if [[ ${#TESTS[@]} -eq 0 && ${#INCLUDE_GROUPS[@]} -eq 0 ]]; then
-	INCLUDE_GROUPS[auto]=1
-fi
-
-if ! . config; then
-	exit 1
-fi
-
-if [[ ! -v TEST_DEVS ]]; then
-	_error "\$TEST_DEVS not defined in ./config"
-fi
-
 _find_sysfs_dir() {
 	local test_dev="$1"
 	local major=$((0x$(stat -L -c '%t' "$test_dev")))
@@ -114,26 +39,6 @@ _find_sysfs_dir() {
 
 	return 1
 }
-
-declare -A TEST_DEV_SYSFS_DIRS
-_check_test_devs() {
-	local test_dev
-
-	for test_dev in "${TEST_DEVS[@]}"; do
-		if [[ ! -e $test_dev ]]; then
-			_error "${test_dev} does not exist"
-		elif [[ ! -b $test_dev ]]; then
-			_error "${test_dev} is not a block device"
-		fi
-
-		local sysfs_dir="$(_find_sysfs_dir "$test_dev")"
-		if [[ $? -ne 0 ]]; then
-			_error "could not find sysfs directory for ${test_dev}"
-		fi
-		TEST_DEV_SYSFS_DIRS["$test_dev"]="$sysfs_dir"
-	done
-}
-_check_test_devs
 
 _check_dmesg() {
 	local dmesg_marker="$1"
@@ -458,9 +363,105 @@ _run_category() {
 		 -name '[0-9][0-9][0-9]' -printf '%P\0' | sort -z)
 }
 
+declare -A TEST_DEV_SYSFS_DIRS
+_check_test_devs() {
+	local test_dev
+
+	for test_dev in "${TEST_DEVS[@]}"; do
+		if [[ ! -e $test_dev ]]; then
+			_error "${test_dev} does not exist"
+		elif [[ ! -b $test_dev ]]; then
+			_error "${test_dev} is not a block device"
+		fi
+
+		local sysfs_dir="$(_find_sysfs_dir "$test_dev")"
+		if [[ $? -ne 0 ]]; then
+			_error "could not find sysfs directory for ${test_dev}"
+		fi
+		TEST_DEV_SYSFS_DIRS["$test_dev"]="$sysfs_dir"
+	done
+}
+
+usage () {
+	USAGE_STRING="\
+usage: $0 [-g group] [-x exclude_group] [test...]
+       $0 -h
+
+Test groups:
+  -g group    run tests belonging to this group; may be specified multiple
+              times
+  -x group    don't run tests belonging to this group; takes precedence over
+              -g, may be specified multiple times
+
+Miscellaneous:
+  -h    display this help message and exit
+
+Examples:
+Run the default set of tests, i.e., the \"auto\" group:
+    ./check
+Run all NVMe and SCSI tests except for those that involve discard:
+    ./check -g nvme -g scsi -x discard
+Run two specific tests:
+    ./check block/001 block/002
+Run a specific test in addition to the default set of tests:
+    ./check -g auto block/003"
+
+	case "$1" in
+		out)
+			echo "$USAGE_STRING"
+			exit 0
+			;;
+		err)
+			echo "$USAGE_STRING" >&2
+			exit 1
+			;;
+	esac
+}
+
+declare -A INCLUDE_GROUPS
+declare -A EXCLUDE_GROUPS
+declare -A TESTS
+
+while getopts "g:x:h" OPT; do
+	case "$OPT" in
+		g)
+			INCLUDE_GROUPS["$OPTARG"]=1
+			;;
+		x)
+			EXCLUDE_GROUPS["$OPTARG"]=1
+			;;
+		h)
+			usage out;
+			;;
+		*)
+			usage err;
+			;;
+	esac
+done
+
+shift $((OPTIND - 1))
+
+for test in "$@"; do
+	TESTS["$test"]=1
+done
+
+if [[ ${#TESTS[@]} -eq 0 && ${#INCLUDE_GROUPS[@]} -eq 0 ]]; then
+	INCLUDE_GROUPS[auto]=1
+fi
+
+if ! . config; then
+	exit 1
+fi
+
+if [[ ! -v TEST_DEVS ]]; then
+	_error "\$TEST_DEVS not defined in ./config"
+fi
+
 if [[ $EUID -ne 0 ]]; then
 	_error "must be run as root"
 fi
+
+_check_test_devs
 
 while IFS= read -r -d '' category; do
 	( _run_category "${category}" )
