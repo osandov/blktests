@@ -1,0 +1,50 @@
+#!/bin/bash
+#
+# Threads doing IO to a device, while we switch schedulers
+#
+# Copyright (C) 2017 Jens Axboe
+#
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+TEST_GROUPS=(block auto sched)
+
+prepare() {
+	_have_fio
+}
+
+test_device() {
+	echo "Running ${TEST_NAME}"
+
+	scheds=($(sed 's/[][]//g' "${TEST_DEV_SYSFS}/queue/scheduler"))
+
+	if _test_dev_is_rotational; then
+		size="32m"
+	else
+		size="1g"
+	fi
+
+	# start fio job
+	fio --bs=4k --rw=randread --norandommap --name=reads \
+		--filename="$TEST_DEV" --size="$size" --numjobs=8 --direct=1 \
+		>>"$FULL" &
+
+	# while job is running, switch between schedulers
+	while kill -0 $! 2>/dev/null; do
+		idx=$(($RANDOM % ${#scheds[@]}))
+		echo "${scheds[$idx]}" > ${TEST_DEV_SYSFS}/queue/scheduler
+		sleep .2
+	done
+
+	echo "Test complete"
+}

@@ -69,3 +69,11 @@ _test_dev_can_discard() {
 	fi
 	return 0
 }
+
+_test_dev_is_rotational() {
+	if [[ $(cat "${TEST_DEV_SYSFS}/queue/rotational") -eq 0 ]]; then
+		SKIP_REASON="$TEST_DEV is not rotational"
+		return 1
+	fi
+	return 1
+}
