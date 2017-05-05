@@ -94,9 +94,11 @@ _output_last_test_run() {
 }
 
 _output_test_run() {
-	# -4 for date, status, reason, and exit_status, which we don't output,
-	# +1 for the test name.
-	tput cuu $((${#LAST_TEST_RUN[@]} - 3))
+	if [[ -t 1 ]]; then
+		# -4 for date, status, reason, and exit_status, which we don't
+		# output, +1 for the test name.
+		tput cuu $((${#LAST_TEST_RUN[@]} - 3))
+	fi
 
 	if [[ -v TEST_DEV ]]; then
 		echo "$TEST_NAME => $(basename "$TEST_DEV") ... [${TEST_RUN[status]}ed]"
