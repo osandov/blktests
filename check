@@ -301,6 +301,7 @@ _run_test() {
 			return
 		fi
 
+		local ret=0
 		for TEST_DEV in "${CATEGORY_TEST_DEVS[@]}"; do
 			TEST_DEV_SYSFS="${TEST_DEV_SYSFS_DIRS["$TEST_DEV"]}"
 			local test_dev="$(basename "$TEST_DEV")"
@@ -309,8 +310,11 @@ _run_test() {
 				continue
 			fi
 			RESULTS_DIR="results/${test_dev}"
-			_call_test test_device
+			if ! _call_test test_device; then
+				ret=1
+			fi
 		done
+		return $ret
 	fi
 }
 
@@ -339,7 +343,7 @@ _run_category() {
 	fi
 
 	if ! prepare; then
-		printf '%s/*** [not run]\n    %s\n' "$category" "$SKIP_REASON"
+		printf '%s/*** ... [not run]\n    %s\n' "$category" "$SKIP_REASON"
 		return
 	fi
 
@@ -351,16 +355,21 @@ _run_category() {
 		fi
 	done
 	if [[ ${#CATEGORY_TEST_DEVS} -eq 0 ]]; then
-		printf '%s/*** [not run]\n    %s\n' "$category" "no suitable devices"
+		printf '%s/*** ... [not run]\n    %s\n' "$category" "no suitable devices"
 		return
 	fi
 
 	unset prepare prepare_device
 
+	local ret=0
+	local seq
 	while IFS= read -r -d '' seq; do
-		( _run_test "${category}/${seq}" )
+		if ! ( _run_test "${category}/${seq}" ); then
+			ret=1
+		fi
 	done < <(find "tests/${category}" -mindepth 1 -maxdepth 1 -type f \
 		 -name '[0-9][0-9][0-9]' -printf '%P\0' | sort -z)
+	return $ret
 }
 
 declare -A TEST_DEV_SYSFS_DIRS
@@ -380,6 +389,17 @@ _check_test_devs() {
 		fi
 		TEST_DEV_SYSFS_DIRS["$test_dev"]="$sysfs_dir"
 	done
+}
+
+_run_tests() {
+	local ret=0
+	local category
+	while IFS= read -r -d '' category; do
+		if ! ( _run_category "${category}" ); then
+			ret=1
+		fi
+	done < <(find tests -mindepth 1 -maxdepth 1 -type d -printf '%P\0' | sort -z)
+	return $ret
 }
 
 usage () {
@@ -462,7 +482,4 @@ if [[ $EUID -ne 0 ]]; then
 fi
 
 _check_test_devs
-
-while IFS= read -r -d '' category; do
-	( _run_category "${category}" )
-done < <(find tests -mindepth 1 -maxdepth 1 -type d -printf '%P\0' | sort -z)
+_run_tests
