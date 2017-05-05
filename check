@@ -17,29 +17,6 @@
 
 . common/rc
 
-_find_sysfs_dir() {
-	local test_dev="$1"
-	local major=$((0x$(stat -L -c '%t' "$test_dev")))
-	local minor=$((0x$(stat -L -c '%T' "$test_dev")))
-	local dev="$major:$minor"
-
-	local block_dir part_dir
-	for block_dir in /sys/block/*; do
-		if [[ $(cat "${block_dir}/dev") = $dev ]]; then
-			echo "$block_dir"
-			return
-		fi
-		for part_dir in "$block_dir"/*; do
-			if [[ -r ${part_dir}/dev && $(cat "${part_dir}/dev") = $dev ]]; then
-				echo "$block_dir"
-				return
-			fi
-		done
-	done
-
-	return 1
-}
-
 _check_dmesg() {
 	local dmesg_marker="$1"
 	local seqres="${RESULTS_DIR}/${TEST_NAME}"
@@ -370,6 +347,29 @@ _run_category() {
 	done < <(find "tests/${category}" -mindepth 1 -maxdepth 1 -type f \
 		 -name '[0-9][0-9][0-9]' -printf '%P\0' | sort -z)
 	return $ret
+}
+
+_find_sysfs_dir() {
+	local test_dev="$1"
+	local major=$((0x$(stat -L -c '%t' "$test_dev")))
+	local minor=$((0x$(stat -L -c '%T' "$test_dev")))
+	local dev="$major:$minor"
+
+	local block_dir part_dir
+	for block_dir in /sys/block/*; do
+		if [[ $(cat "${block_dir}/dev") = $dev ]]; then
+			echo "$block_dir"
+			return
+		fi
+		for part_dir in "$block_dir"/*; do
+			if [[ -r ${part_dir}/dev && $(cat "${part_dir}/dev") = $dev ]]; then
+				echo "$block_dir"
+				return
+			fi
+		done
+	done
+
+	return 1
 }
 
 declare -A TEST_DEV_SYSFS_DIRS
