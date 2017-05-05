@@ -125,6 +125,13 @@ _output_test_run() {
 	done < <(printf '%s\n' "${!TEST_RUN[@]}" | sort)
 }
 
+_cleanup() {
+	if [[ -v TMPDIR ]]; then
+		rm -rf "$TMPDIR"
+		unset TMPDIR
+	fi
+}
+
 _call_test() {
 	local test_func="$1"
 	local seqres="${RESULTS_DIR}/${TEST_NAME}"
@@ -147,6 +154,7 @@ _call_test() {
 		CHECK_DMESG=0
 	fi
 
+	trap _cleanup EXIT
 	TMPDIR="$(mktemp --tmpdir -d "blktests.${category}.${seq}.XXX")"
 	if [[ $? -ne 0 ]]; then
 		return
@@ -158,7 +166,7 @@ _call_test() {
 	TEST_RUN[runtime]="$(cat "${seqres}.runtime")"
 	rm -f "${seqres}.runtime"
 
-	rm -rf "$TMPDIR"
+	_cleanup
 
 	if ! diff "tests/${TEST_NAME}.out" "${seqres}.out" >/dev/null; then
 		mv "${seqres}.out" "${seqres}.out.bad"
