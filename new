@@ -49,7 +49,7 @@ while IFS= read -r -d '' category; do
 	fi
 done < <(find tests -mindepth 1 -maxdepth 1 -type d -printf '%P\0')
 
-read -r -p "Category for new test: " category
+read -r -p "Category for new test (pick one of the above or create a new one): " category
 
 if [[ -z $category ]]; then
 	exit 1
@@ -84,16 +84,33 @@ if [[ ! -e tests/${category} ]]; then
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
+# TODO: source any more common helpers needed for this category script.
+# Anything sourced here will also be available in the test scripts.
+# Additionally, any functions defined here (except for prepare() and
+# prepare_device()) will also be available in the test scripts.
 . common/rc
 
+# TODO: prepare() should check whether tests in this category can be run. If
+# so, it should return 0. Otherwise, it should return non-zero and set the
+# \$SKIP_REASON variable. Usually, prepare() just needs to check that any
+# necessary programs and kernel features are available using the _have_foo
+# helpers. If prepare() returns non-zero, all tests in this category will be
+# skipped.
 prepare() {
-	# TODO: if this category has any extra requirements, fill this in.
 	return 0
 }
 
+# TODO: prepare_device() should check whether tests in this category can be run
+# on the given test device. \$TEST_DEV is the full path of the block device
+# (e.g., /dev/nvme0n1 or /dev/sda1), and \$TEST_DEV_SYSFS is the sysfs path of
+# the disk (not the partition, e.g., /sys/block/nvme0n1 or /sys/block/sda). If
+# tests in this category can be run on the test device, it should return zero.
+# Otherwise, it should return non-zero and set the \$SKIP_REASON variable.
+# Usually, prepare_device() just needs to check that the test device is the
+# right type of hardware or supports any necessary features using the
+# _test_dev_foo helpers. Tests in this category will only be run on devices for
+# which prepare_device() returns zero.
 prepare_device() {
-	# TODO: if this category has any requirements for the devices it can
-	# run on, fill this in.
 	return 0
 }
 EOF
@@ -112,8 +129,16 @@ cat << EOF > "tests/${test_name}"
 #!/bin/bash
 #
 # TODO: provide a brief description of the test here, i.e., what it tests and
-# how. If this is a regression test, be sure to reference the patch or commit
-# it tests. See Documentation/writing-tests.md for more information.
+# how. If this is a regression test for a patch, reference the patch title:
+#
+# Regression test for patch "blk-stat: fix blk_stat_sum() if all samples are
+# batched".
+#
+# For a commit, use the first 12 characters of the commit hash and the one-line
+# commit summary:
+#
+# Regression test for commit efd4b81abbe1 ("blk-stat: fix blk_stat_sum() if all
+# samples are batched").
 #
 # Copyright (C) $(date +%Y) TODO YOUR NAME HERE
 #
@@ -132,13 +157,64 @@ cat << EOF > "tests/${test_name}"
 
 # TODO: if this test shouldn't be run by default, remove the "auto" group. If
 # this test runs quickly, add it to the "quick" group. Add any other groups
-# describing what functionality this tests.
+# describing what functionality this tests (e.g., "discard" or "hotplug"). Feel
+# free to create new groups if it makes sense.
 TEST_GROUPS=($category auto)
 
-# TODO: if this test has any extra requirements, define prepare(). If this test
-# has specific requirements for the device it runs on, define prepare_device().
+# TODO: dmesg is checked after each test run by default. You can suppress this
+# by defining:
+# CHECK_DMESG=0
+# Alternatively, you can filter out any unimportant messages in dmesg like so:
+# DMESG_FILTER="grep -v sysfs"
 
-# TODO: if this test requires a device, rename this to test_device().
+# TODO: if this test has any extra requirements, it should define a prepare()
+# function. If the test can be run, prepare() should return 0. Otherwise, it
+# should return non-zero and set the \$SKIP_REASON variable. Usually, prepare()
+# just needs to check that any necessary programs and kernel features are
+# available using the _have_foo helpers. If prepare() returns non-zero, the
+# test is skipped.
+# prepare() {
+# 	_have_foo
+# }
+
+# TODO: if this test has extra requirements for what devices it can be run on,
+# it should define a prepare_device() function. If the test can be run on
+# \$TEST_DEV, then prepare_device() should return zero. Otherwise, it should
+# return non-zero and set the \$SKIP_REASON variable. Usually, prepare_device()
+# just needs to check that the test device is the right type of hardware or
+# supports any necessary features using the _test_dev_foo helpers. The test
+# will only be run on devices for which prepare_device() returns zero.
+# prepare_device() {
+# 	_test_dev_foo
+# }
+
+# TODO: define the test. The output of this function (stdout and stderr) will
+# be compared to tests/\${TEST_NAME}.out. If it does not match, the test is
+# considered a failure. If the test runs a command which has unnecessary
+# output, either redirect that output to \$FULL or /dev/null, or filter out the
+# unimportant parts (e.g., with grep or the _filter_foo helpers).
+#
+# Additionally, if the test function returns non-zero, it is considered a
+# failure. You should prefer letting the test fail because of broken output
+# over, say, checking the exit status of every command you run.
+#
+# Various variables are defined for the test:
+#    - \$TEST_NAME -- the full name of the test.
+#    - \$TMPDIR -- a temporary directory deleted after the test is run.
+#    - \$FULL -- a file where the test may log verbose output (e.g., the output
+#               of fio or mkfs).
+#    - \$TEST_RUN -- an associative array of additional test data to display
+#                   after the test is run and store for comparison on future
+#                   test runs. Use like TEST_RUN[iops]="\$(measure_iops)".
+#
+# Many tests do not need a test device (usually because they set up their own
+# virtual devices, like null-blk or loop). These tests should define the test()
+# function.
+#
+# Tests that require a test device should rename test() to test_device(). These
+# tests will be run with a few more variables defined:
+#    - \$TEST_DEV -- the block device to run the test on (e.g., /dev/sda1).
+#    - \$TEST_DEV_SYSFS -- the sysfs directory of the device (e.g., /sys/block/sda).
 test() {
 	echo "Running \${TEST_NAME}"
 
@@ -146,6 +222,23 @@ test() {
 
 	echo "Test complete"
 }
+
+# Finally, some coding style guidlines:
+# - Indent with tabs.
+# - Don't add a space before the parentheses or a newline before the curly brace
+#   in function definitions.
+# - Variables set and used by the testing framework are in caps with underscores.
+#   E.g., TEST_NAME and GROUPS. Variables local to the test are lowercase
+#   with underscores.
+# - Functions defined by the testing framework, including helpers, have a leading
+#   underscore. E.g., _have_scsi_debug. Functions local to the test or category
+#   should not have a leading underscore.
+# - Use the bash [[ ]] form of tests instead of [ ].
+# - Always quote variable expansions unless the variable is a number or inside of
+#   a [[ ]] test.
+# - Use the \$() form of command substitution instead of backticks.
+# - Use bash for loops instead of seq. E.g., for ((i = 0; i < 10; i++)), not
+#   for i in \$(seq 0 9).
 EOF
 chmod +x "tests/${test_name}"
 echo "Created tests/${test_name}"
