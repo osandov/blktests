@@ -523,9 +523,5 @@ if [[ ! -v TEST_DEVS ]]; then
 	_error "\$TEST_DEVS not defined in ./config"
 fi
 
-if [[ $EUID -ne 0 ]]; then
-	_error "must be run as root"
-fi
-
 _check_test_devs
 _run_tests

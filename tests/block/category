@@ -20,7 +20,7 @@
 . common/rc
 
 prepare() {
-	return 0
+	_have_root
 }
 
 prepare_device() {

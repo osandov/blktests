@@ -26,6 +26,14 @@ _error() {
 	exit 1
 }
 
+_have_root() {
+	if [[ $EUID -ne 0 ]]; then
+		SKIP_REASON="not running as root"
+		return 1
+	fi
+	return 0
+}
+
 _have_module() {
 	if modprobe -n "$1"; then
 		return 0

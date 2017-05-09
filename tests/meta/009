@@ -19,6 +19,10 @@
 
 TEST_GROUPS=(meta)
 
+prepare() {
+	_have_writeable_kmsg
+}
+
 test() {
 	echo "Running ${TEST_NAME}"
 	fake_bug_on

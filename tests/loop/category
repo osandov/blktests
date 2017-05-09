@@ -20,7 +20,7 @@
 . common/rc
 
 prepare() {
-	_have_loop
+	_have_root && _have_loop
 }
 
 prepare_device() {

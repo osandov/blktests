@@ -35,6 +35,14 @@ prepare_device() {
 	return 0
 }
 
+_have_writeable_kmsg() {
+	if [[ ! -w /dev/kmsg ]]; then
+		SKIP_REASON="cannot write to /dev/kmsg"
+		return 1
+	fi
+	return 0
+}
+
 fake_bug_on() {
 	cat << "EOF" > "$TMPDIR/dmesg"
 ------------[ cut here ]------------

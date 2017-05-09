@@ -97,7 +97,7 @@ if [[ ! -e tests/${category} ]]; then
 # helpers. If prepare() returns non-zero, all tests in this category will be
 # skipped.
 prepare() {
-	return 0
+	_have_root
 }
 
 # TODO: prepare_device() should check whether tests in this category can be run

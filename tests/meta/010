@@ -20,6 +20,10 @@
 TEST_GROUPS=(meta)
 CHECK_DMESG=0
 
+prepare() {
+	_have_writeable_kmsg
+}
+
 test() {
 	echo "Running ${TEST_NAME}"
 	fake_bug_on
