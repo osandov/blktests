@@ -93,6 +93,28 @@ _output_last_test_run() {
 	done < <(printf '%s\n' "${!LAST_TEST_RUN[@]}" | sort)
 }
 
+_output_status() {
+	echo -n "["
+	if [[ -t 1 ]]; then
+		case "$1" in
+		passed)
+			tput setaf 2
+			;;
+		failed)
+			tput setaf 1
+			;;
+		"not run")
+			tput setaf 3
+			;;
+		esac
+	fi
+	echo -n "$1"
+	if [[ -t 1 ]]; then
+		tput sgr0
+	fi
+	echo "]"
+}
+
 _output_test_run() {
 	if [[ -t 1 ]]; then
 		# -4 for date, status, reason, and exit_status, which we don't
@@ -101,10 +123,11 @@ _output_test_run() {
 	fi
 
 	if [[ -v TEST_DEV ]]; then
-		echo "$TEST_NAME => $(basename "$TEST_DEV") ... [${TEST_RUN[status]}ed]"
+		echo -n "$TEST_NAME => $(basename "$TEST_DEV") ... "
 	else
-		echo "$TEST_NAME ... [${TEST_RUN[status]}ed]"
+		echo -n "$TEST_NAME ... "
 	fi
+	_output_status "${TEST_RUN[status]}ed"
 
 	local key last_value value
 	while IFS= read -r key; do
@@ -246,6 +269,12 @@ _should_run_test() {
 	return $ret
 }
 
+_output_notrun() {
+	echo -n "$1 ... "
+	_output_status "not run"
+	echo "    $SKIP_REASON"
+}
+
 _run_test() {
 	TEST_NAME="$1"
 	CHECK_DMESG=1
@@ -276,7 +305,7 @@ _run_test() {
 
 	if declare -fF test >/dev/null; then
 		if declare -fF prepare >/dev/null && ! prepare; then
-			printf '%s ... [not run]\n    %s\n' "$TEST_NAME" "$SKIP_REASON"
+			_output_notrun "$TEST_NAME"
 			return
 		fi
 
@@ -284,7 +313,7 @@ _run_test() {
 		_call_test test
 	else
 		if declare -fF prepare >/dev/null && ! prepare; then
-			printf '%s => * ... [not run]\n    %s\n' "$TEST_NAME" "$SKIP_REASON"
+			_output_notrun "$TEST_NAME => *"
 			return
 		fi
 
@@ -293,7 +322,7 @@ _run_test() {
 			TEST_DEV_SYSFS="${TEST_DEV_SYSFS_DIRS["$TEST_DEV"]}"
 			local test_dev="$(basename "$TEST_DEV")"
 			if declare -fF prepare_device >/dev/null && ! prepare_device; then
-				printf '%s => %s ... [not run]\n    %s\n' "$TEST_NAME" "$test_dev" "$SKIP_REASON"
+				_output_notrun "$TEST_NAME => $test_dev"
 				continue
 			fi
 			RESULTS_DIR="results/${test_dev}"
@@ -330,7 +359,7 @@ _run_category() {
 	fi
 
 	if ! prepare; then
-		printf '%s/*** ... [not run]\n    %s\n' "$category" "$SKIP_REASON"
+		_output_notrun "$category/***"
 		return
 	fi
 
@@ -342,7 +371,7 @@ _run_category() {
 		fi
 	done
 	if [[ ${#CATEGORY_TEST_DEVS} -eq 0 ]]; then
-		printf '%s/*** ... [not run]\n    %s\n' "$category" "no suitable devices"
+		_output_notrun "$category/***"
 		return
 	fi
 
