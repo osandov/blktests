@@ -94,9 +94,13 @@ _output_last_test_run() {
 }
 
 _output_status() {
-	echo -n "["
+	local test="$1"
+	local status="$2"
+
+	printf '%.40s' "$test ........................................"
+	echo -n " ["
 	if [[ -t 1 ]]; then
-		case "$1" in
+		case "$status" in
 		passed)
 			tput setaf 2
 			;;
@@ -108,7 +112,7 @@ _output_status() {
 			;;
 		esac
 	fi
-	echo -n "$1"
+	echo -n "$status"
 	if [[ -t 1 ]]; then
 		tput sgr0
 	fi
@@ -123,11 +127,10 @@ _output_test_run() {
 	fi
 
 	if [[ -v TEST_DEV ]]; then
-		echo -n "$TEST_NAME => $(basename "$TEST_DEV") ... "
+		_output_status "$TEST_NAME => $(basename "$TEST_DEV")" "${TEST_RUN[status]}ed"
 	else
-		echo -n "$TEST_NAME ... "
+		_output_status "$TEST_NAME" "${TEST_RUN[status]}ed"
 	fi
-	_output_status "${TEST_RUN[status]}ed"
 
 	local key last_value value
 	while IFS= read -r key; do
@@ -270,8 +273,7 @@ _should_run_test() {
 }
 
 _output_notrun() {
-	echo -n "$1 ... "
-	_output_status "not run"
+	_output_status "$1" "not run"
 	echo "    $SKIP_REASON"
 }
 
