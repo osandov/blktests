@@ -76,28 +76,16 @@ _write_test_run() {
 	done
 }
 
-_output_last_test_run() {
-	if [[ -v TEST_DEV ]]; then
-		echo "$TEST_NAME => $(basename "$TEST_DEV") ..."
-	else
-		echo "$TEST_NAME ..."
-	fi
-
-	local key value
-	while IFS= read -r key; do
-		if [[ $key =~ ^date|status|reason|exit_status$ ]]; then
-			continue
-		fi
-		value="${LAST_TEST_RUN["$key"]}"
-		echo "    ${key} ${value} ..."
-	done < <(printf '%s\n' "${!LAST_TEST_RUN[@]}" | sort)
-}
-
 _output_status() {
 	local test="$1"
 	local status="$2"
 
-	printf '%.40s' "$test ........................................"
+	printf '%-25s ... %15s' "$test" ''
+	if [[ -z $status ]]; then
+		echo
+		return
+	fi
+
 	echo -n " ["
 	if [[ -t 1 ]]; then
 		case "$status" in
@@ -117,6 +105,23 @@ _output_status() {
 		tput sgr0
 	fi
 	echo "]"
+}
+
+_output_last_test_run() {
+	if [[ -v TEST_DEV ]]; then
+		_output_status "$TEST_NAME => $(basename "$TEST_DEV")" ""
+	else
+		_output_status "$TEST_NAME" ""
+	fi
+
+	local key value
+	while IFS= read -r key; do
+		if [[ $key =~ ^date|status|reason|exit_status$ ]]; then
+			continue
+		fi
+		value="${LAST_TEST_RUN["$key"]}"
+		echo "    ${key} ${value} ..."
+	done < <(printf '%s\n' "${!LAST_TEST_RUN[@]}" | sort)
 }
 
 _output_test_run() {
