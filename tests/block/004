@@ -26,9 +26,14 @@ prepare() {
 test_device() {
 	echo "Running ${TEST_NAME}"
 
-	fio --bs=4k --rw=randwrite --norandommap --fsync=1 \
-		--number_ios=256 --numjobs=64 --name=flushes \
-		--filename="$TEST_DEV" >>"$FULL"
+	fio --output-format=terse --bs=4k --rw=randwrite --norandommap \
+		--fsync=1 --number_ios=256 --numjobs=64 --name=flushes \
+		--group_reporting=1 --filename="$TEST_DEV" >>"$FULL"
+
+	TERSE_VER=$(cat $FULL | cut -d ';' -f1)
+	if [[ "$TERSE_VER" -eq "3" ]]; then
+		TEST_RUN[iops]=$(cat $FULL | cut -d ';' -f49)
+	fi
 
 	echo "Test complete"
 }

@@ -30,9 +30,14 @@ prepare_device() {
 test_device() {
 	echo "Running ${TEST_NAME}"
 
-	fio --bsrange=4k-4g --rw=randtrim --norandommap \
-		--name=discards --filename="$TEST_DEV" --runtime=10s \
-		--time_based=1 >>"$FULL"
+	fio --output-format=terse --terse-version=4 --bsrange=4k-4g \
+		--rw=randtrim --norandommap --name=discards \
+		--filename="$TEST_DEV" --runtime=10s --time_based=1 >>"$FULL"
+
+	TERSE_VER=$(cat $FULL | cut -d ';' -f1)
+	if [[ "$TERSE_VER" -eq "4" ]]; then
+		TEST_RUN[iops]=$(cat $FULL | cut -d ';' -f90)
+	fi
 
 	echo "Test complete"
 }
