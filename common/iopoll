@@ -1,0 +1,63 @@
+#!/bin/bash
+#
+# I/O polling helper functions.
+#
+# Copyright (C) 2017 Jens Axboe
+#
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+_have_fio_with_poll() {
+	if ! _have_fio; then
+		return 1
+	fi
+	if ! fio --parse-only --name=test --ioengine=pvsync2 --hipri=1 1>/dev/null 2>&1; then
+		SKIP_REASON="Fio does not support polling"
+		return 1
+	fi
+	return 0
+}
+
+_test_dev_supports_io_poll() {
+	local old_io_poll="$(cat "${TEST_DEV_SYSFS}/queue/io_poll" 2>/dev/null)"
+	if [[ $? -ne 0 ]]; then
+		SKIP_REASON="kernel does not support polling"
+		return 1
+	fi
+	if ! echo "$old_io_poll" >"${TEST_DEV_SYSFS}/queue/io_poll" 2>/dev/null; then
+		SKIP_REASON="$TEST_DEV does not support polling"
+		return 1
+	fi
+	return 0
+}
+
+_test_dev_supports_io_poll_delay() {
+	local old_io_poll_delay="$(cat "${TEST_DEV_SYSFS}/queue/io_poll_delay" 2>/dev/null)"
+	if [[ $? -ne 0 ]]; then
+		SKIP_REASON="kernel does not support hybrid polling"
+		return 1
+	fi
+	if ! echo "$old_io_poll_delay" >"${TEST_DEV_SYSFS}/queue/io_poll_delay" 2>/dev/null; then
+		SKIP_REASON="$TEST_DEV does not support hybrid polling"
+		return 1
+	fi
+	return 0
+}
+
+_test_dev_set_io_poll() {
+	echo "$1" >"${TEST_DEV_SYSFS}/queue/io_poll"
+}
+
+_test_dev_set_io_poll_delay() {
+	echo "$1" >"${TEST_DEV_SYSFS}/queue/io_poll_delay"
+}

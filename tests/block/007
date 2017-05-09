@@ -1,0 +1,61 @@
+#!/bin/bash
+#
+# Test if IO polling works, both classic and hybrid mode
+#
+# Copyright (C) 2017 Jens Axboe
+#
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+. common/iopoll
+
+TEST_GROUPS=(block auto poll)
+
+prepare() {
+	_have_fio_with_poll
+}
+
+prepare_device() {
+	_test_dev_supports_io_poll && _test_dev_supports_io_poll_delay
+}
+
+run_fio_job() {
+	if _test_dev_is_rotational; then
+		size="32m"
+	else
+		size="1g"
+	fi
+
+	fio --bs=4k --rw=randread --norandommap --name=reads \
+		--filename="$TEST_DEV" --size="$size" --direct=1 \
+		--ioengine=pvsync2 --hipri=1 >>"$FULL"
+}
+
+test_device() {
+	echo "Running ${TEST_NAME}"
+
+	# turn on polling, switch to classic, run job
+	_test_dev_set_io_poll 1
+	_test_dev_set_io_poll_delay -1
+	run_fio_job
+
+	# switch to auto-hybrid polling, run job
+	_test_dev_set_io_poll_delay 0
+	run_fio_job
+
+	# switch to explicit delay polling, run job
+	_test_dev_set_io_poll_delay 4
+	run_fio_job
+
+	echo "Test complete"
+}
