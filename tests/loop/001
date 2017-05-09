@@ -20,15 +20,18 @@
 
 TEST_GROUPS=(loop auto quick)
 
+prepare() {
+	_have_program parted
+}
+
 test() {
 	echo "Running ${TEST_NAME}"
 
-	truncate -s 1M "$TMPDIR/img"
-	cat <<- EOF | sfdisk "$TMPDIR/img" >>"$FULL"
-	label: dos
-	start=1, size=1000, type=83
-	start=1001, size=1000, type=83
-	EOF
+	truncate -s 1G "$TMPDIR/img"
+	parted "$TMPDIR/img" --script \
+		mklabel msdos \
+		mkpart primary 0% 50% \
+		mkpart primary 50% 100%
 
 	loop_device="$(losetup -P -f --show "$TMPDIR/img")"
 	lsblk -ln "$loop_device" | wc -l
