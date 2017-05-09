@@ -75,5 +75,5 @@ _test_dev_is_rotational() {
 		SKIP_REASON="$TEST_DEV is not rotational"
 		return 1
 	fi
-	return 1
+	return 0
 }
