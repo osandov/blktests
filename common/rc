@@ -1,6 +1,6 @@
 #!/bin/bash
 #
-# Common helper functions.
+# Default helper functions.
 #
 # Copyright (C) 2017 Omar Sandoval
 #
@@ -16,6 +16,9 @@
 #
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+# Include fio helpers by default.
+. common/fio
 
 _warning() {
 	echo "$0: $@" >&2
@@ -50,17 +53,6 @@ _have_program() {
 		SKIP_REASON="$1 is not available"
 		return 1
 	fi
-}
-
-_have_fio() {
-	if ! _have_program fio; then
-		return 1
-	fi
-	if ! fio --parse-only --terse-version=4 >/dev/null 2>&1; then
-		SKIP_REASON="Fio version too old (does not support --terse-version=4)"
-		return 1
-	fi
-	return 0
 }
 
 _have_loop() {

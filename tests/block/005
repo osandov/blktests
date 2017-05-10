@@ -35,9 +35,9 @@ test_device() {
 	fi
 
 	# start fio job
-	fio --output-format=terse --bs=4k --rw=randread --norandommap \
-		 --name=reads --filename="$TEST_DEV" --size="$size" \
-		--group_reporting=1 --numjobs=8 --direct=1 >>"$FULL" &
+	_fio_perf_run --bs=4k --rw=randread --norandommap \
+		--name=reads --filename="$TEST_DEV" --size="$size" \
+		--numjobs=8 --direct=1 &
 
 	# while job is running, switch between schedulers
 	while kill -0 $! 2>/dev/null; do
@@ -46,10 +46,8 @@ test_device() {
 		sleep .2
 	done
 
-	TERSE_VER=$(cat $FULL | cut -d ';' -f1)
-	if [[ "$TERSE_VER" -eq "3" ]]; then
-		TEST_RUN[iops]=$(cat $FULL | cut -d ';' -f8)
-	fi
+	FIO_PERF_FIELDS=("read iops")
+	_fio_perf_report
 
 	echo "Test complete"
 }

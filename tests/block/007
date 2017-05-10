@@ -36,46 +36,36 @@ run_fio_job() {
 		size="1g"
 	fi
 
-	fio --bs=4k --rw=randread --norandommap --name=reads \
+	_fio_perf --bs=4k --rw=randread --norandommap --name=reads \
 		--filename="$TEST_DEV" --size="$size" --direct=1 \
-		--ioengine=pvsync2 --hipri=1 >>"$FULL"
-
-	OUT=$(fio --output-format=terse --bs=4k --rw=randread --norandommap \
-		--name=reads --filename="$TEST_DEV" --size="$size" --direct=1 \
-		--ioengine=pvsync2 --hipri=1)
-	echo $OUT >> "$FULL"
-
-	TERSE_VER=$(echo $OUT | cut -d ';' -f1)
-	if [[ "$TERSE_VER" -eq "3" ]]; then
-		iops=$(echo $OUT | cut -d ';' -f8)
-	else
-		iops=0
-	fi
+		--ioengine=pvsync2 --hipri=1
 }
 
 test_device() {
 	echo "Running ${TEST_NAME}"
 
+	FIO_PERF_FIELDS=("read iops" "system cpu")
+
 	# no polling, run job
+	FIO_PERF_PREFIX="no poll "
 	_test_dev_set_io_poll 0
 	run_fio_job
-	TEST_RUN[iops]=$iops
 
 	# turn on polling, switch to classic, run job
+	FIO_PERF_PREFIX="classic poll "
 	_test_dev_set_io_poll 1
 	_test_dev_set_io_poll_delay -1
 	run_fio_job
-	TEST_RUN[poll iops]=$iops
 
 	# switch to auto-hybrid polling, run job
+	FIO_PERF_PREFIX="auto hybrid poll "
 	_test_dev_set_io_poll_delay 0
 	run_fio_job
-	TEST_RUN[hybrid poll iops]=$iops
 
 	# switch to explicit delay polling, run job
+	FIO_PERF_PREFIX="fixed hybrid poll "
 	_test_dev_set_io_poll_delay 4
 	run_fio_job
-	TEST_RUN[fixed poll iops]=$iops
 
 	echo "Test complete"
 }
