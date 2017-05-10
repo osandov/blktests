@@ -45,7 +45,7 @@ run_fio_job() {
 test_device() {
 	echo "Running ${TEST_NAME}"
 
-	FIO_PERF_FIELDS=("read iops" "system cpu")
+	FIO_PERF_FIELDS=("read iops" "read lat mean" "system cpu")
 
 	# no polling, run job
 	FIO_PERF_PREFIX="no poll "
