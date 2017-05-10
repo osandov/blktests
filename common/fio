@@ -150,13 +150,20 @@ FIO_TERSE_FIELDS=(
 # The possible fields are specified above. The optional $FIO_PERF_PREFIX
 # variable is prepended to the field name when reporting.
 _fio_perf() {
-	_fio_perf_run "$@"
+	_run_fio "$@"
 	_fio_perf_report
 }
 
-_fio_perf_run() {
-	fio --output="$TMPDIR/fio_perf" --output-format=terse --terse-version=4 \
-		--group_reporting=1 "$@"
+# Wrapper around fio that handles:
+#     - Recording perf results
+#     - $TIMEOUT
+# You should usually use this instead of calling fio directly.
+_run_fio() {
+	local args=(--output="$TMPDIR/fio_perf" --output-format=terse --terse-version=4 --group_reporting=1)
+	if [[ -v TIMEOUT ]]; then
+		args+=(--runtime="$TIMEOUT")
+	fi
+	fio "${args[@]}" "$@"
 }
 
 _fio_perf_report() {

@@ -18,6 +18,8 @@ Finally, there are a couple of basic groups:
   pass reliably.
 - The `quick` group is a subset of `auto` comprising tests that complete
   "quickly" (i.e., in ~30 seconds or less on reasonable hardware).
+- The `timed` group comprises tests that honor the configured test timeout (see
+  below)
 
 `./check` can execute individual tests or test groups, as well as exclude tests
 or test groups. See `./check -h`.
@@ -36,3 +38,14 @@ and will overwrite any data on these devices.
 ```sh
 TEST_DEVS=(/dev/nvme0n1 /dev/sdb)
 ```
+
+### Test Timeout
+
+Many tests can take a long time to run. By setting the `TIMEOUT` variable, you
+can limit the runtime of each test to a specific length (in seconds).
+
+```sh
+TIMEOUT=30
+```
+
+Note that only tests in the `timed` group honor the timeout.

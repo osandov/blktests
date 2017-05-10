@@ -20,7 +20,7 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-TEST_GROUPS=(block auto)
+TEST_GROUPS=(block auto timed)
 DESCRIPTION="run null-blk in blocking mode"
 
 prepare() {
@@ -30,19 +30,22 @@ prepare() {
 test() {
 	echo "Running ${TEST_NAME}"
 
+	_divide_timeout 2
+	FIO_PERF_FIELDS=("read iops")
+
 	modprobe -r null_blk
 	if ! modprobe null_blk queue_mode=2 submit_queues=2 blocking=1; then
 		return 1
 	fi
 
 	# run sync test
-	fio --bs=4k --ioengine=sync --rw=randread --norandommap --name=reads \
-		--filename=/dev/nullb0 --size=5g --direct=1 >> "$FULL"
+	_run_fio --bs=4k --ioengine=sync --rw=randread --norandommap --name=sync \
+		--filename=/dev/nullb0 --size=5g --direct=1
 
 	# run async test
-	fio --bs=4k --ioengine=sync --rw=randread --norandommap --name=reads \
-		--ioengine=libaio --iodepth=8 --numjobs=4 \
-		--filename=/dev/nullb0 --size=5g --direct=1 >> "$FULL"
+	_run_fio --bs=4k --ioengine=libaio --iodepth=8 --numjobs=4 \
+		--rw=randread --norandommap --name=async \
+		--filename=/dev/nullb0 --size=5g --direct=1
 
 	modprobe -r null_blk
 

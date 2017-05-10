@@ -17,7 +17,7 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-TEST_GROUPS=(block auto sched)
+TEST_GROUPS=(block auto timed sched)
 DESCRIPTION="switch schedulers while doing IO"
 
 prepare() {
@@ -36,7 +36,7 @@ test_device() {
 	fi
 
 	# start fio job
-	_fio_perf_run --bs=4k --rw=randread --norandommap \
+	_run_fio --bs=4k --rw=randread --norandommap \
 		--name=reads --filename="$TEST_DEV" --size="$size" \
 		--numjobs=8 --direct=1 &
 

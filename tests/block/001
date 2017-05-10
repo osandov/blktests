@@ -21,7 +21,7 @@
 
 . common/scsi_debug
 
-TEST_GROUPS=(block auto hotplug)
+TEST_GROUPS=(block auto timed hotplug)
 DESCRIPTION="stress device hotplugging"
 
 prepare() {
@@ -47,18 +47,24 @@ stress_scsi_debug() {
 		host="${target%%:*}"
 		scan="${target#*:}"
 		scan="${scan//:/ }"
-		for ((i = 0; i < 100; i++)); do
+		while [[ ! -e "$TMPDIR/stop" ]]; do
 			echo "${scan}" > "/sys/class/scsi_host/host${host}/scan"
 			echo 1 > "/sys/class/scsi_device/${target}/device/delete"
 		done
 		) &
 	done
+	sleep "$TIMEOUT"
+	touch "$TMPDIR/stop"
 	wait
+	rm -f "$TMPDIR/stop"
 	modprobe -r scsi_debug
 }
 
 test() {
 	echo "Running ${TEST_NAME}"
+
+	: ${TIMEOUT:=30}
+	_divide_timeout 2
 
 	echo "Stressing sd"
 	stress_scsi_debug add_host=4 num_tgts=1 ptype=0

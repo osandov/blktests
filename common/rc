@@ -29,6 +29,15 @@ _error() {
 	exit 1
 }
 
+# If a test runs multiple "subtests", then each subtest should typically run
+# for TIMEOUT / number of subtests.
+_divide_timeout() {
+	local num_tests="$1"
+	if [[ -v TIMEOUT ]]; then
+		((TIMEOUT = (TIMEOUT + num_tests - 1) / num_tests))
+	fi
+}
+
 _have_root() {
 	if [[ $EUID -ne 0 ]]; then
 		SKIP_REASON="not running as root"

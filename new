@@ -156,9 +156,10 @@ cat << EOF > "tests/${test_name}"
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 # TODO: if this test shouldn't be run by default, remove the "auto" group. If
-# this test runs quickly, add it to the "quick" group. Add any other groups
-# describing what functionality this tests (e.g., "discard" or "hotplug"). Feel
-# free to create new groups if it makes sense.
+# this test runs quickly, add it to the "quick" group. If this test honors the
+# configured \$TIMEOUT, add it to the "timed" group.
+# Add any other groups describing what functionality this tests (e.g.,
+# "discard" or "hotplug"). Feel free to create new groups if it makes sense.
 TEST_GROUPS=($category auto)
 # TODO: fill in a very brief description of what this test does. The
 # description should complete the sentence "This test will...". For example,

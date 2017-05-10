@@ -19,7 +19,7 @@
 
 . common/iopoll
 
-TEST_GROUPS=(block auto poll)
+TEST_GROUPS=(block auto timed poll)
 DESCRIPTION="test classic and hybrid IO polling"
 
 prepare() {
@@ -45,6 +45,7 @@ run_fio_job() {
 test_device() {
 	echo "Running ${TEST_NAME}"
 
+	_divide_timeout 4
 	FIO_PERF_FIELDS=("read iops" "read lat mean" "system cpu")
 
 	# no polling, run job
