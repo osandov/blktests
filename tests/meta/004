@@ -18,6 +18,7 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 TEST_GROUPS=(meta)
+DESCRIPTION="exit with non-zero status"
 
 test_device() {
 	echo "Running ${TEST_NAME}"

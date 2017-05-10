@@ -18,6 +18,7 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 TEST_GROUPS=(meta)
+DESCRIPTION="produce bad output"
 
 test() {
 	echo '¯\_(ツ)_/¯'

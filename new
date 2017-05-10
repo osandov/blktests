@@ -128,8 +128,8 @@ done
 cat << EOF > "tests/${test_name}"
 #!/bin/bash
 #
-# TODO: provide a brief description of the test here, i.e., what it tests and
-# how. If this is a regression test for a patch, reference the patch title:
+# TODO: provide a description of the test here, i.e., what it tests and how. If
+# this is a regression test for a patch, reference the patch title:
 #
 # Regression test for patch "blk-stat: fix blk_stat_sum() if all samples are
 # batched".
@@ -160,6 +160,10 @@ cat << EOF > "tests/${test_name}"
 # describing what functionality this tests (e.g., "discard" or "hotplug"). Feel
 # free to create new groups if it makes sense.
 TEST_GROUPS=($category auto)
+# TODO: fill in a very brief description of what this test does. The
+# description should complete the sentence "This test will...". For example,
+# "run a mixed read/write workload" would be a good description.
+DESCRIPTION=""
 
 # TODO: dmesg is checked after each test run by default. You can suppress this
 # by defining:

@@ -18,6 +18,7 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 TEST_GROUPS=(block auto flush)
+DESCRIPTION="run lots of flushes"
 
 prepare() {
 	_have_fio

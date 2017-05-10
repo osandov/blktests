@@ -18,6 +18,7 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 TEST_GROUPS=(meta)
+DESCRIPTION="produce lots of bad output"
 
 test() {
 	for ((i = 1; i <= 100; i++)); do

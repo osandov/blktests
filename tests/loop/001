@@ -19,6 +19,7 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 TEST_GROUPS=(loop auto quick)
+DESCRIPTION="scan loop device partitions"
 
 prepare() {
 	_have_program parted

@@ -80,7 +80,7 @@ _output_status() {
 	local test="$1"
 	local status="$2"
 
-	printf '%-25s ... %15s' "$test" ''
+	printf '%-60s' "$test ($DESCRIPTION)"
 	if [[ -z $status ]]; then
 		echo
 		return
@@ -293,6 +293,11 @@ _run_test() {
 
 	if [[ ! -v TEST_GROUPS ]]; then
 		_warning "${TEST_NAME} does not define TEST_GROUPS"
+		return
+	fi
+
+	if [[ -z $DESCRIPTION ]]; then
+		_warning "${TEST_NAME} does not define DESCRIPTION"
 		return
 	fi
 

@@ -20,6 +20,7 @@
 . common/iopoll
 
 TEST_GROUPS=(block auto poll)
+DESCRIPTION="test classic and hybrid IO polling"
 
 prepare() {
 	_have_fio_with_poll

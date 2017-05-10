@@ -21,6 +21,7 @@
 . common/scsi_debug
 
 TEST_GROUPS=(block auto quick blktrace hotplug)
+DESCRIPTION="remove a device while running blktrace"
 
 prepare() {
 	_have_blktrace && _have_scsi_debug

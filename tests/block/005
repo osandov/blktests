@@ -18,6 +18,7 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 TEST_GROUPS=(block auto sched)
+DESCRIPTION="switch schedulers while doing IO"
 
 prepare() {
 	_have_fio

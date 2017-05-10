@@ -22,6 +22,7 @@
 . common/scsi_debug
 
 TEST_GROUPS=(block auto hotplug)
+DESCRIPTION="stress device hotplugging"
 
 prepare() {
 	_have_scsi_debug

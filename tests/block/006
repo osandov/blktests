@@ -21,8 +21,7 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 TEST_GROUPS=(block auto)
-
-CHECK_DMESG=1
+DESCRIPTION="run null-blk in blocking mode"
 
 prepare() {
 	_have_module null_blk
