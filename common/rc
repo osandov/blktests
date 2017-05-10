@@ -53,7 +53,14 @@ _have_program() {
 }
 
 _have_fio() {
-	_have_program fio
+	if ! _have_program fio; then
+		return 1
+	fi
+	if ! fio --parse-only --terse-version=4 >/dev/null 2>&1; then
+		SKIP_REASON="Fio version too old (does not support --terse-version=4)"
+		return 1
+	fi
+	return 0
 }
 
 _have_loop() {
