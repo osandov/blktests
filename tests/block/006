@@ -1,0 +1,51 @@
+#!/bin/bash
+#
+# Test if a block driver with BLK_MQ_F_BLOCKING set works correctly.
+#
+# Regression test for commit bf4907c05e61 ("blk-mq: fix schedule-under-preempt
+# or blocking drivers")
+#
+# Copyright (C) 2017 Jens Axboe
+#
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+TEST_GROUPS=(block auto)
+
+CHECK_DMESG=1
+
+prepare() {
+	_have_module null_blk
+}
+
+test() {
+	echo "Running ${TEST_NAME}"
+
+	modprobe -r null_blk
+	if ! modprobe null_blk queue_mode=2 submit_queues=2 blocking=1; then
+		return 1
+	fi
+
+	# run sync test
+	fio --bs=4k --ioengine=sync --rw=randread --norandommap --name=reads \
+		--filename=/dev/nullb0 --size=5g --direct=1 >> "$FULL"
+
+	# run async test
+	fio --bs=4k --ioengine=sync --rw=randread --norandommap --name=reads \
+		--ioengine=libaio --iodepth=8 --numjobs=4 \
+		--filename=/dev/nullb0 --size=5g --direct=1 >> "$FULL"
+
+	modprobe -r null_blk
+
+	echo "Test complete"
+}
