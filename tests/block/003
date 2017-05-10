@@ -33,7 +33,7 @@ test_device() {
 
 	FIO_PERF_FIELDS=("trim iops")
 	_fio_perf --bsrange=4k-4g --rw=randtrim --norandommap --name=discards \
-		--filename="$TEST_DEV" --runtime=10s --time_based=1
+		--filename="$TEST_DEV" --number_ios=200k
 
 	echo "Test complete"
 }
