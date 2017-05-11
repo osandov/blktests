@@ -18,10 +18,10 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-TEST_GROUPS=(loop auto quick)
 DESCRIPTION="scan loop device partitions"
+QUICK=1
 
-prepare() {
+requires() {
 	_have_program parted
 }
 

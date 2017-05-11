@@ -17,19 +17,17 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-. common/rc
-
-prepare() {
-	if [[ -v META_PREPARE_SHOULD_FAIL ]]; then
-		SKIP_REASON="META_PREPARE_SHOULD_FAIL"
+group_requires() {
+	if [[ -v META_REQUIRES_SKIP ]]; then
+		SKIP_REASON="META_REQUIRES_SKIP was set"
 		return 1
 	fi
 	return 0
 }
 
-prepare_device() {
-	if [[ -v META_PREPARE_DEVICE_SHOULD_FAIL ]]; then
-		SKIP_REASON="META_PREPARE_DEVICE_SHOULD_FAIL"
+group_device_requires() {
+	if [[ -v META_DEVICE_REQUIRES_SKIP ]]; then
+		SKIP_REASON="META_DEVICE_REQUIRES_SKIP was set"
 		return 1
 	fi
 	return 0

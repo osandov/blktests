@@ -17,6 +17,83 @@
 
 . common/rc
 
+_found_test() {
+	local test_name="$1"
+
+	unset DESCRIPTION requires device_requires test test_device
+
+	if ! . "tests/${test_name}"; then
+		return 1
+	fi
+
+	if [[ -z $DESCRIPTION ]]; then
+		_warning "${test_name} does not define DESCRIPTION"
+		return 1
+	fi
+
+	if declare -fF test >/dev/null && declare -fF test_device >/dev/null; then
+		_warning "${test_name} defines both test() and test_device()"
+		return 1
+	fi
+
+	if ! declare -fF test >/dev/null && ! declare -fF test_device >/dev/null; then
+		_warning "${test_name} does not define test() or test_device()"
+		return 1
+	fi
+
+	if declare -fF device_requires >/dev/null && ! declare -fF test_device >/dev/null; then
+		_warning "${test_name} defines device_requires() but not test_device()"
+		return 1
+	fi
+
+	printf '%s\0' "$test_name"
+}
+
+_found_group() {
+	local group="$1"
+
+	local test_path
+	while IFS= read -r -d '' test_path; do
+		_found_test "${test_path#tests/}"
+	done < <(find "tests/$group" -type f -name '[0-9][0-9][0-9]' -print0)
+}
+
+_find_tests() {
+	if [[ $# -eq 0 ]]; then
+		# No filters given, run all tests except for the meta group.
+		local group_path
+		while IFS= read -r -d '' group_path; do
+			if [[ $group_path != tests/meta ]]; then
+				_found_group "${group_path#tests/}"
+			fi
+		done < <(find tests -mindepth 2 -type f -name group -printf '%h\0')
+	else
+		local filter
+		for filter in "$@"; do
+			# A filter is bad if it:
+			#     - Is an absolute path
+			#     - Is a relative path containing ".."
+			if [[ $filter =~ ^/|(^|/)\.\.(/|$) ]]; then
+				_warning "bad filter ${filter}"
+				continue
+			fi
+			# Remove leading and internal "." components.
+			filter="${filter##+(./)}"
+			filter="${filter//\/+(.\/)/\/}"
+			# Remove leading "tests/"
+			filter="${filter#tests/}"
+
+			if [[ -d tests/$filter ]]; then
+				_found_group "$filter"
+			elif [[ -f tests/$filter ]]; then
+				_found_test "$filter"
+			else
+				_warning "no group or test named ${filter}"
+			fi
+		done
+	fi
+}
+
 _check_dmesg() {
 	local dmesg_marker="$1"
 	local seqres="${RESULTS_DIR}/${TEST_NAME}"
@@ -80,7 +157,11 @@ _output_status() {
 	local test="$1"
 	local status="$2"
 
-	printf '%-60s' "$test ($DESCRIPTION)"
+	if [[ -v DESCRIPTION ]]; then
+		printf '%-60s' "$test ($DESCRIPTION)"
+	else
+		printf '%-60s' "$test"
+	fi
 	if [[ -z $status ]]; then
 		echo
 		return
@@ -105,6 +186,11 @@ _output_status() {
 		tput sgr0
 	fi
 	echo "]"
+}
+
+_output_notrun() {
+	_output_status "$1" "not run"
+	echo "    $SKIP_REASON"
 }
 
 _output_last_test_run() {
@@ -188,7 +274,7 @@ _call_test() {
 	fi
 
 	trap _cleanup EXIT
-	TMPDIR="$(mktemp --tmpdir -d "blktests.${category}.${seq}.XXX")"
+	TMPDIR="$(mktemp --tmpdir -d "blktests.${TEST_NAME//\//.}.XXX")"
 	if [[ $? -ne 0 ]]; then
 		return
 	fi
@@ -254,90 +340,39 @@ _call_test() {
 	fi
 }
 
-_should_run_test() {
-	local test
-	local group
-	local include_group
-	local exclude_group
-
-	if [[ -n ${TESTS[$TEST_NAME]} ]]; then
-		return 0
-	fi
-
-	local ret=1
-	for group in "${TEST_GROUPS[@]}"; do
-		if [[ -n ${INCLUDE_GROUPS[$group]} ]]; then
-			ret=0
-		fi
-		if [[ -n ${EXCLUDE_GROUPS[$group]} ]]; then
-			return 1
-		fi
-	done
-
-	return $ret
-}
-
-_output_notrun() {
-	_output_status "$1" "not run"
-	echo "    $SKIP_REASON"
-}
-
 _run_test() {
 	TEST_NAME="$1"
 	CHECK_DMESG=1
 	DMESG_FILTER=cat
 
-	if ! . "tests/${TEST_NAME}"; then
-		return
-	fi
-
-	if [[ ! -v TEST_GROUPS ]]; then
-		_warning "${TEST_NAME} does not define TEST_GROUPS"
-		return
-	fi
-
-	if [[ -z $DESCRIPTION ]]; then
-		_warning "${TEST_NAME} does not define DESCRIPTION"
-		return
-	fi
-
-	if declare -fF test >/dev/null && declare -fF test_device >/dev/null; then
-		_warning "${TEST_NAME} defines both test() and test_device()"
-		return
-	fi
-
-	if ! declare -fF test >/dev/null && ! declare -fF test_device >/dev/null; then
-		_warning "${TEST_NAME} does not define test() or test_device()"
-		return
-	fi
-
-	if ! _should_run_test; then
-		return
-	fi
+	. "tests/${TEST_NAME}"
 
 	if declare -fF test >/dev/null; then
-		if declare -fF prepare >/dev/null && ! prepare; then
+		if declare -fF requires >/dev/null && ! requires; then
 			_output_notrun "$TEST_NAME"
-			return
+			return 0
 		fi
 
 		RESULTS_DIR="results/nodev"
 		_call_test test
 	else
-		if declare -fF prepare >/dev/null && ! prepare; then
-			_output_notrun "$TEST_NAME => *"
-			return
+		if [[ ${#TEST_DEVS[@]} -eq 0 ]]; then
+			return 0
+		fi
+
+		if declare -fF requires >/dev/null && ! requires; then
+			_output_notrun "$TEST_NAME"
+			return 0
 		fi
 
 		local ret=0
-		for TEST_DEV in "${CATEGORY_TEST_DEVS[@]}"; do
+		for TEST_DEV in "${TEST_DEVS[@]}"; do
 			TEST_DEV_SYSFS="${TEST_DEV_SYSFS_DIRS["$TEST_DEV"]}"
-			local test_dev="$(basename "$TEST_DEV")"
-			if declare -fF prepare_device >/dev/null && ! prepare_device; then
-				_output_notrun "$TEST_NAME => $test_dev"
-				continue
+			if declare -fF device_requires >/dev/null && ! device_requires; then
+				_output_notrun "$TEST_NAME => $(basename "$TEST_DEV")"
+				return 0
 			fi
-			RESULTS_DIR="results/${test_dev}"
+			RESULTS_DIR="results/$(basename "$TEST_DEV")"
 			if ! _call_test test_device; then
 				ret=1
 			fi
@@ -346,57 +381,43 @@ _run_test() {
 	fi
 }
 
-_run_category() {
-	local category="$1"
+_run_group() {
+	local tests=("$@")
 
-	# Most of this script is written defensively against whitespace in the
-	# test name, but we can't handle it in the test logs.
-	if [[ $category =~ [[:space:]] ]]; then
-		_error "category name \"${category}\" contains whitespace"
-		return
+	if [[ ${#tests} -eq 0 ]]; then
+		return 0
 	fi
 
-	if ! . "tests/${category}/category"; then
-		return
+	local group="${tests[0]%/*}"
+
+	. "tests/${group}/group"
+
+	if declare -fF group_requires >/dev/null && ! group_requires; then
+		_output_notrun "${group}/***"
+		return 0
 	fi
 
-	if ! declare -fF prepare >/dev/null; then
-		_warning "${category} does not define prepare()"
-		return
+	if declare -fF group_device_requires >/dev/null; then
+		local i
+		for i in "${!TEST_DEVS[@]}"; do
+			TEST_DEV="${TEST_DEVS[$i]}"
+			if ! group_device_requires; then
+				_output_notrun "${group}/*** => $(basename "$TEST_DEV")"
+				unset TEST_DEVS[$i]
+			fi
+		done
+		# Fix the array indices.
+		TEST_DEVS=("${TEST_DEVS[@]}")
+		unset TEST_DEV
 	fi
-
-	if ! declare -fF prepare_device >/dev/null; then
-		_warning "${category} does not define prepare_device()"
-		return
-	fi
-
-	if ! prepare; then
-		_output_notrun "$category/***"
-		return
-	fi
-
-	declare -a CATEGORY_TEST_DEVS
-	local test_dev
-	for test_dev in "${TEST_DEVS[@]}"; do
-		if prepare_device; then
-			CATEGORY_TEST_DEVS+=("$test_dev")
-		fi
-	done
-	if [[ ${#CATEGORY_TEST_DEVS} -eq 0 ]]; then
-		_output_notrun "$category/***"
-		return
-	fi
-
-	unset prepare prepare_device
 
 	local ret=0
-	local seq
-	while IFS= read -r -d '' seq; do
-		if ! ( _run_test "${category}/${seq}" ); then
+	local test_name
+	for test_name in "${tests[@]}"; do
+		if ! ( _run_test "$test_name" ); then
 			ret=1
 		fi
-	done < <(find "tests/${category}" -mindepth 1 -maxdepth 1 -type f \
-		 -name '[0-9][0-9][0-9]' -printf '%P\0' | sort -z)
+	done
 	return $ret
 }
 
@@ -424,9 +445,8 @@ _find_sysfs_dir() {
 }
 
 declare -A TEST_DEV_SYSFS_DIRS
-_check_test_devs() {
+_check() {
 	local test_dev
-
 	for test_dev in "${TEST_DEVS[@]}"; do
 		if [[ ! -e $test_dev ]]; then
 			_error "${test_dev} does not exist"
@@ -440,42 +460,36 @@ _check_test_devs() {
 		fi
 		TEST_DEV_SYSFS_DIRS["$test_dev"]="$sysfs_dir"
 	done
-}
 
-_run_tests() {
+	local test_name group prev_group
+	local tests=()
 	local ret=0
-	local category
-	while IFS= read -r -d '' category; do
-		if ! ( _run_category "${category}" ); then
-			ret=1
+	while IFS= read -r -d '' test_name; do
+		group="${test_name%/*}"
+		if [[ $group != $prev_group ]]; then
+			prev_group="$group"
+			if ! ( _run_group "${tests[@]}" ); then
+				ret=1
+			fi
 		fi
-	done < <(find tests -mindepth 1 -maxdepth 1 -type d -printf '%P\0' | sort -z)
+		tests+=("$test_name")
+	done < <(_find_tests "$@" | sort -zu)
+
+	if ! ( _run_group "${tests[@]}" ); then
+		ret=1
+	fi
+
 	return $ret
 }
 
 usage () {
 	USAGE_STRING="\
-usage: $0 [-g group] [-x exclude_group] [test...]
-       $0 -h
+usage: $0 [options] [group-or-test...]
 
-Test groups:
-  -g group    run tests belonging to this group; may be specified multiple
-              times
-  -x group    don't run tests belonging to this group; takes precedence over
-              -g, may be specified multiple times
+Run blktests
 
 Miscellaneous:
-  -h    display this help message and exit
-
-Examples:
-Run the default set of tests, i.e., the \"auto\" group:
-    ./check
-Run all NVMe and SCSI tests except for those that involve discard:
-    ./check -g nvme -g scsi -x discard
-Run two specific tests:
-    ./check block/001 block/002
-Run a specific test in addition to the default set of tests:
-    ./check -g auto block/003"
+  -h    display this help message and exit"
 
 	case "$1" in
 		out)
@@ -489,44 +503,25 @@ Run a specific test in addition to the default set of tests:
 	esac
 }
 
-declare -A INCLUDE_GROUPS
-declare -A EXCLUDE_GROUPS
-declare -A TESTS
-
-while getopts "g:x:h" OPT; do
+while getopts "h" OPT; do
 	case "$OPT" in
-		g)
-			INCLUDE_GROUPS["$OPTARG"]=1
-			;;
-		x)
-			EXCLUDE_GROUPS["$OPTARG"]=1
-			;;
 		h)
-			usage out;
+			usage out
 			;;
 		*)
-			usage err;
+			usage err
 			;;
 	esac
 done
 
 shift $((OPTIND - 1))
 
-for test in "$@"; do
-	TESTS["$test"]=1
-done
-
-if [[ ${#TESTS[@]} -eq 0 && ${#INCLUDE_GROUPS[@]} -eq 0 ]]; then
-	INCLUDE_GROUPS[auto]=1
-fi
-
-if ! . config; then
-	exit 1
+if [[ -r config ]]; then
+	. config
 fi
 
 if [[ ! -v TEST_DEVS ]]; then
-	_error "\$TEST_DEVS not defined in ./config"
+	TEST_DEVS=()
 fi
 
-_check_test_devs
-_run_tests
+_check "$@"

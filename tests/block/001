@@ -21,10 +21,10 @@
 
 . common/scsi_debug
 
-TEST_GROUPS=(block auto timed hotplug)
 DESCRIPTION="stress device hotplugging"
+TIMED=1
 
-prepare() {
+requires() {
 	_have_scsi_debug
 }
 

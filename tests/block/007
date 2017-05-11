@@ -19,14 +19,14 @@
 
 . common/iopoll
 
-TEST_GROUPS=(block auto timed poll)
 DESCRIPTION="test classic and hybrid IO polling"
+TIMED=1
 
-prepare() {
+requires() {
 	_have_fio_with_poll
 }
 
-prepare_device() {
+device_requires() {
 	_test_dev_supports_io_poll && _test_dev_supports_io_poll_delay
 }
 

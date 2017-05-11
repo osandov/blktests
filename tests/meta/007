@@ -1,6 +1,6 @@
 #!/bin/bash
 #
-# Test prepare().
+# Test requires().
 #
 # Copyright (C) 2017 Omar Sandoval
 #
@@ -17,10 +17,9 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-TEST_GROUPS=(meta)
-DESCRIPTION="skip in prepare()"
+DESCRIPTION="skip in requires()"
 
-prepare() {
+requires() {
 	SKIP_REASON="(╯°□°)╯︵ ┻━┻"
 	return 1
 }

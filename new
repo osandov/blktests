@@ -42,32 +42,32 @@ prompt_yes_no() {
 	fi
 }
 
-echo "Available test categories:"
-while IFS= read -r -d '' category; do
-	if [[ $category != meta ]]; then
-		echo "    ${category}"
+echo "Available test groups:"
+while IFS= read -r -d '' group; do
+	if [[ $group != meta ]]; then
+		echo "    ${group}"
 	fi
 done < <(find tests -mindepth 1 -maxdepth 1 -type d -printf '%P\0')
 
-read -r -p "Category for new test (pick one of the above or create a new one): " category
+read -r -p "Category for new test (pick one of the above or create a new one): " group
 
-if [[ -z $category ]]; then
+if [[ -z $group ]]; then
 	exit 1
 fi
 
-if [[ $category =~ [[:space:]] ]]; then
-	_error "category name must not contain whitespace"
+if [[ $group =~ [[:space:]/] ]]; then
+	_error 'group name must not contain whitespace or "/"'
 fi
 
-if [[ ! -e tests/${category} ]]; then
+if [[ ! -e tests/${group} ]]; then
 	if ! prompt_yes_no "Category does not exist; create it?"; then
 		exit 1
 	fi
-	mkdir -p "tests/${category}"
-	cat << EOF > "tests/${category}/category"
+	mkdir -p "tests/${group}"
+	cat << EOF > "tests/${group}/group"
 #!/bin/bash
 #
-# TODO: provide a brief description of the category here.
+# TODO: provide a brief description of the group here.
 #
 # Copyright (C) $(date +%Y) TODO YOUR NAME HERE
 #
@@ -84,42 +84,46 @@ if [[ ! -e tests/${category} ]]; then
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-# TODO: source any more common helpers needed for this category script.
-# Anything sourced here will also be available in the test scripts.
-# Additionally, any functions defined here (except for prepare() and
-# prepare_device()) will also be available in the test scripts.
-. common/rc
+# TODO: source any common helpers needed for this group. Anything sourced here
+# will also be available in the test scripts. Additionally, any functions
+# defined here will also be available in the test scripts. Note that common/rc
+# and common/fio are automatically sourced for all tests.
+# . common/foo
 
-# TODO: prepare() should check whether tests in this category can be run. If
-# so, it should return 0. Otherwise, it should return non-zero and set the
-# \$SKIP_REASON variable. Usually, prepare() just needs to check that any
-# necessary programs and kernel features are available using the _have_foo
-# helpers. If prepare() returns non-zero, all tests in this category will be
-# skipped.
-prepare() {
+# TODO: if this test group has any extra requirements, it should define a
+# group_requires() function. If tests in this group can be run,
+# group_requires() should return 0. Otherwise, it should return non-zero and
+# set the \$SKIP_REASON variable.
+#
+# Usually, group_requires() just needs to check that any necessary programs and
+# kernel features are available using the _have_foo helpers. If
+# group_requires() returns non-zero, all tests in this group will be skipped.
+group_requires() {
 	_have_root
 }
 
-# TODO: prepare_device() should check whether tests in this category can be run
-# on the given test device. \$TEST_DEV is the full path of the block device
-# (e.g., /dev/nvme0n1 or /dev/sda1), and \$TEST_DEV_SYSFS is the sysfs path of
-# the disk (not the partition, e.g., /sys/block/nvme0n1 or /sys/block/sda). If
-# tests in this category can be run on the test device, it should return zero.
-# Otherwise, it should return non-zero and set the \$SKIP_REASON variable.
-# Usually, prepare_device() just needs to check that the test device is the
-# right type of hardware or supports any necessary features using the
-# _test_dev_foo helpers. Tests in this category will only be run on devices for
-# which prepare_device() returns zero.
-prepare_device() {
-	return 0
-}
+# TODO: if this test group has extra requirements for what devices it can be
+# run on, it should define a group_device_requires() function. If tests in this
+# group can be run on the test device, it should return zero. Otherwise, it
+# should return non-zero and set the \$SKIP_REASON variable. \$TEST_DEV is the
+# full path of the block device (e.g., /dev/nvme0n1 or /dev/sda1), and
+# \$TEST_DEV_SYSFS is the sysfs path of the disk (not the partition, e.g.,
+# /sys/block/nvme0n1 or /sys/block/sda).
+#
+# Usually, group_device_requires() just needs to check that the test device is
+# the right type of hardware or supports any necessary features using the
+# _test_dev_foo helpers. If group_device_requires() returns non-zero, all tests
+# in this group will be skipped on that device.
+# group_device_requires() {
+# 	_test_dev_is_foo && _test_dev_supports_bar
+# }
 EOF
-	echo "Created tests/${category}/category"
+	echo "Created tests/${group}/group"
 fi
 
 for ((i = 1; ; i++)); do
 	seq="$(printf "%03d" $i)"
-	test_name="${category}/${seq}"
+	test_name="${group}/${seq}"
 	if [[ ! -e tests/${test_name} ]]; then
 		break
 	fi
@@ -155,16 +159,17 @@ cat << EOF > "tests/${test_name}"
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-# TODO: if this test shouldn't be run by default, remove the "auto" group. If
-# this test runs quickly, add it to the "quick" group. If this test honors the
-# configured \$TIMEOUT, add it to the "timed" group.
-# Add any other groups describing what functionality this tests (e.g.,
-# "discard" or "hotplug"). Feel free to create new groups if it makes sense.
-TEST_GROUPS=($category auto)
 # TODO: fill in a very brief description of what this test does. The
 # description should complete the sentence "This test will...". For example,
 # "run a mixed read/write workload" would be a good description.
 DESCRIPTION=""
+
+# TODO: if this test completes quickly (i.e., in ~30 seconds or less on
+# reasonable hardware), uncomment the line below.
+# QUICK=1
+
+# TODO: if this test honors the configured \$TIMEOUT, uncomment the line below.
+# TIMED=1
 
 # TODO: dmesg is checked after each test run by default. You can suppress this
 # by defining:
@@ -172,25 +177,30 @@ DESCRIPTION=""
 # Alternatively, you can filter out any unimportant messages in dmesg like so:
 # DMESG_FILTER="grep -v sysfs"
 
-# TODO: if this test has any extra requirements, it should define a prepare()
-# function. If the test can be run, prepare() should return 0. Otherwise, it
-# should return non-zero and set the \$SKIP_REASON variable. Usually, prepare()
-# just needs to check that any necessary programs and kernel features are
-# available using the _have_foo helpers. If prepare() returns non-zero, the
-# test is skipped.
-# prepare() {
+# TODO: if this test has any extra requirements, it should define a requires()
+# function. If the test can be run, requires() should return 0. Otherwise, it
+# should return non-zero and set the \$SKIP_REASON variable. Usually,
+# requires() just needs to check that any necessary programs and kernel
+# features are available using the _have_foo helpers. If requires() returns
+# non-zero, the test is skipped.
+# requires() {
 # 	_have_foo
 # }
 
 # TODO: if this test has extra requirements for what devices it can be run on,
-# it should define a prepare_device() function. If the test can be run on
-# \$TEST_DEV, then prepare_device() should return zero. Otherwise, it should
-# return non-zero and set the \$SKIP_REASON variable. Usually, prepare_device()
-# just needs to check that the test device is the right type of hardware or
-# supports any necessary features using the _test_dev_foo helpers. The test
-# will only be run on devices for which prepare_device() returns zero.
-# prepare_device() {
-# 	_test_dev_foo
+# it should define a device_requires() function. If this test can be run on the
+# test device, it should return zero. Otherwise, it should return non-zero and
+# set the \$SKIP_REASON variable. \$TEST_DEV is the full path of the block
+# device (e.g., /dev/nvme0n1 or /dev/sda1), and \$TEST_DEV_SYSFS is the sysfs
+# path of the disk (not the partition, e.g., /sys/block/nvme0n1 or
+# /sys/block/sda).
+#
+# Usually, device_requires() just needs to check that the test device is the
+# right type of hardware or supports any necessary features using the
+# _test_dev_foo helpers. If device_requires() returns non-zero, the test will
+# be skipped on that device.
+# device_requires() {
+# 	_test_dev_is_foo && _test_dev_supports_bar
 # }
 
 # TODO: define the test. The output of this function (stdout and stderr) will
@@ -211,6 +221,8 @@ DESCRIPTION=""
 #    - \$TEST_RUN -- an associative array of additional test data to display
 #                   after the test is run and store for comparison on future
 #                   test runs. Use like TEST_RUN[iops]="\$(measure_iops)".
+#    - \$TIMEOUT -- an optional timeout configured by the user. If possible, limit
+#                  the runtime of the entire test to this value if it is set.
 #
 # Many tests do not need a test device (usually because they set up their own
 # virtual devices, like null-blk or loop). These tests should define the test()
@@ -236,7 +248,7 @@ test() {
 #   E.g., TEST_NAME and GROUPS. Variables local to the test are lowercase
 #   with underscores.
 # - Functions defined by the testing framework, including helpers, have a leading
-#   underscore. E.g., _have_scsi_debug. Functions local to the test or category
+#   underscore. E.g., _have_scsi_debug. Functions local to the test or group
 #   should not have a leading underscore.
 # - Use the bash [[ ]] form of tests instead of [ ].
 # - Always quote variable expansions unless the variable is a number or inside of

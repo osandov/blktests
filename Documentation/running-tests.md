@@ -1,28 +1,21 @@
 # Running Tests
 
-The `./check` script executes tests. Without any arguments, it executes the
-default set of tests. `./check` exits with a zero exit status if all tests
-passed and non-zero otherwise.
+The `./check` script executes tests. `./check` exits with a zero exit status if
+all tests passed and non-zero otherwise.
 
 ## Test Organization
 
-Tests are split up into various categories, which are the subdirectories of the
+Tests are split up into various groups, which are the subdirectories of the
 `tests` directory. For example, `tests/loop` contains tests for loop devices,
 and `tests/block` contains generic block layer tests.
 
-Tests also belong to one or more groups. Each test category is also a group.
-Additionally, there is a group for common functionality like "discard".
-Finally, there are a couple of basic groups:
+`./check` can execute individual tests or test groups. For example,
 
-- The `auto` group is the default set of tests. These tests are expected to
-  pass reliably.
-- The `quick` group is a subset of `auto` comprising tests that complete
-  "quickly" (i.e., in ~30 seconds or less on reasonable hardware).
-- The `timed` group comprises tests that honor the configured test timeout (see
-  below)
+```sh
+./check loop block/002
+```
 
-`./check` can execute individual tests or test groups, as well as exclude tests
-or test groups. See `./check -h`.
+will run all tests in the `loop` group and the `block/002` test.
 
 ## Configuration
 
@@ -48,4 +41,4 @@ can limit the runtime of each test to a specific length (in seconds).
 TIMEOUT=30
 ```
 
-Note that only tests in the `timed` group honor the timeout.
+Note that not all tests honor this timeout.
