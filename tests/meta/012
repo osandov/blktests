@@ -17,10 +17,13 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-DESCRIPTION="record pid"
+DESCRIPTION="record pid and random junk"
 
 test() {
 	echo "Running ${TEST_NAME}"
+	sleep 1
 	TEST_RUN[pid]=$$
+	TEST_RUN[random]="$(od -N $((4 * (RANDOM % 4))) -An -vtx1 /dev/urandom | tr -d ' \n')"
+	TEST_RUN[$$]=hello
 	echo "Test complete"
 }

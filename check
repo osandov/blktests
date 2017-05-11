@@ -205,14 +205,16 @@ _output_last_test_run() {
 		_output_status "$TEST_NAME" ""
 	fi
 
+	(
 	local key value
 	while IFS= read -r key; do
 		if [[ $key =~ ^date|status|reason|exit_status$ ]]; then
 			continue
 		fi
 		value="${LAST_TEST_RUN["$key"]}"
-		echo "    ${key} ${value} ..."
+		printf '    %s\t%s\t...\n' "${key}" "${value}"
 	done < <(printf '%s\n' "${!LAST_TEST_RUN[@]}" | sort)
+	) | column -t -s $'\t'
 }
 
 _output_test_run() {
@@ -228,6 +230,7 @@ _output_test_run() {
 		_output_status "$TEST_NAME" "${TEST_RUN[status]}ed"
 	fi
 
+	(
 	local key last_value value
 	while IFS= read -r key; do
 		if [[ $key =~ ^date|status|reason|exit_status$ ]]; then
@@ -235,7 +238,7 @@ _output_test_run() {
 		fi
 		last_value="${LAST_TEST_RUN["$key"]}"
 		value="${TEST_RUN["$key"]}"
-		echo "    ${key} ${last_value} ... ${value}"
+		printf '    %s\t%s\t...\t%s\n' "$key" "$last_value" "$value"
 	done < <(printf '%s\n' "${!LAST_TEST_RUN[@]}" | sort)
 
 	while IFS= read -r key; do
@@ -245,8 +248,9 @@ _output_test_run() {
 			continue
 		fi
 		value="${TEST_RUN["$key"]}"
-		echo "    ${key} ... ${value}"
+		printf '    %s\t\t...\t%s\n' "$key" "$value"
 	done < <(printf '%s\n' "${!TEST_RUN[@]}" | sort)
+	) | column -t -s $'\t'
 }
 
 _cleanup() {
