@@ -19,6 +19,7 @@
 
 _found_test() {
 	local test_name="$1"
+	local explicit="$2"
 
 	unset DESCRIPTION requires device_requires test test_device
 
@@ -46,6 +47,10 @@ _found_test() {
 		return 1
 	fi
 
+	if (( explicit || (QUICK_RUN && !QUICK && !TIMED) )); then
+		return
+	fi
+
 	printf '%s\0' "$test_name"
 }
 
@@ -54,7 +59,7 @@ _found_group() {
 
 	local test_path
 	while IFS= read -r -d '' test_path; do
-		_found_test "${test_path#tests/}"
+		_found_test "${test_path#tests/}" 0
 	done < <(find "tests/$group" -type f -name '[0-9][0-9][0-9]' -print0)
 }
 
@@ -86,7 +91,7 @@ _find_tests() {
 			if [[ -d tests/$filter ]]; then
 				_found_group "$filter"
 			elif [[ -f tests/$filter ]]; then
-				_found_test "$filter"
+				_found_test "$filter" 1
 			else
 				_warning "no group or test named ${filter}"
 			fi
@@ -488,8 +493,13 @@ usage: $0 [options] [group-or-test...]
 
 Run blktests
 
+Test runs:
+  -q, --quick=SECONDS    do a quick run (only run quick tests and limit the
+			 runtime of longer tests to the given timeout,
+			 defaulting to 30 seconds)
+
 Miscellaneous:
-  -h    display this help message and exit"
+  -h, --help             display this help message and exit"
 
 	case "$1" in
 		out)
@@ -503,18 +513,34 @@ Miscellaneous:
 	esac
 }
 
-while getopts "h" OPT; do
-	case "$OPT" in
-		h)
+TEMP=$(getopt -o 'q::h' --long 'quick::,help' -n "$0" -- "$@")
+if [[ $? -ne 0 ]]; then
+	exit 1
+fi
+
+eval set -- "$TEMP"
+unset TEMP
+
+QUICK_RUN=0
+while true; do
+	case "$1" in
+		'-q'|'--quick')
+			QUICK_RUN=1
+			TIMEOUT="${2:-30}"
+			shift 2
+			;;
+		'-h'|'--help')
 			usage out
 			;;
+		'--')
+			shift
+			break
+		;;
 		*)
 			usage err
 			;;
 	esac
 done
-
-shift $((OPTIND - 1))
 
 if [[ -r config ]]; then
 	. config
