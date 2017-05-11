@@ -1,0 +1,49 @@
+#!/bin/bash
+#
+# CPU hotplug helper functions.
+#
+# Copyright (C) 2017 Omar Sandoval
+#
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+# Also initializes the HOTPLUGGABLE_CPUS array.
+_have_cpu_hotplug() {
+	HOTPLUGGABLE_CPUS=()
+	CPUS_ONLINE_SAVED=()
+
+	local cpu_dir cpu
+	for cpu_dir in /sys/devices/system/cpu/cpu+([0-9]); do
+		if [[ -w ${cpu_dir}/online ]]; then
+			cpu="${cpu_dir#/sys/devices/system/cpu/cpu}"
+			HOTPLUGGABLE_CPUS=("$cpu")
+			CPUS_ONLINE_SAVED["$cpu"]="$(cat "${cpu_dir}/online")"
+		fi
+	done
+
+	if [[ ${#HOTPLUGGABLE_CPUS[@]} -eq 0 ]]; then
+		SKIP_REASON="CPU hotplugging is not supported"
+		return 1
+	fi
+	return 0
+}
+
+_online_cpu() {
+	RESTORE_CPUS_ONLINE=1
+	echo 1 >"/sys/devices/system/cpu/cpu$1/online"
+}
+
+_offline_cpu() {
+	RESTORE_CPUS_ONLINE=1
+	echo 0 >"/sys/devices/system/cpu/cpu$1/online"
+}

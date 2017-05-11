@@ -265,6 +265,14 @@ _cleanup() {
 		echo "$value" >"${TEST_DEV_SYSFS}/queue/${key}"
 		unset TEST_DEV_QUEUE_SAVED["$key"]
 	done
+
+	if [[ -v RESTORE_CPUS_ONLINE ]]; then
+		local cpu
+		for cpu in "${!CPUS_ONLINE_SAVED[@]}"; do
+			echo "${CPUS_ONLINE_SAVED["$cpu"]}" >"/sys/devices/system/cpu/cpu$cpu/online"
+		done
+		unset RESTORE_CPUS_ONLINE
+	fi
 }
 
 _call_test() {
