@@ -47,7 +47,7 @@ _found_test() {
 		return 1
 	fi
 
-	if (( explicit || (QUICK_RUN && !QUICK && !TIMED) )); then
+	if (( !explicit && QUICK_RUN && !QUICK && !TIMED )); then
 		return
 	fi
 
