@@ -43,7 +43,7 @@ test_device() {
 	# while job is running, switch between schedulers
 	while kill -0 $! 2>/dev/null; do
 		idx=$(($RANDOM % ${#scheds[@]}))
-		echo "${scheds[$idx]}" > ${TEST_DEV_SYSFS}/queue/scheduler
+		_test_dev_queue_set scheduler "${scheds[$idx]}"
 		sleep .2
 	done
 

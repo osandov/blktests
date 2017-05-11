@@ -50,23 +50,23 @@ test_device() {
 
 	# no polling, run job
 	FIO_PERF_PREFIX="no poll "
-	_test_dev_set_io_poll 0
+	_test_dev_queue_set io_poll 0
 	run_fio_job
 
 	# turn on polling, switch to classic, run job
 	FIO_PERF_PREFIX="classic poll "
-	_test_dev_set_io_poll 1
-	_test_dev_set_io_poll_delay -1
+	_test_dev_queue_set io_poll 1
+	_test_dev_queue_set io_poll_delay -1
 	run_fio_job
 
 	# switch to auto-hybrid polling, run job
 	FIO_PERF_PREFIX="auto hybrid poll "
-	_test_dev_set_io_poll_delay 0
+	_test_dev_queue_set io_poll_delay 0
 	run_fio_job
 
 	# switch to explicit delay polling, run job
 	FIO_PERF_PREFIX="fixed hybrid poll "
-	_test_dev_set_io_poll_delay 4
+	_test_dev_queue_set io_poll_delay 4
 	run_fio_job
 
 	echo "Test complete"

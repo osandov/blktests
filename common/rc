@@ -95,3 +95,20 @@ _test_dev_is_rotational() {
 	fi
 	return 0
 }
+
+_test_dev_queue_get() {
+	if [[ $1 = scheduler ]]; then
+		sed -e 's/.*\[//' -e 's/\].*//' "${TEST_DEV_SYSFS}/queue/scheduler"
+	else
+		cat "${TEST_DEV_SYSFS}/queue/$1"
+	fi
+}
+
+_test_dev_queue_set() {
+	# For bash >=4.3 we'd write if [[ ! -v TEST_DEV_QUEUE_SAVED["$1"] ]].
+	if [[ -z ${TEST_DEV_QUEUE_SAVED["$1"]} &&
+	      ${TEST_DEV_QUEUE_SAVED["$1"]-unset} == unset ]]; then
+		TEST_DEV_QUEUE_SAVED["$1"]="$(_test_dev_queue_get "$1")"
+	fi
+	echo "$2" >"${TEST_DEV_SYSFS}/queue/$1"
+}

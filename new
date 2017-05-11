@@ -231,7 +231,9 @@ DESCRIPTION=""
 # Tests that require a test device should rename test() to test_device(). These
 # tests will be run with a few more variables defined:
 #    - \$TEST_DEV -- the block device to run the test on (e.g., /dev/sda1).
-#    - \$TEST_DEV_SYSFS -- the sysfs directory of the device (e.g., /sys/block/sda).
+#    - \$TEST_DEV_SYSFS -- the sysfs directory of the device (e.g.,
+#                         /sys/block/sda). In general, you should use the
+#                         _test_dev_queue_{get,set} helpers.
 test() {
 	echo "Running \${TEST_NAME}"
 

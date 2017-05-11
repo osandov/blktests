@@ -53,11 +53,3 @@ _test_dev_supports_io_poll_delay() {
 	fi
 	return 0
 }
-
-_test_dev_set_io_poll() {
-	echo "$1" >"${TEST_DEV_SYSFS}/queue/io_poll"
-}
-
-_test_dev_set_io_poll_delay() {
-	echo "$1" >"${TEST_DEV_SYSFS}/queue/io_poll_delay"
-}

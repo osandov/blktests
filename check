@@ -258,12 +258,20 @@ _cleanup() {
 		rm -rf "$TMPDIR"
 		unset TMPDIR
 	fi
+
+	local key value
+	for key in "${!TEST_DEV_QUEUE_SAVED[@]}"; do
+		value="${TEST_DEV_QUEUE_SAVED["$key"]}"
+		echo "$value" >"${TEST_DEV_SYSFS}/queue/${key}"
+		unset TEST_DEV_QUEUE_SAVED["$key"]
+	done
 }
 
 _call_test() {
 	local test_func="$1"
 	local seqres="${RESULTS_DIR}/${TEST_NAME}"
 	FULL="${seqres}.full"
+	declare -A TEST_DEV_QUEUE_SAVED
 
 	_read_last_test_run
 	_output_last_test_run
