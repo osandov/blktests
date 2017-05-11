@@ -388,11 +388,6 @@ _run_test() {
 
 _run_group() {
 	local tests=("$@")
-
-	if [[ ${#tests} -eq 0 ]]; then
-		return 0
-	fi
-
 	local group="${tests[0]%/*}"
 
 	. "tests/${group}/group"
@@ -473,15 +468,20 @@ _check() {
 		group="${test_name%/*}"
 		if [[ $group != $prev_group ]]; then
 			prev_group="$group"
-			if ! ( _run_group "${tests[@]}" ); then
-				ret=1
+			if [[ ${#tests[@]} -gt 0 ]]; then
+				if ! ( _run_group "${tests[@]}" ); then
+					ret=1
+				fi
+				tests=()
 			fi
 		fi
 		tests+=("$test_name")
 	done < <(_find_tests "$@" | sort -zu)
 
-	if ! ( _run_group "${tests[@]}" ); then
-		ret=1
+	if [[ ${#tests[@]} -gt 0 ]]; then
+		if ! ( _run_group "${tests[@]}" ); then
+			ret=1
+		fi
 	fi
 
 	return $ret
