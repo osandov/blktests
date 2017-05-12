@@ -23,11 +23,11 @@ shopt -s extglob
 . common/fio
 
 _warning() {
-	echo "$0: $@" >&2
+	echo "$0: $*" >&2
 }
 
 _error() {
-	echo "$0: $@" >&2
+	echo "$0: $*" >&2
 	exit 1
 }
 
