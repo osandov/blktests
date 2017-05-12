@@ -32,3 +32,6 @@ configuration and running tests.
 
 The `./new` script creates a new test from a template. The generated template
 contains more detailed documentation.
+
+Pull requests on GitHub and patches to <linux-block@vger.kernel.org> are both
+accepted. See [here](CONTRIBUTING.md) for more information on contributing.
