@@ -29,7 +29,7 @@ prompt_yes_no() {
 	fi
 
 	local yn
-	read -n 1 -p "${prompt}" yn
+	read -r -n 1 -p "${prompt}" yn
 	if [[ -n "${yn}" ]]; then
 		echo
 	fi

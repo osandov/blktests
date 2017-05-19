@@ -35,7 +35,7 @@ test() {
 	fi
 
 	SG_DEV="/dev/$(_get_sg_from_blockdev "$SCSI_DEBUG_NAME")"
-	cd "$TMPDIR"
+	cd "$TMPDIR" || return 1
 	timeout -s INT 10s "$SRCDIR/sg/syzkaller1" "$SG_DEV"
 
 	_put_scsi_debug_dev

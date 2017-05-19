@@ -63,7 +63,7 @@ stress_scsi_debug() {
 test() {
 	echo "Running ${TEST_NAME}"
 
-	: ${TIMEOUT:=30}
+	: "${TIMEOUT:=30}"
 	_divide_timeout 2
 
 	echo "Stressing sd"

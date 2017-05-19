@@ -42,8 +42,8 @@ test_device() {
 
 	# while job is running, hotplug CPUs randomly
 	while kill -0 $! 2>/dev/null; do
-		idx=$(($RANDOM % ${#HOTPLUGGABLE_CPUS[@]}))
-		if (( $RANDOM % 2 )); then
+		idx=$((RANDOM % ${#HOTPLUGGABLE_CPUS[@]}))
+		if (( RANDOM % 2 )); then
 			_online_cpu "${HOTPLUGGABLE_CPUS[$idx]}"
 		else
 			_offline_cpu "${HOTPLUGGABLE_CPUS[$idx]}"

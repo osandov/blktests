@@ -131,6 +131,7 @@ _check_dmesg() {
 	     -e "INFO: possible circular locking dependency detected" \
 	     -e "general protection fault:" \
 	     "${seqres}.dmesg"
+	# shellcheck disable=SC2181
 	if [[ $? -eq 0 ]]; then
 		return 1
 	else
@@ -312,8 +313,7 @@ _call_test() {
 	fi
 
 	trap _cleanup EXIT
-	TMPDIR="$(mktemp --tmpdir -d "blktests.${TEST_NAME//\//.}.XXX")"
-	if [[ $? -ne 0 ]]; then
+	if ! TMPDIR="$(mktemp --tmpdir -d "blktests.${TEST_NAME//\//.}.XXX")"; then
 		return
 	fi
 
@@ -438,7 +438,7 @@ _run_group() {
 			TEST_DEV="${TEST_DEVS[$i]}"
 			if ! group_device_requires; then
 				_output_notrun "${group}/*** => $(basename "$TEST_DEV")"
-				unset TEST_DEVS[$i]
+				unset TEST_DEVS["$i"]
 			fi
 		done
 		# Fix the array indices.
@@ -464,12 +464,12 @@ _find_sysfs_dir() {
 
 	local block_dir part_dir
 	for block_dir in /sys/block/*; do
-		if [[ $(cat "${block_dir}/dev") = $dev ]]; then
+		if [[ $(cat "${block_dir}/dev") = "$dev" ]]; then
 			echo "$block_dir"
 			return
 		fi
 		for part_dir in "$block_dir"/*; do
-			if [[ -r ${part_dir}/dev && $(cat "${part_dir}/dev") = $dev ]]; then
+			if [[ -r ${part_dir}/dev && $(cat "${part_dir}/dev") = "$dev" ]]; then
 				echo "$block_dir"
 				return
 			fi
@@ -491,8 +491,8 @@ _check() {
 			_error "${test_dev} is not a block device"
 		fi
 
-		local sysfs_dir="$(_find_sysfs_dir "$test_dev")"
-		if [[ $? -ne 0 ]]; then
+		local sysfs_dir
+		if ! sysfs_dir="$(_find_sysfs_dir "$test_dev")"; then
 			_error "could not find sysfs directory for ${test_dev}"
 		fi
 		TEST_DEV_SYSFS_DIRS["$test_dev"]="$sysfs_dir"
@@ -503,7 +503,7 @@ _check() {
 	local ret=0
 	while IFS= read -r -d '' test_name; do
 		group="${test_name%/*}"
-		if [[ $group != $prev_group ]]; then
+		if [[ $group != "$prev_group" ]]; then
 			prev_group="$group"
 			if [[ ${#tests[@]} -gt 0 ]]; then
 				if ! ( _run_group "${tests[@]}" ); then
@@ -553,8 +553,7 @@ Miscellaneous:
 	esac
 }
 
-TEMP=$(getopt -o 'q::x:h' --long 'quick::,exclude:,help' -n "$0" -- "$@")
-if [[ $? -ne 0 ]]; then
+if ! TEMP=$(getopt -o 'q::x:h' --long 'quick::,exclude:,help' -n "$0" -- "$@"); then
 	exit 1
 fi
 
@@ -580,6 +579,7 @@ while true; do
 			shift 2
 			;;
 		'-x'|'--exclude')
+			# shellcheck disable=SC2190
 			EXCLUDE+=("$2")
 			shift 2
 			;;
