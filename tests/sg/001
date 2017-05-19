@@ -1,0 +1,43 @@
+#!/bin/bash
+#
+# Regression test for commit 48ae8484e9fc ("scsi: sg: don't return bogus
+# Sg_requests")
+#
+# Copyright (C) 2017 Johannes Thumshirn <jthumshirn@suse.de>
+#
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+. common/scsi_debug
+
+DESCRIPTION="try triggering a kernel GPF with 0 byte SG reads"
+QUICK=1
+
+requires() {
+	_have_program src/sg/syzkaller1 && _have_scsi_debug
+}
+
+test() {
+	echo "Running ${TEST_NAME}"
+
+	if ! _get_scsi_debug_dev; then
+		return 1
+	fi
+
+	SG_DEV="/dev/$(_get_sg_from_blockdev "$SCSI_DEBUG_NAME")"
+	timeout -s INT 10s ./src/sg/syzkaller1 "$SG_DEV"
+
+	_put_scsi_debug_dev
+
+	echo "Test complete"
+}
