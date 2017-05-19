@@ -557,13 +557,22 @@ fi
 eval set -- "$TEMP"
 unset TEMP
 
+# Default configuration.
 QUICK_RUN=0
 EXCLUDE=()
+TEST_DEVS=()
+
+if [[ -r config ]]; then
+	. config
+fi
+
 while true; do
 	case "$1" in
 		'-q'|'--quick')
 			QUICK_RUN=1
-			TIMEOUT="${2:-30}"
+			# Use the timeout specified on the command line, from
+			# the config, or the default.
+			TIMEOUT="${2:-${TIMEOUT:-30}}"
 			shift 2
 			;;
 		'-x'|'--exclude')
@@ -583,12 +592,8 @@ while true; do
 	esac
 done
 
-if [[ -r config ]]; then
-	. config
-fi
-
-if [[ ! -v TEST_DEVS ]]; then
-	TEST_DEVS=()
+if [[ QUICK_RUN -ne 0 && ! -v TIMEOUT ]]; then
+	_error "QUICK_RUN specified without TIMEOUT"
 fi
 
 # Convert the exclude list to an associative array.

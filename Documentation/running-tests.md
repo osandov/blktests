@@ -32,13 +32,34 @@ and will overwrite any data on these devices.
 TEST_DEVS=(/dev/nvme0n1 /dev/sdb)
 ```
 
-### Test Timeout
+### Excluding Tests
+
+
+The `EXCLUDE` variable is an array of tests or test groups to exclude. This
+corresponds to the `-x` command line option.
+
+```sh
+EXCLUDE=(loop block/001)
+```
+
+Tests specified explicitly on the command line will always run even if they are
+in `EXCLUDE`.
+
+### Quick Runs and Test Timeouts
 
 Many tests can take a long time to run. By setting the `TIMEOUT` variable, you
 can limit the runtime of each test to a specific length (in seconds).
 
 ```sh
-TIMEOUT=30
+TIMEOUT=60
 ```
 
-Note that not all tests honor this timeout.
+Note that not all tests honor this timeout. You can define the `QUICK_RUN`
+variable in addition to `TIMEOUT` to specify that only tests which honor the
+timeout or are otherwise "quick" should run. This corresponds to the `-q`
+command line option.
+
+```sh
+QUICK_RUN=1
+TIMEOUT=30
+```
