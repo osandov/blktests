@@ -395,7 +395,7 @@ _run_test() {
 			TEST_DEV_SYSFS="${TEST_DEV_SYSFS_DIRS["$TEST_DEV"]}"
 			if declare -fF device_requires >/dev/null && ! device_requires; then
 				_output_notrun "$TEST_NAME => $(basename "$TEST_DEV")"
-				return 0
+				continue
 			fi
 			RESULTS_DIR="results/$(basename "$TEST_DEV")"
 			if ! _call_test test_device; then
