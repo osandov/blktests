@@ -66,6 +66,14 @@ _have_program() {
 	fi
 }
 
+_have_src_program() {
+	if [[ ! -x "$SRCDIR/$1" ]]; then
+		SKIP_REASON="$1 was not built; run \`make\`"
+		return 1
+	fi
+	return 0
+}
+
 _have_loop() {
 	_have_module loop && _have_program losetup
 }

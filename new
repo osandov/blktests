@@ -216,6 +216,7 @@ DESCRIPTION=""
 # Various variables are defined for the test:
 #    - \$TEST_NAME -- the full name of the test.
 #    - \$TMPDIR -- a temporary directory deleted after the test is run.
+#    - \$SRCDIR -- absolute path of the src/ subdirectory
 #    - \$FULL -- a file where the test may log verbose output (e.g., the output
 #               of fio or mkfs).
 #    - \$TEST_RUN -- an associative array of additional test data to display

@@ -318,8 +318,10 @@ _call_test() {
 	fi
 
 	TIMEFORMAT="%Rs"
+	pushd . >/dev/null
 	{ time "$test_func" >"${seqres}.out" 2>&1; } 2>"${seqres}.runtime"
 	TEST_RUN[exit_status]=$?
+	popd >/dev/null
 	TEST_RUN[runtime]="$(cat "${seqres}.runtime")"
 	rm -f "${seqres}.runtime"
 
@@ -479,6 +481,8 @@ _find_sysfs_dir() {
 
 declare -A TEST_DEV_SYSFS_DIRS
 _check() {
+	SRCDIR="$(realpath src)"
+
 	local test_dev
 	for test_dev in "${TEST_DEVS[@]}"; do
 		if [[ ! -e $test_dev ]]; then
