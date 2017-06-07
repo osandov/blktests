@@ -27,6 +27,8 @@ _get_scsi_debug_dev() {
 		return 1
 	fi
 
+	udevadm settle
+
 	local dev
 	for dev in /sys/block/sd*; do
 		if [[ "$(cat "${dev}/device/model")" =~ ^scsi_debug[[:space:]]*$ ]]; then
