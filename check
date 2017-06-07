@@ -98,6 +98,8 @@ _find_tests() {
 			# Remove leading and internal "." components.
 			filter="${filter##+(./)}"
 			filter="${filter//\/+(.\/)/\/}"
+			# Remove repeated "/".
+			filter="${filter//\/+(\/)/\/}"
 			# Remove leading "tests/"
 			filter="${filter#tests/}"
 
