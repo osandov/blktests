@@ -39,11 +39,11 @@ test() {
 	fi
 
 	# run sync test
-	_run_fio --bs=4k --ioengine=sync --rw=randread --norandommap --name=sync \
+	_fio_perf --bs=4k --ioengine=sync --rw=randread --norandommap --name=sync \
 		--filename=/dev/nullb0 --size=5g --direct=1
 
 	# run async test
-	_run_fio --bs=4k --ioengine=libaio --iodepth=8 --numjobs=4 \
+	_fio_perf --bs=4k --ioengine=libaio --iodepth=8 --numjobs=4 \
 		--rw=randread --norandommap --name=async \
 		--filename=/dev/nullb0 --size=5g --direct=1
 
