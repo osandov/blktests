@@ -1,0 +1,80 @@
+#!/bin/bash
+#
+# Test if shared and non-shared tags perform roughly identical
+#
+# Regression test for commit a4db5f2fbb1 ("blk-mq: fix performance regression
+# with shared tags")
+#
+# Copyright (C) 2017 Jens Axboe
+#
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+DESCRIPTION="run I/O on null_blk with shared and non-shared tags"
+TIMED=1
+
+requires() {
+	_have_module null_blk
+}
+
+run_fio_job() {
+	_fio_perf --size=8g --bs=4k --direct=1 --ioengine=libaio --iodepth=32 \
+		--group_reporting=1 --rw=randread --norandommap --name=nullb0 \
+		--filename=/dev/nullb0 --name=nullb1 --filename=/dev/nullb1 \
+		--name=nullb2 --filename=/dev/nullb2 --name=nullb3 \
+		--filename=/dev/nullb3 --name=nullb4 --filename=/dev/nullb4 \
+		--name=nullb5 --filename=/dev/nullb5 --name=nullb6 \
+		--filename=/dev/nullb6 --name=nullb7 --filename=/dev/nullb7 \
+		--name=nullb8 --filename=/dev/nullb8 --name=nullb9 \
+		--filename=/dev/nullb9 --name=nullb10 --filename=/dev/nullb10 \
+		--name=nullb11 --filename=/dev/nullb11 --name=nullb12 \
+		--filename=/dev/nullb12 --name=nullb13 --filename=/dev/nullb13 \
+		--name=nullb14 --filename=/dev/nullb14 --name=nullb15 \
+		--filename=/dev/nullb15 --name=nullb16 --filename=/dev/nullb16 \
+		--name=nullb17 --filename=/dev/nullb17 --name=nullb18 \
+		--filename=/dev/nullb18 --name=nullb19 --filename=/dev/nullb19 \
+		--name=nullb20 --filename=/dev/nullb20 --name=nullb21 \
+		--filename=/dev/nullb21 --name=nullb22 --filename=/dev/nullb22 \
+		--name=nullb23 --filename=/dev/nullb23 --name=nullb24 \
+		--filename=/dev/nullb24 --name=nullb25 --filename=/dev/nullb25 \
+		--name=nullb26 --filename=/dev/nullb26 --name=nullb27 \
+		--filename=/dev/nullb27 --name=nullb28 --filename=/dev/nullb28 \
+		--name=nullb29 --filename=/dev/nullb29 --name=nullb30 \
+		--filename=/dev/nullb30 --name=nullb31 --filename=/dev/nullb31
+}
+
+test() {
+	echo "Running ${TEST_NAME}"
+
+	_divide_timeout 2
+
+	modprobe -r null_blk
+	if ! modprobe null_blk queue_mode=2 submit_queues=16 nr_devices=32; then
+		return 1
+	fi
+
+	FIO_PERF_PREFIX="Individual tags "
+	FIO_PERF_FIELDS=("read iops")
+	run_fio_job
+
+	modprobe -r null_blk
+	if ! modprobe null_blk queue_mode=2 submit_queues=16 nr_devices=32 shared_tags=1; then
+		return 1
+	fi
+
+	FIO_PERF_PREFIX="Shared tags "
+	FIO_PERF_FIELDS=("read iops")
+	run_fio_job
+
+	echo "Test complete"
+}
