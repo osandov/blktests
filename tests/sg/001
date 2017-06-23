@@ -24,21 +24,15 @@ DESCRIPTION="try triggering a kernel GPF with 0 byte SG reads"
 QUICK=1
 
 requires() {
-	_have_src_program sg/syzkaller1 && _have_scsi_debug
+	_have_src_program sg/syzkaller1
 }
 
-test() {
+test_device() {
 	echo "Running ${TEST_NAME}"
-
-	if ! _get_scsi_debug_dev; then
-		return 1
-	fi
 
 	SG_DEV="/dev/$(_get_sg_from_blockdev "$SCSI_DEBUG_NAME")"
 	cd "$TMPDIR" || return 1
 	timeout -s INT 10s "$SRCDIR/sg/syzkaller1" "$SG_DEV"
-
-	_put_scsi_debug_dev
 
 	echo "Test complete"
 }
