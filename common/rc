@@ -58,7 +58,7 @@ _have_module() {
 }
 
 _have_module_param() {
-	if ! modinfo -F parm -0 "$1" | grep -z "^$2:" >/dev/null; then
+	if ! modinfo -F parm -0 "$1" | grep -q -z "^$2:"; then
 		SKIP_REASON="$1 module does not have parameter $2"
 		return 1
 	fi
