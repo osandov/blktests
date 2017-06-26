@@ -57,6 +57,13 @@ _have_module() {
 	fi
 }
 
+_have_module_param() {
+	if ! modinfo -F parm -0 "$1" | grep -z "^$2:" >/dev/null; then
+		SKIP_REASON="$1 module does not have parameter $2"
+		return 1
+	fi
+}
+
 _have_program() {
 	if command -v "$1" >/dev/null 2>&1; then
 		return 0
