@@ -438,6 +438,7 @@ _run_group() {
 		local i
 		for i in "${!TEST_DEVS[@]}"; do
 			TEST_DEV="${TEST_DEVS[$i]}"
+			TEST_DEV_SYSFS="${TEST_DEV_SYSFS_DIRS["$TEST_DEV"]}"
 			if ! group_device_requires; then
 				_output_notrun "${group}/*** => $(basename "$TEST_DEV")"
 				unset TEST_DEVS["$i"]
