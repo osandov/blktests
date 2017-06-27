@@ -127,3 +127,16 @@ _test_dev_queue_set() {
 	fi
 	echo "$2" >"${TEST_DEV_SYSFS}/queue/$1"
 }
+
+_test_dev_is_pci() {
+	if ! readlink -f "$TEST_DEV_SYSFS/device" | grep -q pci; then
+		SKIP_REASON="$TEST_DEV is not a PCI device"
+		return 1
+	fi
+	return 0
+}
+
+_get_pci_dev_from_blkdev() {
+	readlink -f "$TEST_DEV_SYSFS/device" | \
+		grep -Eo '[0-9a-f]{4}:[0-9a-f]{2}:[0-9a-f]{2}\.[0-9a-f]'
+}
