@@ -1,0 +1,55 @@
+#!/bin/bash
+#
+# Do disable PCI device while doing I/O to it
+#
+# Copyright (C) 2017 Johannes Thumshirn <jthumshirn@suse.de>
+#
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+DESCRIPTION="disable PCI device while doing I/O"
+TIMED=1
+
+requires() {
+	_have_fio
+}
+
+device_requires() {
+	_test_dev_is_pci
+}
+
+test_device() {
+	echo "Running ${TEST_NAME}"
+
+	pdev=$(_get_pci_dev_from_blkdev)
+
+	if _test_dev_is_rotational; then
+		size="32m"
+	else
+		size="1g"
+	fi
+
+	# start fio job
+	_run_fio --bs=4k --rw=randread --norandommap \
+		--name=reads --filename="$TEST_DEV" --size="$size" \
+		--numjobs=8 --direct=1 --ignore_error=EIO,ENXIO,ENODEV &
+
+	while kill -0 $! 2>/dev/null; do
+		echo 0 > "/sys/bus/pci/devices/${pdev}/enable"
+		sleep .2
+		echo 1 > "/sys/bus/pci/devices/${pdev}/enable"
+		sleep .2
+	done
+
+	echo "Test complete"
+}
