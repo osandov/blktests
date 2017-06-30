@@ -40,9 +40,8 @@ test_device() {
 	fi
 
 	# start fio job
-	_run_fio --bs=4k --rw=randread --norandommap \
-		--name=reads --filename="$TEST_DEV" --size="$size" \
-		--numjobs=8 --direct=1 --ignore_error=EIO,ENXIO,ENODEV &
+	_run_fio_rand_io --filename="$TEST_DEV" --size="$size" \
+			--ignore_error=EIO,ENXIO,ENODEV &
 
 	while kill -0 $! 2>/dev/null; do
 		echo 0 > "/sys/bus/pci/devices/${pdev}/enable"

@@ -36,9 +36,7 @@ test_device() {
 	fi
 
 	# start fio job
-	_run_fio --bs=4k --rw=randread --norandommap \
-		--name=reads --filename="$TEST_DEV" --size="$size" \
-		--numjobs=8 --direct=1 &
+	_run_fio_rand_io --filename="$TEST_DEV" --size="$size" &
 
 	# while job is running, switch between schedulers
 	while kill -0 $! 2>/dev/null; do

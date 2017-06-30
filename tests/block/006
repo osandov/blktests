@@ -43,7 +43,7 @@ test() {
 		--filename=/dev/nullb0 --size=5g --direct=1
 
 	# run async test
-	_fio_perf --bs=4k --ioengine=libaio --iodepth=8 --numjobs=4 \
+	_fio_perf --bs=4k --ioengine=libaio --iodepth=8 --numjobs="$(nproc)" \
 		--rw=randread --norandommap --name=async \
 		--filename=/dev/nullb0 --size=5g --direct=1
 

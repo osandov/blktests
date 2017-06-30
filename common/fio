@@ -166,6 +166,13 @@ _run_fio() {
 	fio "${args[@]}" "$@"
 }
 
+# Wrapper around _run_fio used if you need some I/O but don't really care much
+# about the details
+_run_fio_rand_io() {
+	_run_fio --bs=4k --rw=randread --norandommap --numjobs="$(nproc)" \
+		--name=reads --direct=1 "$@"
+}
+
 _fio_perf_report() {
 	# If there is more than one group, we don't know what to report.
 	if [[ $(wc -l < "$TMPDIR/fio_perf") -gt 1 ]]; then
