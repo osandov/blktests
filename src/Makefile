@@ -1,4 +1,4 @@
-TARGETS := sg/syzkaller1
+TARGETS := sg/dxfer-from-dev sg/syzkaller1
 
 CFLAGS := -O2
 

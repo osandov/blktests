@@ -1,9 +1,8 @@
 #!/bin/bash
 #
-# Regression test for commit 48ae8484e9fc ("scsi: sg: don't return bogus
-# Sg_requests")
+# Regression test for patch "scsi: sg: fix SG_DXFER_FROM_DEV transfers"
 #
-# Copyright (C) 2017 Johannes Thumshirn <jthumshirn@suse.de>
+# Copyright (C) 2017 Johannes Thumshirn
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -18,21 +17,18 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-. common/scsi_debug
-
-DESCRIPTION="try triggering a kernel GPF with 0 byte SG reads"
+DESCRIPTION="perfom a SG_DXFER_FROM_DEV from the /dev/sg read-write interface"
 QUICK=1
 
 requires() {
-	_have_src_program sg/syzkaller1
+	_have_src_program sg/dxfer-from-dev
 }
 
 test_device() {
 	echo "Running ${TEST_NAME}"
 
 	SG_DEV="/dev/$(_get_test_dev_sg)"
-	cd "$TMPDIR" || return 1
-	timeout -s INT 10s "$SRCDIR/sg/syzkaller1" "$SG_DEV"
+	"$SRCDIR"/sg/dxfer-from-dev "$SG_DEV"
 
 	echo "Test complete"
 }

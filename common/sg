@@ -29,6 +29,6 @@ _test_dev_is_scsi() {
 	return 0
 }
 
-_get_sg_from_blockdev() {
-	echo /sys/block/"$1"/device/scsi_generic/sg+([0-9])
+_get_test_dev_sg() {
+	echo "${TEST_DEV_SYSFS}"/device/scsi_generic/sg* | grep -Eo "sg[0-9]+"
 }
