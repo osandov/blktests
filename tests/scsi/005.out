@@ -1,0 +1,10 @@
+Running scsi/005
+                          
+AAAAAAAA BBBBBBBBBBBBBBBB 
+HITACHI  OPEN-V           REPORTLUN2 TRY_VPD_PAGES
+         Scanner          NOLUN
+Inateck                   
+Promise  STEX             SPARSELUN
+HITA     OPEN-V           
+ABCD     Scanner          
+Test complete

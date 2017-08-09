@@ -1,0 +1,60 @@
+#!/bin/bash
+#
+# Regression test for patch "scsi_devinfo: fixup string compare".
+#
+# Copyright (C) 2017 Hannes Reinecke, SUSE Linux GmbH
+#
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+. tests/scsi/rc
+. common/scsi_debug
+
+DESCRIPTION="test SCSI device blacklisting"
+QUICK=1
+
+requires() {
+	_have_scsi_debug && _have_module_param scsi_debug inq_vendor
+}
+
+test() {
+	echo "Running ${TEST_NAME}"
+
+	local inqs=(
+		"                        "
+		"AAAAAAAABBBBBBBBBBBBBBBB"
+		"HITACHI OPEN-V          "
+		"        Scanner         "
+		"Inateck                 "
+		"Promise STEX            "
+		"HITA    OPEN-V          "
+		"ABCD    Scanner         "
+	)
+
+	local inq vendor model blacklist
+	for inq in "${inqs[@]}"; do
+		vendor="${inq:0:8}"
+		model="${inq:8:16}"
+		if ! _init_scsi_debug inq_vendor="$vendor" inq_product="$model"; then
+			continue
+		fi
+		vendor="$(cat "/sys/block/${SCSI_DEBUG_DEVICES[0]}/device/vendor")"
+		model="$(cat "/sys/block/${SCSI_DEBUG_DEVICES[0]}/device/model")"
+		blacklist="$(cat "/sys/block/${SCSI_DEBUG_DEVICES[0]}/device/blacklist")"
+		echo "$vendor $model $blacklist"
+		_exit_scsi_debug
+	done
+
+	echo "Test complete"
+	return 0
+}
