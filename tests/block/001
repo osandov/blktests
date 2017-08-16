@@ -25,7 +25,7 @@ DESCRIPTION="stress device hotplugging"
 TIMED=1
 
 requires() {
-	_have_scsi_debug
+	_have_scsi_debug && _have_module sd_mod && _have_module sr_mod
 }
 
 stress_scsi_debug() {
