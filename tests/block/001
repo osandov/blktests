@@ -29,20 +29,12 @@ requires() {
 }
 
 stress_scsi_debug() {
-	modprobe -r scsi_debug
-	modprobe scsi_debug "$@"
+	if ! _init_scsi_debug "$@"; then
+		return
+	fi
 
-	targets=()
-	for host in /sys/class/scsi_host/*; do
-		if [[ "$(cat "${host}/proc_name")" = scsi_debug ]]; then
-			host="$(basename "${host}")"
-			for target in "/sys/class/scsi_device/${host#host}:"*; do
-				targets+=("$(basename "${target}")")
-			done
-		fi
-	done
-
-	for target in "${targets[@]}"; do
+	local host target
+	for target in "${SCSI_DEBUG_TARGETS[@]}"; do
 		(
 		host="${target%%:*}"
 		scan="${target#*:}"
@@ -57,7 +49,8 @@ stress_scsi_debug() {
 	touch "$TMPDIR/stop"
 	wait
 	rm -f "$TMPDIR/stop"
-	modprobe -r scsi_debug
+
+	_exit_scsi_debug
 }
 
 test() {

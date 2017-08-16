@@ -30,22 +30,22 @@ requires() {
 test() {
 	echo "Running ${TEST_NAME}"
 
-	if ! _get_scsi_debug_dev; then
+	if ! _init_scsi_debug; then
 		return 1
 	fi
 
-	blktrace -D "$TMP_DIR" "$SCSI_DEBUG_DEV" >"$FULL" 2>&1 &
+	blktrace -D "$TMP_DIR" "/dev/${SCSI_DEBUG_DEVICES[0]}" >"$FULL" 2>&1 &
 	sleep 0.5
-	echo 1 > "/sys/block/${SCSI_DEBUG_NAME}/device/delete"
-	if [[ ! -d /sys/kernel/debug/block/${SCSI_DEBUG_NAME} ]]; then
+	echo 1 > "/sys/block/${SCSI_DEBUG_DEVICES[0]}/device/delete"
+	if [[ ! -d /sys/kernel/debug/block/${SCSI_DEBUG_DEVICES[0]} ]]; then
 		echo "debugfs directory deleted with blktrace active"
 	fi
 	{ kill $!; wait; } >/dev/null 2>/dev/null
-	if [[ -d /sys/kernel/debug/block/${SCSI_DEBUG_NAME} ]]; then
+	if [[ -d /sys/kernel/debug/block/${SCSI_DEBUG_DEVICES[0]} ]]; then
 		echo "debugfs directory leaked"
 	fi
 
-	_put_scsi_debug_dev
+	_exit_scsi_debug
 
 	echo "Test complete"
 }

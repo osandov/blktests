@@ -21,27 +21,47 @@ _have_scsi_debug() {
 	_have_module scsi_debug
 }
 
-_get_scsi_debug_dev() {
-	modprobe -r scsi_debug
-	if ! modprobe scsi_debug; then
+_init_scsi_debug() {
+	if ! modprobe -r scsi_debug || ! modprobe scsi_debug "$@"; then
 		return 1
 	fi
 
 	udevadm settle
 
-	local dev
-	for dev in /sys/block/sd*; do
-		if [[ "$(cat "${dev}/device/model")" =~ ^scsi_debug[[:space:]]*$ ]]; then
-			SCSI_DEBUG_NAME="${dev#/sys/block}"
-			SCSI_DEBUG_DEV="/dev/${SCSI_DEBUG_NAME}"
-			return 0
+	local host_sysfs host target_sysfs target
+	SCSI_DEBUG_HOSTS=()
+	SCSI_DEBUG_TARGETS=()
+	SCSI_DEBUG_DEVICES=()
+	for host_sysfs in /sys/class/scsi_host/*; do
+		if [[ "$(cat "${host_sysfs}/proc_name")" = scsi_debug ]]; then
+			host="${host_sysfs#/sys/class/scsi_host/host}"
+			SCSI_DEBUG_HOSTS+=("$host")
+			for target_sysfs in /sys/class/scsi_device/"$host":*; do
+				target="${target_sysfs#/sys/class/scsi_device/}"
+				SCSI_DEBUG_TARGETS+=("$target")
+				SCSI_DEBUG_DEVICES+=("$(ls "$target_sysfs/device/block")")
+			done
 		fi
 	done
 
-	echo "Could not get scsi_debug device" >&2
-	return 1
+	if [[ ${#SCSI_DEBUG_HOSTS[@]} -eq 0 ]]; then
+		echo "Could not find scsi_debug hosts" >&2
+		_exit_scsi_debug
+		return 1
+	fi
+
+	if [[ ${#SCSI_DEBUG_TARGETS[@]} -eq 0 ]]; then
+		echo "Could not find scsi_debug targets" >&2
+		_exit_scsi_debug
+		return 1
+	fi
+
+	return 0
 }
 
-_put_scsi_debug_dev() {
+_exit_scsi_debug() {
+	unset SCSI_DEBUG_HOSTS
+	unset SCSI_DEBUG_TARGETS
+	unset SCSI_DEBUG_DEVICES
 	modprobe -r scsi_debug
 }
