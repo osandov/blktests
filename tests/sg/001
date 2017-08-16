@@ -18,8 +18,6 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-. common/scsi_debug
-
 DESCRIPTION="try triggering a kernel GPF with 0 byte SG reads"
 QUICK=1
 
