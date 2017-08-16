@@ -171,8 +171,8 @@ DESCRIPTION=""
 # TODO: if this test honors the configured \$TIMEOUT, uncomment the line below.
 # TIMED=1
 
-# TODO: dmesg is checked after each test run by default. You can suppress this
-# by defining:
+# TODO: dmesg is checked for oopses, warnings, etc. after each test run by
+# default. You can suppress this by defining:
 # CHECK_DMESG=0
 # Alternatively, you can filter out any unimportant messages in dmesg like so:
 # DMESG_FILTER="grep -v sysfs"
