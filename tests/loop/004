@@ -1,0 +1,55 @@
+#!/bin/bash
+#
+# Tests LO_FLAGS_BLOCKSIZE together with LO_FLAGS_DIRECT_IO.
+#
+# Copyright (C) 2017 Omar Sandoval
+#
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+. common/loop
+. common/scsi_debug
+
+DESCRIPTION="combine loop direct I/O mode and a custom block size"
+QUICK=1
+
+requires() {
+	_have_program xfs_io && _have_scsi_debug && _have_src_program loblksize && _have_lo_flags_blocksize
+}
+
+test() {
+	local loop_dev
+
+	echo "Running ${TEST_NAME}"
+
+	if ! _init_scsi_debug sector_size=4096; then
+		return 1
+	fi
+
+	if ! loop_dev="$(losetup -f --show "/dev/${SCSI_DEBUG_DEVICES[0]}")"; then
+		_exit_scsi_debug
+		return 1
+	fi
+
+	src/loblksize "$loop_dev" 4096
+	losetup --direct-io=on "$loop_dev"
+	cat "/sys/block/${loop_dev#/dev/}/loop/dio"
+	xfs_io -f -d -c 'pwrite 0 4096' "$loop_dev" >/dev/null
+	dd if="$loop_dev" bs=4096 count=1 iflag=direct status=none | sha256sum
+
+	losetup -d "$loop_dev"
+	udevadm settle
+	_exit_scsi_debug
+
+	echo "Test complete"
+}

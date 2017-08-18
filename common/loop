@@ -1,0 +1,47 @@
+#!/bin/bash
+#
+# Loop device helper functions.
+#
+# Copyright (C) 2017 Omar Sandoval
+#
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+
+_have_lo_flags_blocksize() {
+	local tmpfile loop_dev
+
+	# XXX: $TMPDIR isn't set up for requires(), should it be?
+	if ! tmpfile="$(mktemp "blktests.${TEST_NAME//\//.}.XXX")" ||
+	   ! truncate -s 1M "$tmpfile"; then
+		SKIP_REASON="could not create temporary file"
+		return 1
+	fi
+
+	if ! loop_dev="$(losetup -f --show "$tmpfile" 2>/dev/null)"; then
+		SKIP_REASON="could not get loop device"
+		rm -f "$tmpfile"
+		return 1
+	fi
+
+	if ! src/loblksize "$loop_dev" >/dev/null 2>&1; then
+		SKIP_REASON="kernel does not support LO_FLAGS_BLOCKSIZE"
+		losetup -d "$loop_dev"
+		rm -f "$tmpfile"
+		return 1
+	fi
+
+	losetup -d "$loop_dev"
+	rm -f "$tmpfile"
+	return 0
+}
