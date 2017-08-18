@@ -8,6 +8,6 @@ clean:
 	rm -f $(TARGETS)
 
 $(TARGETS): %: %.c
-	$(CC) -o $@ $(CPPFLAGS) $(CFLAGS) $^
+	$(CC) -Wall -o $@ $(CPPFLAGS) $(CFLAGS) $^
 
 .PHONY: all clean
