@@ -73,7 +73,8 @@ test() {
 		else
 			echo "Setting block size to $blksize"
 			if src/loblksize "$loop_dev" "$blksize"; then
-				dd if=/dev/zero of="$loop_dev" oflag=direct bs="$blksize" count=1 status=none
+				xfs_io -f -d -c "pwrite 0 $blksize" "$loop_dev" >/dev/null
+				dd if="$loop_dev" bs="$blksize" count=1 iflag=direct status=none | sha256sum
 			fi
 		fi
 		local loop_get_status="$(src/loblksize "$loop_dev")"
