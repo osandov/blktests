@@ -1,4 +1,4 @@
-TARGETS := sg/dxfer-from-dev sg/syzkaller1
+TARGETS := sg/dxfer-from-dev sg/syzkaller1 loblksize
 
 CFLAGS := -O2
 

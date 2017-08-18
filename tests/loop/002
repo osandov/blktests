@@ -1,0 +1,84 @@
+#!/bin/bash
+#
+# Tests the LO_FLAGS_BLOCKSIZE flag for LOOP_{GET,SET}_STATUS, introduced in
+# commit f2c6df7dbf9a ("loop: support 4k physical blocksize"). Also a
+# regression test for patches "loop: always return block size in
+# LOOP_GET_STATUS" and "loop: fix hang if LOOP_SET_STATUS gets invalid
+# blocksize or encrypt type".
+#
+# Copyright (C) 2017 Omar Sandoval
+#
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+DESCRIPTION="try various loop device block sizes"
+QUICK=1
+
+requires() {
+	local tmpfile loop_dev
+
+	if ! _have_src_program loblksize; then
+		return 1
+	fi
+
+	# XXX: $TMPDIR isn't set up for requires(), should it be?
+	if ! tmpfile="$(mktemp "blktests.${TEST_NAME//\//.}.XXX")" ||
+	   ! truncate -s 1M "$tmpfile"; then
+		SKIP_REASON="could not create temporary file"
+		return 1
+	fi
+
+	if ! loop_dev="$(losetup -f --show "$tmpfile" 2>/dev/null)"; then
+		SKIP_REASON="could not get loop device"
+		rm -f "$tmpfile"
+		return 1
+	fi
+
+	if ! src/loblksize "$loop_dev" >/dev/null 2>&1; then
+		SKIP_REASON="kernel does not support LO_FLAGS_BLOCKSIZE"
+		losetup -d "$loop_dev"
+		rm -f "$tmpfile"
+		return 1
+	fi
+
+	losetup -d "$loop_dev"
+	rm -f "$tmpfile"
+	return 0
+}
+
+test() {
+	local loop_dev
+	echo "Running ${TEST_NAME}"
+
+	truncate -s 1M "$TMPDIR/file"
+	if ! loop_dev="$(losetup -f --show "$TMPDIR/file")"; then
+		return 1
+	fi
+
+	for blksize in "" 4096 2048 1234 1024 512; do
+		if [[ -z $blksize ]]; then
+			echo "Checking default block size"
+		else
+			echo "Setting block size to $blksize"
+			if src/loblksize "$loop_dev" "$blksize"; then
+				dd if=/dev/zero of="$loop_dev" oflag=direct bs="$blksize" count=1 status=none
+			fi
+		fi
+		echo "LOOP_GET_STATUS says" "$(src/loblksize "$loop_dev")"
+		echo "sysfs says" "$(cat "/sys/block/${loop_dev#/dev/}/queue/logical_block_size")"
+	done
+
+	losetup -d "$loop_dev"
+
+	echo "Test complete"
+}

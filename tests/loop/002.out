@@ -1,0 +1,21 @@
+Running loop/002
+Checking default block size
+LOOP_GET_STATUS says 512
+sysfs says 512
+Setting block size to 4096
+LOOP_GET_STATUS says 4096
+sysfs says 4096
+Setting block size to 2048
+LOOP_GET_STATUS says 2048
+sysfs says 2048
+Setting block size to 1234
+LOOP_SET_STATUS64: Invalid argument
+LOOP_GET_STATUS says 2048
+sysfs says 2048
+Setting block size to 1024
+LOOP_GET_STATUS says 1024
+sysfs says 1024
+Setting block size to 512
+LOOP_GET_STATUS says 512
+sysfs says 512
+Test complete
