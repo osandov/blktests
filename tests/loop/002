@@ -2,9 +2,10 @@
 #
 # Tests the LO_FLAGS_BLOCKSIZE flag for LOOP_{GET,SET}_STATUS, introduced in
 # commit f2c6df7dbf9a ("loop: support 4k physical blocksize"). Also a
-# regression test for patches "loop: always return block size in
-# LOOP_GET_STATUS" and "loop: fix hang if LOOP_SET_STATUS gets invalid
-# blocksize or encrypt type".
+# regression test for patches "loop: fix hang if LOOP_SET_STATUS gets invalid
+# blocksize or encrypt type", "loop: use queue limit instead of private
+# lo_logical_blocksize", and "loop: always return block size in
+# LOOP_GET_STATUS".
 #
 # Copyright (C) 2017 Omar Sandoval
 #
@@ -65,6 +66,7 @@ test() {
 		return 1
 	fi
 
+	local sysfs="/sys/block/${loop_dev#/dev/}"
 	for blksize in "" 4096 2048 1234 1024 512; do
 		if [[ -z $blksize ]]; then
 			echo "Checking default block size"
@@ -74,8 +76,11 @@ test() {
 				dd if=/dev/zero of="$loop_dev" oflag=direct bs="$blksize" count=1 status=none
 			fi
 		fi
-		echo "LOOP_GET_STATUS says" "$(src/loblksize "$loop_dev")"
-		echo "sysfs says" "$(cat "/sys/block/${loop_dev#/dev/}/queue/logical_block_size")"
+		local loop_get_status="$(src/loblksize "$loop_dev")"
+		local logical_block_size="$(cat "$sysfs/queue/logical_block_size")"
+		local physical_block_size="$(cat "$sysfs/queue/physical_block_size")"
+		local minimum_io_size="$(cat "$sysfs/queue/minimum_io_size")"
+		echo "LOOP_GET_STATUS=$loop_get_status queue/logical_block_size=$logical_block_size queue/physical_block_size=$physical_block_size queue/minimum_io_size=$minimum_io_size"
 	done
 
 	losetup -d "$loop_dev"
