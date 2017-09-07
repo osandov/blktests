@@ -18,30 +18,11 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 
-_have_lo_flags_blocksize() {
-	local tmpfile loop_dev
-
-	# XXX: $TMPDIR isn't set up for requires(), should it be?
-	if ! tmpfile="$(mktemp "blktests.${TEST_NAME//\//.}.XXX")" ||
-	   ! truncate -s 1M "$tmpfile"; then
-		SKIP_REASON="could not create temporary file"
+_have_loop_set_block_size() {
+	src/loblksize "$(losetup -f)" 512 &>/dev/null
+	if [[ $? -eq 2 ]]; then
+		SKIP_REASON="kernel does not support LOOP_SET_BLOCK_SIZE"
 		return 1
 	fi
-
-	if ! loop_dev="$(losetup -f --show "$tmpfile" 2>/dev/null)"; then
-		SKIP_REASON="could not get loop device"
-		rm -f "$tmpfile"
-		return 1
-	fi
-
-	if ! src/loblksize "$loop_dev" >/dev/null 2>&1; then
-		SKIP_REASON="kernel does not support LO_FLAGS_BLOCKSIZE"
-		losetup -d "$loop_dev"
-		rm -f "$tmpfile"
-		return 1
-	fi
-
-	losetup -d "$loop_dev"
-	rm -f "$tmpfile"
 	return 0
 }

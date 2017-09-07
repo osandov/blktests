@@ -24,7 +24,7 @@ DESCRIPTION="combine loop direct I/O mode and a custom block size"
 QUICK=1
 
 requires() {
-	_have_program xfs_io && _have_scsi_debug && _have_src_program loblksize && _have_lo_flags_blocksize
+	_have_program xfs_io && _have_scsi_debug && _have_src_program loblksize && _have_loop_set_block_size
 }
 
 test() {

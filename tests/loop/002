@@ -28,7 +28,7 @@ DESCRIPTION="try various loop device block sizes"
 QUICK=1
 
 requires() {
-	_have_program xfs_io && _have_src_program loblksize && _have_lo_flags_blocksize
+	_have_program xfs_io && _have_src_program loblksize && _have_loop_set_block_size
 }
 
 test() {
@@ -51,13 +51,10 @@ test() {
 				dd if="$loop_dev" bs="$blksize" count=1 iflag=direct status=none | sha256sum
 			fi
 		fi
-		local loop_get_status="$(src/loblksize "$loop_dev")"
-		local logical_block_size="$(cat "$sysfs/queue/logical_block_size")"
-		local physical_block_size="$(cat "$sysfs/queue/physical_block_size")"
-		local minimum_io_size="$(cat "$sysfs/queue/minimum_io_size")"
-		echo "LOOP_GET_STATUS=$loop_get_status queue/logical_block_size=$logical_block_size queue/physical_block_size=$physical_block_size queue/minimum_io_size=$minimum_io_size"
+		cat "$sysfs/queue/logical_block_size"
 	done
 
+	sync
 	losetup -d "$loop_dev"
 
 	echo "Test complete"

@@ -1,19 +1,19 @@
 Running loop/002
 Checking default block size
-LOOP_GET_STATUS=512 queue/logical_block_size=512 queue/physical_block_size=512 queue/minimum_io_size=512
+512
 Setting block size to 4096
 769bd186841c10e5b1106b55986206c0e87fc05a7f565fdee01b5abcaff6ae78  -
-LOOP_GET_STATUS=4096 queue/logical_block_size=4096 queue/physical_block_size=4096 queue/minimum_io_size=4096
+4096
 Setting block size to 2048
 0ca3bfdeda1ef5036bfa5dad078a9f15724e79cf296bd4388cf786bfaf4195d0  -
-LOOP_GET_STATUS=2048 queue/logical_block_size=2048 queue/physical_block_size=2048 queue/minimum_io_size=2048
+2048
 Setting block size to 1234
-LOOP_SET_STATUS64: Invalid argument
-LOOP_GET_STATUS=2048 queue/logical_block_size=2048 queue/physical_block_size=2048 queue/minimum_io_size=2048
+LOOP_SET_BLOCK_SIZE: Invalid argument
+2048
 Setting block size to 1024
 cfa35bcc2f57149955e5e4f666e1bda1318596e8b6306e9055087643beb9f190  -
-LOOP_GET_STATUS=1024 queue/logical_block_size=1024 queue/physical_block_size=1024 queue/minimum_io_size=1024
+1024
 Setting block size to 512
 58b991c23d339f9d25eccb315cf8ba9edb608bb60be3be6c73b03a4481dc7682  -
-LOOP_GET_STATUS=512 queue/logical_block_size=512 queue/physical_block_size=512 queue/minimum_io_size=512
+512
 Test complete
