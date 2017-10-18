@@ -1,0 +1,56 @@
+#!/bin/bash
+#
+# check page-cache coherency after BLKDISCARD
+# Regression test for patch "block: Invalidate cache on discard v2"-
+# https://lkml.org/lkml/2017/3/22/789
+# Page cache should be dropped after successful discard
+#
+# Copyright (C) 2017 Dmitry Monakhov <dmonakhov@openvz.org>
+#
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+DESCRIPTION="check page-cache coherency after BLKDISCARD"
+
+. common/scsi_debug
+
+requires() {
+	_have_scsi_debug && _have_program xfs_io
+}
+
+test() {
+	echo "Running ${TEST_NAME}"
+
+	rm -f "$FULL"
+
+	# Create virtual device with unmap_zeroes_data support
+	if ! _init_scsi_debug dev_size_mb=32 lbpws=1 lbpws10=1; then
+		return 1
+	fi
+
+	local dev="/dev/${SCSI_DEBUG_DEVICES[0]}"
+	# Initialize data with known pattern
+	xfs_io -c "pwrite -S 0xaa -b 2M 0 32M -w" -d "$dev" >>"$FULL"
+
+	# Fill page cache with dirty data
+	xfs_io -c "pwrite -S 0xbb -b 2M 2M 10M" -f "$dev" >>"$FULL"
+
+	blkdiscard "$dev"
+	# After device was fully discarded, read sould return all zeroes
+	dd if="$dev" bs=4k  2>>"$FULL" | hexdump
+	dd if="$dev" bs=4M iflag=direct 2>>"$FULL" | hexdump
+
+	_exit_scsi_debug
+
+	echo "Test complete"
+}
