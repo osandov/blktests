@@ -31,7 +31,7 @@ device_requires() {
 test_device() {
 	echo "Running ${TEST_NAME}"
 
-	pdev=$(_get_pci_dev_from_blkdev)
+	pdev="$(_get_pci_dev_from_blkdev)"
 
 	if _test_dev_is_rotational; then
 		size="32m"

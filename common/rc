@@ -138,5 +138,6 @@ _test_dev_is_pci() {
 
 _get_pci_dev_from_blkdev() {
 	readlink -f "$TEST_DEV_SYSFS/device" | \
-		grep -Eo '[0-9a-f]{4}:[0-9a-f]{2}:[0-9a-f]{2}\.[0-9a-f]'
+		grep -Eo '[0-9a-f]{4}:[0-9a-f]{2}:[0-9a-f]{2}\.[0-9a-f]' | \
+		tail -1
 }
