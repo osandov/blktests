@@ -1,0 +1,40 @@
+Running block/013
+Run: dif-type1-w
+T0: Test basic IO
+Check that buffered IO
+f18a6c9b9d69ff8ed61daa62dfab4341  -
+Check that direct IO
+f18a6c9b9d69ff8ed61daa62dfab4341  -
+f18a6c9b9d69ff8ed61daa62dfab4341  -
+Check csum corruption detection
+T1: Corrupt guard_tag, next read should fail
+T2: Check that unaffected blocks are still readable
+T3: Rewrite corrupted sector and check that read works
+T4: Corrupt app_tag, should not affect read
+T5: Corrupt ref_tag, next read should fail
+T6: Check that unaffected blocks are still readable
+T7: Rewrite corrupted sector and check that read works
+Check that buffered and direct read works
+f18a6c9b9d69ff8ed61daa62dfab4341  -
+f18a6c9b9d69ff8ed61daa62dfab4341  -
+f18a6c9b9d69ff8ed61daa62dfab4341  -
+Run: dif-type1-wo
+T0: Test basic IO
+Check that buffered IO
+f18a6c9b9d69ff8ed61daa62dfab4341  -
+Check that direct IO
+f18a6c9b9d69ff8ed61daa62dfab4341  -
+f18a6c9b9d69ff8ed61daa62dfab4341  -
+Check csum corruption detection
+T1: Corrupt guard_tag, next read should fail
+T2: Check that unaffected blocks are still readable
+T3: Rewrite corrupted sector and check that read works
+T4: Corrupt app_tag, should not affect read
+T5: Corrupt ref_tag, next read should fail
+T6: Check that unaffected blocks are still readable
+T7: Rewrite corrupted sector and check that read works
+Check that buffered and direct read works
+f18a6c9b9d69ff8ed61daa62dfab4341  -
+f18a6c9b9d69ff8ed61daa62dfab4341  -
+f18a6c9b9d69ff8ed61daa62dfab4341  -
+Test complete

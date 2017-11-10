@@ -1,0 +1,133 @@
+#!/bin/bash
+#
+# Test create virtual block device via lio-targed infastructure and
+# perform basic IO operations with data corruption detection.
+#
+# Temprorally mark is as dangerous, because currently it trigger BUG_ON
+# inside blkdev_issue_flush
+# Check basic T10-DIF integrity features for a block device
+#
+# DIF/DIX TYPE: T10-DIF-TYPE1-CRC
+#
+# Copyright (C) 2017 Dmitry Monakhov <dmonakhov@openvz.org>
+#
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+DESCRIPTION="basic blockdev T10-DIF-TYPE1 integrity checks"
+
+. common/liotarget
+
+requires() {
+	_have_liotarget && _have_program xfs_io
+}
+
+# One full test suite
+run_one() {
+	local img_name=$1
+	echo "Run: $img_name"
+
+	echo "T0: Test basic IO"
+	xfs_io -c "pwrite -S 0xa0 -b 4M 0 16M" -d "$dev" >>"$FULL"
+	xfs_io -c "pwrite -S 0xa3 -b 1k -V8  20M 32k" -d "$dev" >>"$FULL"
+	xfs_io -c "pwrite -S 0xa2 -b 1k -V8  2M 32k" -f "$dev" >>"$FULL"
+	xfs_io -c "pwrite -S 0xa1 -b 4k  1536000 8k" -f "$dev" >>"$FULL"
+	xfs_io -c "fsync" -d "$dev" >>"$FULL"
+
+	echo "Check that buffered IO"
+	dd if="$dev" bs=4k  2>>"$FULL" | md5sum
+
+	echo "Check that direct IO"
+	# Small requests are not being split
+	dd if="$dev" bs=64k iflag=direct 2>>"$FULL" | md5sum
+	# Big requests may be split on flight, but result MUST be the same.
+	dd if="$dev" bs=4M iflag=direct 2>>"$FULL" | md5sum
+
+	echo "Check csum corruption detection"
+	# LIO-fileio store t10 DIF data in separate file ${IMG}.protection
+	# struct t10_pi_tuple {
+	#       __be16 guard_tag;       /* Checksum */
+	#       __be16 app_tag;         /* Opaque storage */
+	#       __be32 ref_tag;         /* Target LBA or indirect LBA */
+	#}
+	# Play with 3000'th sector -> t10_pi_tuple offset == 3000 * 8 == 24000
+	#
+	echo "T1: Corrupt guard_tag, next read should fail"
+	xfs_io -c "pwrite -S 0xde -b2 24000 2 -w" \
+		-f $TEST_DIR/$$/$img_name.protection >>"$FULL"
+	dd if="$dev" of=/dev/null bs=1M count=2 iflag=direct >>"$FULL"
+
+	echo "T2: Check that unaffected blocks are still readable"
+	dd if="$dev" of=/dev/null bs=1M count=1 iflag=direct >>"$FULL"
+
+	echo "T3: Rewrite corrupted sector and check that read works"
+	xfs_io -c "pwrite -S 0xa1 -b 4k 1536000 4k" -d "$dev" >>"$FULL"
+	dd if="$dev" bs=2M count=1 iflag=direct >>"$FULL"
+
+	echo "T4: Corrupt app_tag, should not affect read"
+	xfs_io -c "pwrite -S 0xde -b2 24002 2 -w" \
+		-f $TEST_DIR/$$/$img_name.protection >>"$FULL"
+	dd if="$dev" bs=2M count=1 iflag=direct >>"$FULL"
+
+	echo "T5: Corrupt ref_tag, next read should fail"
+	xfs_io -c "pwrite -S 0xde -b4 24004 4 -w"  \
+		$TEST_DIR/$$/$img_name.protection >>"$FULL"
+	dd if="$dev" of=/dev/null bs=1M count=2 iflag=direct >>"$FULL"
+
+	echo "T6: Check that unaffected blocks are still readable"
+	dd if="$dev" of=/dev/null bs=1M count=1 iflag=direct >>"$FULL"
+
+	echo "T7: Rewrite corrupted sector and check that read works"
+	xfs_io -c "pwrite -S 0xa1 -b 4k 1536000 4k" -d $dev >>"$FULL"
+
+	echo "Check that buffered and direct read works"
+	dd if="$dev" bs=4k  2>>"$FULL" | md5sum
+	# Small requests are not being split
+	dd if="$dev" bs=64k iflag=direct 2>>"$FULL" | md5sum
+	# Big requests may be split on flight, but result MUST be the same.
+	dd if="$dev" bs=4M iflag=direct 2>>"$FULL" | md5sum
+}
+
+test() {
+	echo "Running ${TEST_NAME}"
+
+	rm -f "$FULL"
+	mkdir -p $TEST_DIR/$$
+
+	# Create virtual scsi target with internal csum verification
+	name=dif-type1-w
+	cfg_path=$(_liotgt_create_fileio $name $TEST_DIR/$$/$name 32M)
+	_liotgt_set_attribute $cfg_path pi_prot_type 1
+	_liotgt_set_attribute $cfg_path pi_prot_format 1
+	_liotgt_set_attribute $cfg_path pi_prot_verify 1
+	dev=$(_liotgt_attach_target /backstores/fileio/$name)
+	run_one $name
+	
+	#
+	# Create virtual scsi target w/o internal csum verification,
+	# check that core blk_integrity_profile->verify_fn works
+	#
+	name=dif-type1-wo
+	cfg_path=$(_liotgt_create_fileio $name $TEST_DIR/$$/$name 32M)
+	_liotgt_set_attribute $cfg_path  pi_prot_type 1
+	_liotgt_set_attribute $cfg_path  pi_prot_format 1
+	_liotgt_set_attribute $cfg_path  pi_prot_verify 0
+	dev=$(_liotgt_attach_target /backstores/fileio/$name)
+	run_one $name
+
+	#Cleanup
+	_liotgt_cleanup
+	rm -rf $TEST_DIR/$$
+
+	echo "Test complete"
+}

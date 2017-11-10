@@ -1,0 +1,51 @@
+#!/bin/bash
+#
+# Regression test for  information leak for lio-fileio target
+# BUG: If image  file is less than virtual blockdev then read()
+# may return unitilized data.
+#
+# Copyright (C) 2017 Dmitry Monakhov <dmonakhov@openvz.org>
+#
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+DESCRIPTION="check information leak for lio-fileio"
+
+. common/liotarget
+
+requires() {
+	_have_liotarget && _have_program xfs_io
+}
+
+test() {
+	echo "Running ${TEST_NAME}"
+
+	rm -f "$FULL"
+
+	mkdir -p $TEST_DIR/$$
+
+	cfg_path=$(_liotgt_create_fileio  002-test.img $TEST_DIR/$$/002-test.img 128M)
+	dev=$(_liotgt_attach_target /backstores/fileio/002-test.img)
+
+	xfs_io -f -c "truncate 1M" $TEST_DIR/$$/002-test.img >>"$FULL"
+	xfs_io -c "pwrite -S 0xa0 -b 512 512 1k" -d "$dev" >>"$FULL"
+	xfs_io -c "pwrite -S 0xab -b 512 2M 1k" -d "$dev" >>"$FULL"
+
+	dd if="$dev" bs=4k  2>>"$FULL" | hexdump
+
+	# Cleanup
+	_liotgt_cleanup
+	rm -rf $TEST_DIR/$$
+
+	echo "Test complete"
+}
