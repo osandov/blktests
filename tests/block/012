@@ -17,7 +17,7 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-DESCRIPTION="check read-only state"
+DESCRIPTION="check that a read-only block device fails writes"
 TIMED=1
 
 requires() {
@@ -34,7 +34,8 @@ test_device() {
 	blockdev --setro "$TEST_DEV"
 	blockdev --getro "$TEST_DEV"
 	# writes should fail while device is read-only
-	xfs_io -c "pwrite -w -S 0xbb -b 2M 0 2M" -d "$TEST_DEV" >>"$FULL"
+	xfs_io -c "pwrite -w -S 0xbb -b 2M 0 2M" -d "$TEST_DEV" 2>&1 >>"$FULL" \
+		| _filter_xfs_io_error
 	dd if="$TEST_DEV" bs=2M count=1 2>>"$FULL" | hexdump
 	blockdev --setrw "$TEST_DEV"
 	blockdev --getro "$TEST_DEV"

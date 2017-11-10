@@ -141,3 +141,10 @@ _get_pci_dev_from_blkdev() {
 		grep -Eo '[0-9a-f]{4}:[0-9a-f]{2}:[0-9a-f]{2}\.[0-9a-f]' | \
 		tail -1
 }
+
+# Older versions of xfs_io use pwrite64 and such, so the error messages won't
+# match current versions of xfs_io. See c52086226bc6 ("filter: xfs_io output
+# has dropped "64" from error messages") in xfstests.
+_filter_xfs_io_error() {
+	sed -e 's/^\(.*\)64\(: .*$\)/\1\2/'
+}

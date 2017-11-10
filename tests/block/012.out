@@ -4,7 +4,7 @@ Running block/012
 *
 0200000
 1
-pwrite64: Operation not permitted
+pwrite: Operation not permitted
 0000000 aaaa aaaa aaaa aaaa aaaa aaaa aaaa aaaa
 *
 0200000
