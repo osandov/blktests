@@ -51,7 +51,8 @@ int main(int argc, char **argv)
 	}
 
 	printf("PASS\n");
-
+	rc = 0;
 out_close:
 	close(fd);
+	return (rc ? 1 : 0);
 }
