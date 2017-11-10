@@ -37,7 +37,7 @@ int main(int argc, char **argv)
 	int fd = -1;
 
 	if (argc != 3) {
-		fprintf(stderr, "usage: %s DEV [BLKSIZE]\n", argv[0]);
+		fprintf(stderr, "usage: %s DEV BLKSIZE\n", argv[0]);
 		return 1;
 	}
 
