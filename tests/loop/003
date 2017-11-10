@@ -21,6 +21,10 @@
 DESCRIPTION="time opening and closing an unbound loop device"
 QUICK=1
 
+requires() {
+	_have_src_program openclose
+}
+
 test() {
 	local loop_dev
 	echo "Running ${TEST_NAME}"
@@ -30,11 +34,7 @@ test() {
 	# In a subshell so TIMEFORMAT doesn't get clobbered.
 	(
 	TIMEFORMAT="Test took %0R seconds"
-	{FD}<>"$loop_dev"
-	time for ((i = 0; i < 500; i++)); do
-		$FD>&-
-		$FD<>"$loop_dev"
-	done
+	time src/openclose "$(losetup -f)" 5000
 	)
 
 	echo "Test complete"
