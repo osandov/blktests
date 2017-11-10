@@ -1,0 +1,137 @@
+#!/bin/bash
+#
+# Functions for Linux-IO Target manipulation 
+#
+# Copyright (C) 2017 Dmitry Monakhov <dmonakhov@openvz.org>
+#
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+_have_liotarget() {
+	local status=1
+	if command -v targetcli >/dev/null; then
+		status=0                
+	else
+		SKIP_REASON="targetcli is not available"
+		return 1
+	fi
+
+	targetcli ls /backstores/ramdisk >>/dev/null;
+	if [ $? -ne 0 ]; then
+		SKIP_REASON="kernel compiled w/o CONFIG_TARGET_CORE"
+		return 1 
+	fi
+
+	targetcli ls /backstores/fileio >>/dev/null;
+	if [ $? -ne 0 ]; then
+		SKIP_REASON="kernel compiled w/o CONFIG_TCM_FILEIO"
+		return 1
+	fi
+
+	targetcli ls /loopback >>/dev/null;
+	if [ $? -ne 0 ]; then
+		SKIP_REASON="kernel compiled w/o CONFIG_LOOPBACK_TARGET"
+		return 1
+	fi
+
+	return $status
+}
+
+_liotgt_create_fileio() {
+	local name=$1
+	local img=$2
+	local sz=$3
+
+	targetcli /backstores/fileio create \
+		name=$name file_or_dev=$img  size=$sz >>/dev/null
+	if [ $? -ne 0 ]; then
+		SKIP_REASON="Can not create /backstores/fileio/$name"
+		return 1
+	fi
+
+	local cfg_path=`ls -d /sys/kernel/config/target/core/fileio_*/$name`
+	if [ -d "$cfg_path" ]; then
+		echo $cfg_path
+	else
+		SKIP_REASON="Bad config path"
+		return 1;
+	fi
+}
+
+_liotgt_set_attribute() {
+	local path=$1
+	local attr_name=$2
+	local attr_val=$3
+
+	if [ -f $path/attrib/$attr_name ]; then
+		echo "echo $attr_val > $path/attrib/$attr_name" >>"$FULL"
+		echo $attr_val >  $path/attrib/$attr_name
+	else
+		SKIP_REASON="Bad attribute $attr_name"
+		return 1
+	fi
+}
+
+_liotgt_create_loopback() {
+	local out=`targetcli /loopback/ create 2>&1`
+	if [ $? -ne 0 ]; then
+		SKIP_REASON="Can not create loopback target"
+		return 1
+	fi
+	echo $out >>"$FULL"
+
+	local naa=`echo $out | gawk '{ print $3 }'`
+	echo ${naa:0:20} >>"$FULL"
+
+	echo ${naa:0:20}
+}
+
+_liotgt_find_dev() {
+	local found=""
+	local name=$1
+	local drives=`find /sys/devices -type f -name model`
+	for d in $drives;do
+		local dir=`dirname $d`
+		local vendor=`cat $dir/vendor`
+		local model=`cat $dir/model`
+		if [ "${vendor//[[:space:]]/}" == "LIO-ORG" ] && \
+		       [ "${model//[[:space:]]/}" == "$name" ]; then
+			found=/dev/$(ls $dir/block)
+			break
+		fi
+	done
+	if  [ -z "$found" ]; then
+		SKIP_REASON="Can not find device with backend $name"
+		return 1
+	fi
+
+	echo "$found"
+}
+
+_liotgt_attach_target() {
+	local path=$1
+	local name=`basename $path`
+	local naa=$(_liotgt_create_loopback)
+
+	targetcli /loopback/$naa/luns create $path >>/dev/null
+	if [ $? -ne 0 ]; then
+		SKIP_REASON="Can not attach $path to tcm_loop"
+		return 1
+	fi
+
+	_liotgt_find_dev $name
+}
+
+_liotgt_cleanup() {
+	targetctl clear
+}
