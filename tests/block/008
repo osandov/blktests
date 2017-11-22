@@ -23,7 +23,7 @@ DESCRIPTION="do IO while hotplugging CPUs"
 TIMED=1
 
 requires() {
-	_have_cpu_hotplug
+	_have_cpu_hotplug && _have_fio
 }
 
 test_device() {
