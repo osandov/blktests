@@ -24,7 +24,7 @@ DESCRIPTION="run null-blk in blocking mode"
 TIMED=1
 
 requires() {
-	_have_module null_blk && _have_module_param null_blk blocking
+	_have_module null_blk && _have_module_param null_blk blocking && _have_fio
 }
 
 test() {
