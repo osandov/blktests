@@ -1,0 +1,51 @@
+#!/bin/bash
+#
+# Test blk-mq requeues with all schedulers using null-blk. Regression test for
+# commit ba989a01469d ("block: kyber: fix domain token leak during requeue").
+#
+# Copyright (C) 2018 Omar Sandoval
+#
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+DESCRIPTION="run null-blk on different schedulers with requeue injection configured"
+
+QUICK=1
+
+requires() {
+	_have_module null-blk && _have_module_param null_blk requeue
+}
+
+test() {
+	echo "Running ${TEST_NAME}"
+
+	modprobe -r null_blk
+
+	# The format is "<interval>,<probability>,<space>,<times>". Here, we
+	# requeue 10% of the time.
+	modprobe null_blk queue_mode=2 requeue='1,10,0,-1'
+
+	local scheds
+	scheds=($(sed 's/[][]//g' /sys/block/nullb0/queue/scheduler))
+
+	for sched in "${scheds[@]}"; do
+		echo "Testing $sched" >> "$FULL"
+		echo "$sched" > /sys/block/nullb0/queue/scheduler
+		dd if=/dev/nullb0 of=/dev/null bs=4K count=$((512 * 1024)) \
+			iflag=direct status=none
+	done
+
+	modprobe -r null_blk
+
+	echo "Test complete"
+}
