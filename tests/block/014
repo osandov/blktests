@@ -31,7 +31,7 @@ test() {
 	modprobe -r null_blk
 
 	# The format is "<interval>,<probability>,<space>,<times>". Here, we
-	# fail every other I/O.
+	# fail 50% of I/Os.
 	modprobe null_blk timeout='1,50,0,-1'
 
 	# Do a bunch of I/Os which will timeout and then complete. The only
