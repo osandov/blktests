@@ -95,6 +95,22 @@ _have_blktrace() {
 	_have_program blktrace
 }
 
+_have_tracefs() {
+	if ! findmnt -t tracefs /sys/kernel/debug/tracing >/dev/null; then
+		SKIP_REASON="tracefs is not mounted at /sys/kernel/debug/tracing"
+		return 1
+	fi
+	return 0
+}
+
+_have_tracepoint() {
+	if [[ ! -d /sys/kernel/debug/tracing/events/${event} ]]; then
+		SKIP_REASON="tracepoint ${event} does not exist"
+		return 1
+	fi
+	return 0
+}
+
 _test_dev_can_discard() {
 	if [[ $(cat "${TEST_DEV_SYSFS}/queue/discard_max_bytes") -eq 0 ]]; then
 		SKIP_REASON="$TEST_DEV does not support discard"
