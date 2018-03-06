@@ -1,0 +1,40 @@
+#!/bin/bash
+#
+# Regression test for patch "scsi: sd: Keep disk read-only when re-reading
+# partition"
+#
+# Copyright (C) 2018 Jeremy Cline <jeremy@jcline.org>
+#
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+DESCRIPTION="ensure re-reading the partition table keeps its read-only flag"
+QUICK=1
+
+test_device() {
+	echo "Running ${TEST_NAME}"
+
+	blockdev --setro "$TEST_DEV"
+	blockdev --getro "$TEST_DEV"
+	blockdev --rereadpt "$TEST_DEV"
+	blockdev --getro "$TEST_DEV"
+	dd if=/dev/zero of="$TEST_DEV" count=1024 |& grep -o "Operation not permitted"
+
+	blockdev --setrw "$TEST_DEV"
+	blockdev --getro "$TEST_DEV"
+	blockdev --rereadpt "$TEST_DEV"
+	blockdev --getro "$TEST_DEV"
+	dd if=/dev/zero of="$TEST_DEV" count=1024 |& grep -o "Operation not permitted"
+
+	echo "Test complete"
+}
