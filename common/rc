@@ -95,6 +95,14 @@ _have_blktrace() {
 	_have_program blktrace
 }
 
+_have_configfs() {
+	if ! findmnt -t configfs /sys/kernel/config >/dev/null; then
+		SKIP_REASON="configfs is not mounted at /sys/kernel/config"
+		return 1
+	fi
+	return 0
+}
+
 _have_tracefs() {
 	if ! findmnt -t tracefs /sys/kernel/debug/tracing >/dev/null; then
 		SKIP_REASON="tracefs is not mounted at /sys/kernel/debug/tracing"
