@@ -1,0 +1,57 @@
+#!/bin/bash
+#
+# Test nvme discovery with many subsystems so the discovery log page
+# exceeds 4k
+#
+# Copyright (C) 2018 Johannes Thumshirn
+#
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+DESCRIPTION="create many subsystems and test discovery"
+
+requires() {
+	_have_program nvme && _have_module nvme-loop && _have_module loop && \
+		_have_configfs
+}
+
+test() {
+	echo "Running ${TEST_NAME}"
+
+	local iterations=1000
+
+	modprobe nvmet
+	modprobe nvme-loop
+
+	local port
+	port="$(_create_nvmet_port "loop")"
+
+	local loop_dev
+	loop_dev="$(losetup -f)"
+
+	for ((i = 0; i < iterations; i++)); do
+		_create_nvmet_subsystem "blktests-subsystem-$i" "${loop_dev}"
+		_add_nvmet_subsys_to_port "${port}" "blktests-subsystem-$i"
+	done
+
+	nvme discover -t loop | sed -r -e "s/portid:  [0-9]+/portid:  X/"
+
+	for ((i = iterations - 1; i >= 0; i--)); do
+		_remove_nvmet_subsystem_from_port "${port}" "blktests-subsystem-$i"
+		_remove_nvmet_subsystem "blktests-subsystem-$i"
+	done
+
+	_remove_nvmet_port "${port}"
+
+	echo "Test complete"
+}
