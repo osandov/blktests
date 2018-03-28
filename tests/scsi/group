@@ -17,10 +17,10 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-. common/sg
+. common/scsi
 
 group_requires() {
-	_have_root && _have_scsi_generic
+	_have_root
 }
 
 group_device_requires() {
