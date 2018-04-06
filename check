@@ -320,10 +320,10 @@ _call_test() {
 	fi
 
 	TIMEFORMAT="%Rs"
-	pushd . >/dev/null
+	pushd . >/dev/null || return
 	{ time "$test_func" >"${seqres}.out" 2>&1; } 2>"${seqres}.runtime"
 	TEST_RUN[exit_status]=$?
-	popd >/dev/null
+	popd >/dev/null || return
 	TEST_RUN[runtime]="$(cat "${seqres}.runtime")"
 	rm -f "${seqres}.runtime"
 
@@ -335,7 +335,7 @@ _call_test() {
 		TEST_RUN[reason]=output
 	elif [[ ${TEST_RUN[exit_status]} -ne 0 ]]; then
 		TEST_RUN[status]=fail
-		TEST_RUN[reason]=exit
+		TEST_RUN[reason]="exit"
 	elif ! _check_dmesg "$dmesg_marker"; then
 		TEST_RUN[status]=fail
 		TEST_RUN[reason]=dmesg

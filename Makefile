@@ -12,7 +12,10 @@ clean:
 # positives on helpers like _init_scsi_debug.
 # SC2154: "VARIABLE is referenced but not assigned". False positives on
 # TEST_RUN[foo]=bar.
-SHELLCHECK_EXCLUDE := SC1090,SC2034,SC2119,SC2154
+# SC2209: "Use var=$(command) to assign output (or quote to assign string)".
+# Warns about DMESG_FILTER=cat, which is not going to confuse anyone who knows
+# how to write shell scripts.
+SHELLCHECK_EXCLUDE := SC1090,SC2034,SC2119,SC2154,SC2209
 
 shellcheck:
 	shellcheck -x -e $(SHELLCHECK_EXCLUDE) -f gcc check new common/* tests/*/[0-9]*[0-9]
