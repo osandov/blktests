@@ -24,3 +24,61 @@ _test_dev_is_nvme() {
 	fi
 	return 0
 }
+
+_create_nvmet_port() {
+	local trtype="$1"
+	local nvmet_cfs="/sys/kernel/config/nvmet/"
+
+	local port=$(($(ls "${nvmet_cfs}" | wc -l) + 1))
+
+	mkdir "${nvmet_cfs}/ports/${port}"
+	echo "${trtype}" > "${nvmet_cfs}/ports/${port}/addr_trtype"
+
+	echo "${port}"
+}
+
+_remove_nvmet_port() {
+	local port="$1"
+	local nvmet_cfs="/sys/kernel/config/nvmet/"
+	rmdir "${nvmet_cfs}/ports/${port}"
+}
+
+_create_nvmet_subsystem() {
+	local nvmet_subsystem="$1"
+	local blkdev="$2"
+	local nvmet_cfs="/sys/kernel/config/nvmet/"
+	local cfs_path="${nvmet_cfs}/subsystems/${nvmet_subsystem}"
+
+	mkdir -p "${cfs_path}"
+	echo 1 > "${cfs_path}/attr_allow_any_host"
+	mkdir "${cfs_path}/namespaces/1"
+	printf "%s" "$blkdev" > "${cfs_path}/namespaces/1/device_path"
+	printf 1 > "${cfs_path}/namespaces/1/enable"
+}
+
+_remove_nvmet_subsystem() {
+	local nvmet_subsystem="$1"
+	local nvmet_cfs="/sys/kernel/config/nvmet/"
+	local cfs_path="${nvmet_cfs}/subsystems/${nvmet_subsystem}"
+
+	echo 0 > "${cfs_path}/namespaces/1/enable"
+	rmdir "${cfs_path}/namespaces/1/"
+	rmdir "${cfs_path}"
+}
+
+_add_nvmet_subsys_to_port() {
+	local port="$1"
+	local nvmet_subsystem="$2"
+	local nvmet_cfs="/sys/kernel/config/nvmet/"
+
+	ln -s "${nvmet_cfs}/subsystems/${nvmet_subsystem}" \
+		"${nvmet_cfs}/ports/${port}/subsystems/${nvmet_subsystem}"
+}
+
+_remove_nvmet_subsystem_from_port() {
+	local port="$1"
+	local nvmet_subsystem="$2"
+	local nvmet_cfs="/sys/kernel/config/nvmet/"
+
+	rm "${nvmet_cfs}/ports/${port}/subsystems/${nvmet_subsystem}"
+}
