@@ -26,6 +26,10 @@ requires() {
 	_have_tracefs && _have_tracepoint "nvme/nvme_setup_nvm_cmd"
 }
 
+device_requires() {
+	_test_dev_is_nvme
+}
+
 filter_trace() {
 	sed -r -e  's/dd-[0-9]+/dd-XXX/' \
 		-e 's/\[[0-9]+\]/[XXX]/' \
