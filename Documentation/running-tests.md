@@ -32,6 +32,9 @@ and will overwrite any data on these devices.
 TEST_DEVS=(/dev/nvme0n1 /dev/sdb)
 ```
 
+If `TEST_DEVS` is not defined or is empty, only tests which do not require a
+device will be run.
+
 ### Excluding Tests
 
 
