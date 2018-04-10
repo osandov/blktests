@@ -22,7 +22,3 @@
 group_requires() {
 	_have_root
 }
-
-group_device_requires() {
-	_test_dev_is_nvme
-}
