@@ -85,6 +85,11 @@ _have_loop() {
 	_have_module loop && _have_program losetup
 }
 
+_have_nbd() {
+	_have_module nbd && _have_program nbd-server && \
+		_have_program nbd-client
+}
+
 _have_blktrace() {
 	# CONFIG_BLK_DEV_IO_TRACE might still be disabled, but this is easier
 	# to check. We can fix it if someone complains.
