@@ -3,7 +3,8 @@ TARGETS := \
 	loop_get_status_null \
 	openclose \
 	sg/dxfer-from-dev \
-	sg/syzkaller1
+	sg/syzkaller1 \
+	nbdsetsize
 
 CFLAGS := -O2
 
