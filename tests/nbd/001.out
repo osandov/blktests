@@ -1,0 +1,6 @@
+Running nbd/001
+Disk /dev/nbd0: 10.7GB
+nbd0  43:0    0  10G  0 disk 
+Setting size to 1gib
+nbd0  43:0    0   1G  0 disk 
+Disk /dev/nbd0: 1074MB
