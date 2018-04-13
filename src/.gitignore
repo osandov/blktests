@@ -1,5 +1,6 @@
 /loblksize
 /loop_get_status_null
 /openclose
+/nbdsetsize
 /sg/dxfer-from-dev
 /sg/syzkaller1
