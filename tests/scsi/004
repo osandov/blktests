@@ -1,0 +1,59 @@
+#!/bin/bash
+#
+# Ensure repeated SAM_STAT_TASK_SET_FULL results in EIO on timing out command.
+#
+# Regression test for commit cbe095e2b584 ("Revert "scsi: core: return
+# BLK_STS_OK for DID_OK in __scsi_error_from_host_byte()"")
+#
+# Found independently of corresponding commit mail threads while
+# experimenting with storage mirroring. This test is a storage-independent
+# reproducer for the error case I ran into.
+#
+# Copyright IBM Corp. 2018
+# Author: Steffen Maier <maier@linux.ibm.com>
+#
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+. common/scsi_debug
+
+DESCRIPTION="ensure repeated TASK SET FULL results in EIO on timing out command"
+
+requires() {
+	_have_scsi_debug
+}
+
+test() {
+	echo "Running ${TEST_NAME}"
+
+	if ! _init_scsi_debug add_host=1 max_luns=1 statistics=1 every_nth=1; then
+	    return 1
+	fi
+	# every_nth RW with full queue gets SAM_STAT_TASK_SET_FULL
+	echo 0x800 > /sys/bus/pseudo/drivers/scsi_debug/opts
+	# delay to reduce response repetition: around 1..10sec depending on HZ
+	echo 1000 > /sys/bus/pseudo/drivers/scsi_debug/delay
+	# a single command fills device queue to satisfy 0x800 opts condition
+	echo 1 > "/sys/block/${SCSI_DEBUG_DEVICES[0]}/device/queue_depth"
+	dd if="/dev/${SCSI_DEBUG_DEVICES[0]}" iflag=direct of=/dev/null bs=512 count=1 |& grep -o "Input/output error"
+	# stop injection
+	echo 0 > /sys/bus/pseudo/drivers/scsi_debug/opts
+	# dd closing SCSI disk causes implicit TUR also being delayed once
+	while grep -q -F "in_use_bm BUSY:" "/proc/scsi/scsi_debug/${SCSI_DEBUG_HOSTS[0]}"; do
+		sleep 1
+	done
+	echo 1 > /sys/bus/pseudo/drivers/scsi_debug/delay
+	_exit_scsi_debug
+
+	echo "Test complete"
+}
