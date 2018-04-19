@@ -39,6 +39,7 @@ test() {
 	if ! _init_scsi_debug add_host=1 max_luns=1 statistics=1 every_nth=1; then
 	    return 1
 	fi
+	echo 5 > "/sys/block/${SCSI_DEBUG_DEVICES[0]}/device/timeout"
 	# every_nth RW with full queue gets SAM_STAT_TASK_SET_FULL
 	echo 0x800 > /sys/bus/pseudo/drivers/scsi_debug/opts
 	# delay to reduce response repetition: around 1..10sec depending on HZ
