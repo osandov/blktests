@@ -46,13 +46,19 @@ _remove_nvmet_port() {
 _create_nvmet_subsystem() {
 	local nvmet_subsystem="$1"
 	local blkdev="$2"
+	local uuid="00000000-0000-0000-0000-000000000000"
 	local nvmet_cfs="/sys/kernel/config/nvmet/"
 	local cfs_path="${nvmet_cfs}/subsystems/${nvmet_subsystem}"
+
+	if [[ $# -eq 3 ]]; then
+		uuid="$3"
+	fi
 
 	mkdir -p "${cfs_path}"
 	echo 1 > "${cfs_path}/attr_allow_any_host"
 	mkdir "${cfs_path}/namespaces/1"
 	printf "%s" "$blkdev" > "${cfs_path}/namespaces/1/device_path"
+	printf "%s" "$uuid" > "${cfs_path}/namespaces/1/device_uuid"
 	printf 1 > "${cfs_path}/namespaces/1/enable"
 }
 
