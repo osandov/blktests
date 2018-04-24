@@ -42,8 +42,9 @@ test() {
 	echo 5 > "/sys/block/${SCSI_DEBUG_DEVICES[0]}/device/timeout"
 	# every_nth RW with full queue gets SAM_STAT_TASK_SET_FULL
 	echo 0x800 > /sys/bus/pseudo/drivers/scsi_debug/opts
-	# delay to reduce response repetition: around 1..10sec depending on HZ
-	echo 1000 > /sys/bus/pseudo/drivers/scsi_debug/delay
+	# delay to reduce response repetition (1 second - 1 nanosecond, the
+	# maximum which scsi-debug allows)
+	echo 999999999 > /sys/bus/pseudo/drivers/scsi_debug/ndelay
 	# a single command fills device queue to satisfy 0x800 opts condition
 	echo 1 > "/sys/block/${SCSI_DEBUG_DEVICES[0]}/device/queue_depth"
 	dd if="/dev/${SCSI_DEBUG_DEVICES[0]}" iflag=direct of=/dev/null bs=512 count=1 |& grep -o "Input/output error"
@@ -53,7 +54,7 @@ test() {
 	while grep -q -F "in_use_bm BUSY:" "/proc/scsi/scsi_debug/${SCSI_DEBUG_HOSTS[0]}"; do
 		sleep 1
 	done
-	echo 1 > /sys/bus/pseudo/drivers/scsi_debug/delay
+	echo 1 > /sys/bus/pseudo/drivers/scsi_debug/ndelay
 	_exit_scsi_debug
 
 	echo "Test complete"
