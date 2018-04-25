@@ -259,6 +259,9 @@ test() {
 # - Use the \$() form of command substitution instead of backticks.
 # - Use bash for loops instead of seq. E.g., for ((i = 0; i < 10; i++)), not
 #   for i in \$(seq 0 9).
+#
+# Please run \`make check\` after your test is done to check for shell
+# scripting errors and other mistakes.
 EOF
 chmod +x "tests/${test_name}"
 echo "Created tests/${test_name}"

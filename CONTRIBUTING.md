@@ -10,3 +10,7 @@ format.subjectPrefix "PATCH blktests"`.
 All commits must be signed off (i.e., `Signed-off-by: Jane Doe <janedoe@example.org>`)
 as per the [Developer Certificate of Origin](https://developercertificate.org/).
 `git commit -s` and `git format-patch -s` can do this for you.
+
+Please run `make check` before submitting a new test. This runs the
+[shellcheck](https://github.com/koalaman/shellcheck) static analysis tool and
+some other sanity checks.
