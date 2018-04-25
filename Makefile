@@ -17,7 +17,7 @@ clean:
 # how to write shell scripts.
 SHELLCHECK_EXCLUDE := SC1090,SC2034,SC2119,SC2154,SC2209
 
-shellcheck:
+check:
 	shellcheck -x -e $(SHELLCHECK_EXCLUDE) -f gcc check new common/* tests/*/[0-9]*[0-9]
 
-.PHONY: all shellcheck
+.PHONY: all check
