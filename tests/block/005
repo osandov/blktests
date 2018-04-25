@@ -27,6 +27,8 @@ requires() {
 test_device() {
 	echo "Running ${TEST_NAME}"
 
+	local scheds
+	# shellcheck disable=SC2207
 	scheds=($(sed 's/[][]//g' "${TEST_DEV_SYSFS}/queue/scheduler"))
 
 	if _test_dev_is_rotational; then

@@ -36,6 +36,7 @@ test() {
 	modprobe null_blk queue_mode=2 requeue='1,10,0,-1'
 
 	local scheds
+	# shellcheck disable=SC2207
 	scheds=($(sed 's/[][]//g' /sys/block/nullb0/queue/scheduler))
 
 	for sched in "${scheds[@]}"; do
