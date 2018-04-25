@@ -1,9 +1,8 @@
 #!/bin/bash
 #
-# check page-cache coherency after BLKDISCARD
-# Regression test for patch "block: Invalidate cache on discard v2"-
-# https://lkml.org/lkml/2017/3/22/789
-# Page cache should be dropped after successful discard
+# Check page-cache coherency after BLKDISCARD. Regression test for commit
+# 351499a172c0 ("block: Invalidate cache on discard v2"). The page cache should
+# be dropped after a successful discard.
 #
 # Copyright (C) 2017 Dmitry Monakhov <dmonakhov@openvz.org>
 #

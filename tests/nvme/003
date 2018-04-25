@@ -1,7 +1,7 @@
 #!/bin/bash
 #
-# Regression test for patch "nvme: don't send keep-alives to the discovery
-# controller"
+# Regression test for commit 74c6c7153084 ("nvme: don't send keep-alives to the
+# discovery controller").
 #
 # Copyright (C) 2018 Johannes Thumshirn
 #

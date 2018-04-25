@@ -1,6 +1,7 @@
 #!/bin/bash
 #
-# Regression test for patch "scsi: sg: fix SG_DXFER_FROM_DEV transfers"
+# Regression test for commit 68c59fcea1f2 ("scsi: sg: fix SG_DXFER_FROM_DEV
+# transfers").
 #
 # Copyright (C) 2017 Johannes Thumshirn
 #

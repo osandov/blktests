@@ -1,7 +1,8 @@
 #!/bin/bash
 #
 # Test the LOOP_GET_STATUS{,64} error case where the passed argument is NULL.
-# Regression test for patch "loop: fix LOOP_GET_STATUS lock imbalance".
+# Regression test for commit bdac616db9bb ("loop: fix LOOP_GET_STATUS lock
+# imbalance").
 #
 # Copyright (C) 2018 Omar Sandoval
 #
