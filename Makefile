@@ -19,5 +19,6 @@ SHELLCHECK_EXCLUDE := SC1090,SC2034,SC2119,SC2154,SC2209
 
 check:
 	shellcheck -x -e $(SHELLCHECK_EXCLUDE) -f gcc check new common/* tests/*/[0-9]*[0-9]
+	! grep TODO tests/*/[0-9]*[0-9]
 
 .PHONY: all check
