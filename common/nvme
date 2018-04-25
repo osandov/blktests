@@ -29,7 +29,12 @@ _create_nvmet_port() {
 	local trtype="$1"
 	local nvmet_cfs="/sys/kernel/config/nvmet/"
 
-	local port=$(($(ls "${nvmet_cfs}/ports" | wc -l) + 1))
+	local port
+	for ((port = 0; ; port++)); do
+		if [[ ! -e "${nvmet_cfs}/${port}" ]]; then
+			break
+		fi
+	done
 
 	mkdir "${nvmet_cfs}/ports/${port}"
 	echo "${trtype}" > "${nvmet_cfs}/ports/${port}/addr_trtype"
