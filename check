@@ -569,6 +569,7 @@ EXCLUDE=()
 TEST_DEVS=()
 
 if [[ -r config ]]; then
+	# shellcheck disable=SC1091
 	. config
 fi
 
