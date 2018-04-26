@@ -1,0 +1,20 @@
+Running block/018
+queue mode 1
+read 0 s
+write 0 s
+read 1 s
+write 0 s
+read 1 s
+write 1 s
+read 2 s
+write 3 s
+queue mode 2
+read 0 s
+write 0 s
+read 1 s
+write 0 s
+read 1 s
+write 1 s
+read 2 s
+write 3 s
+Test complete
