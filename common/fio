@@ -157,7 +157,9 @@ _fio_perf() {
 # Wrapper around fio that handles:
 #     - Recording perf results
 #     - $TIMEOUT
-# You should usually use this instead of calling fio directly.
+# You should usually use this instead of calling fio directly. An explicitly
+# passed --runtime will override the configured $TIMEOUT, which is useful for
+# tests that should run for a specific amount of time.
 _run_fio() {
 	local args=("--output=$TMPDIR/fio_perf" "--output-format=terse" "--terse-version=4" "--group_reporting=1")
 	if [[ -v TIMEOUT ]]; then
