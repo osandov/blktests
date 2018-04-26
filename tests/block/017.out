@@ -1,22 +1,28 @@
 Running block/017
 queue mode 1
-sysfs reads 1
-sysfs writes 0
+sysfs inflight reads 1
+sysfs inflight writes 0
+sysfs stat 1
 diskstats 1
-sysfs reads 1
-sysfs writes 1
+sysfs inflight reads 1
+sysfs inflight writes 1
+sysfs stat 2
 diskstats 2
-sysfs reads 0
-sysfs writes 0
+sysfs inflight reads 0
+sysfs inflight writes 0
+sysfs stat 0
 diskstats 0
 queue mode 2
-sysfs reads 1
-sysfs writes 0
+sysfs inflight reads 1
+sysfs inflight writes 0
+sysfs stat 1
 diskstats 1
-sysfs reads 1
-sysfs writes 1
+sysfs inflight reads 1
+sysfs inflight writes 1
+sysfs stat 2
 diskstats 2
-sysfs reads 0
-sysfs writes 0
+sysfs inflight reads 0
+sysfs inflight writes 0
+sysfs stat 0
 diskstats 0
 Test complete

@@ -1,7 +1,8 @@
 #!/bin/bash
 #
-# Test the inflight counter in /sys/block/$dev/inflight and /proc/diskstats.
-# Regression test for patch "blk-mq: fix sysfs inflight counter".
+# Test the inflight counter in /sys/block/$dev/inflight, /sys/block/$dev/stat,
+# and /proc/diskstats. Regression test for patch "blk-mq: fix sysfs inflight
+# counter".
 #
 # Copyright (C) 2018 Omar Sandoval
 #
@@ -26,7 +27,9 @@ requires() {
 }
 
 show_inflight() {
-	awk '{ printf "sysfs reads %d\nsysfs writes %d\n", $1, $2 }' /sys/block/nullb0/inflight
+	awk '{ printf "sysfs inflight reads %d\nsysfs inflight writes %d\n", $1, $2 }' \
+		/sys/block/nullb0/inflight
+	awk '{ print "sysfs stat " $9 }' /sys/block/nullb0/stat
 	awk '$3 == "nullb0" { print "diskstats " $12 }' /proc/diskstats
 }
 
