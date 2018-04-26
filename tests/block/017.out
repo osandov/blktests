@@ -1,0 +1,22 @@
+Running block/017
+queue mode 1
+sysfs reads 1
+sysfs writes 0
+diskstats 1
+sysfs reads 1
+sysfs writes 1
+diskstats 2
+sysfs reads 0
+sysfs writes 0
+diskstats 0
+queue mode 2
+sysfs reads 1
+sysfs writes 0
+diskstats 1
+sysfs reads 1
+sysfs writes 1
+diskstats 2
+sysfs reads 0
+sysfs writes 0
+diskstats 0
+Test complete
