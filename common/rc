@@ -109,6 +109,7 @@ _have_configfs() {
 }
 
 _have_tracefs() {
+	stat /sys/kernel/debug/tracing/trace > /dev/null 2>&1
 	if ! findmnt -t tracefs /sys/kernel/debug/tracing >/dev/null; then
 		SKIP_REASON="tracefs is not mounted at /sys/kernel/debug/tracing"
 		return 1
