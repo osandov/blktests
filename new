@@ -169,6 +169,10 @@ DESCRIPTION=""
 # QUICK=1
 
 # TODO: if this test honors the configured \$TIMEOUT, uncomment the line below.
+# This is for tests that can potentially run for a long time but where it's
+# possible to limit the runtime (e.g., with the \`timeout\` command or with
+# fio --runtime, which is what the _run_fio helper does). A test shouldn't be
+# both QUICK and TIMED.
 # TIMED=1
 
 # TODO: dmesg is checked for oopses, warnings, etc. after each test run by

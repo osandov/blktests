@@ -21,7 +21,7 @@ _found_test() {
 	local test_name="$1"
 	local explicit="$2"
 
-	unset DESCRIPTION requires device_requires test test_device
+	unset DESCRIPTION QUICK TIMED requires device_requires test test_device
 
 	if ! . "tests/${test_name}"; then
 		return 1
@@ -44,6 +44,11 @@ _found_test() {
 
 	if declare -fF device_requires >/dev/null && ! declare -fF test_device >/dev/null; then
 		_warning "${test_name} defines device_requires() but not test_device()"
+		return 1
+	fi
+
+	if (( QUICK && TIMED )); then
+		_warning "${test_name} cannot be both QUICK and TIMED"
 		return 1
 	fi
 
