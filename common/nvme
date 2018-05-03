@@ -93,3 +93,15 @@ _remove_nvmet_subsystem_from_port() {
 
 	rm "${nvmet_cfs}/ports/${port}/subsystems/${nvmet_subsystem}"
 }
+
+_find_nvme_loop_dev() {
+	local dev
+	local transport
+	for dev in /sys/class/nvme/nvme*; do
+		dev="$(basename "$dev")"
+		transport="$(cat "/sys/class/nvme/${dev}/transport")"
+		if [[ "$transport" == "loop" ]]; then
+			echo "$dev"
+		fi
+	done
+}
