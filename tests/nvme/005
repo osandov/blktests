@@ -1,0 +1,77 @@
+#!/bin/bash
+#
+# Regression test for patch "nvmet: switch loopback target state to connecting
+# when resetting"
+#
+# Copyright (C) 2018 Johannes Thumshirn
+#
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+DESCRIPTION="reset local loopback target"
+
+QUICK=1
+
+requires() {
+	_have_module nvme-loop && _have_module nvmet && _have_module loop && \
+		_have_configfs && _have_module nvme-core && \
+		_have_module_param nvme-core multipath
+}
+
+test() {
+	echo "Running ${TEST_NAME}"
+
+	# Clean up all stale modules
+	modprobe -r nvme-loop
+	modprobe -r nvme-core
+	modprobe -r nvmet
+
+	modprobe nvme-core multipath=1
+	modprobe nvmet
+	modprobe nvme-loop
+
+	local port
+	port="$(_create_nvmet_port "loop")"
+
+	truncate -s 1G "$TMPDIR/img"
+
+	local loop_dev
+	loop_dev="$(losetup -f --show "$TMPDIR/img")"
+
+	_create_nvmet_subsystem "blktests-subsystem-1" "${loop_dev}" \
+		"91fdba0d-f87b-4c25-b80f-db7be1418b9e"
+	_add_nvmet_subsys_to_port "${port}" "blktests-subsystem-1"
+
+	nvme connect -t loop -n blktests-subsystem-1
+
+	local nvmedev
+	nvmedev="$(_find_nvme_loop_dev)"
+
+	udevadm settle
+
+	echo 1 > "/sys/class/nvme/${nvmedev}/reset_controller"
+
+	nvme disconnect -d "${nvmedev}"
+	_remove_nvmet_subsystem_from_port "${port}" "blktests-subsystem-1"
+	_remove_nvmet_port "${port}"
+
+	_remove_nvmet_subsystem "blktests-subsystem-1"
+	losetup -d "$loop_dev"
+	rm "$TMPDIR/img"
+
+	modprobe -r nvme-loop
+	modprobe -r nvme-core
+	modprobe -r nvmet
+
+	echo "Test complete"
+}
