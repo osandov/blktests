@@ -1,8 +1,8 @@
 #!/bin/bash
 #
 # Test the inflight counter in /sys/block/$dev/inflight, /sys/block/$dev/stat,
-# and /proc/diskstats. Regression test for patch "blk-mq: fix sysfs inflight
-# counter".
+# and /proc/diskstats. Regression test for commit bf0ddaba65dd "blk-mq: fix
+# sysfs inflight counter".
 #
 # Copyright (C) 2018 Omar Sandoval
 #
