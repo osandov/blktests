@@ -28,9 +28,9 @@ requires() {
 }
 
 _find_nvme_loop_dev() {
-	for dev in /sys/block/nvme*; do
+	for dev in /sys/class/nvme/nvme*; do
 		dev="$(basename "$dev")"
-		transport="$(cat "/sys/block/${dev}/device/transport")"
+		transport="$(cat "/sys/class/nvme/${dev}/transport")"
 		if [[ "$transport" == "loop" ]]; then
 			echo "$dev"
 		fi
@@ -59,8 +59,8 @@ test() {
 
 	local nvmedev
 	nvmedev="$(_find_nvme_loop_dev)"
-	cat "/sys/block/${nvmedev}/uuid"
-	cat "/sys/block/${nvmedev}/wwid"
+	cat "/sys/block/${nvmedev}n1/uuid"
+	cat "/sys/block/${nvmedev}n1/wwid"
 
 	_remove_nvmet_subsystem_from_port "${port}" "blktests-subsystem-1"
 	_remove_nvmet_subsystem "blktests-subsystem-1"
