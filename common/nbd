@@ -48,6 +48,26 @@ _have_nbd_netlink() {
 	return 0
 }
 
+_wait_for_nbd_connect() {
+	for ((i = 0; i < 3; i++)); do
+		if [[ -e /sys/kernel/debug/nbd/nbd0/tasks ]]; then
+			return 0
+		fi
+		sleep 1
+	done
+	return 1
+}
+
+_wait_for_nbd_disconnect() {
+	for ((i = 0; i < 3; i++)); do
+		if [[ ! -e /sys/kernel/debug/nbd/nbd0/tasks ]]; then
+			return 0
+		fi
+		sleep 1
+	done
+	return 1
+}
+
 _start_nbd_server() {
 	truncate -s 10G "${TMPDIR}/export"
 	cat > "${TMPDIR}/nbd.conf" << EOF

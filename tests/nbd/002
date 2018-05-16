@@ -1,0 +1,133 @@
+#!/bin/bash
+#
+# Test nbd device resizing. Regression test for the following commits:
+#
+# 8364da4751cf ("nbd: fix nbd device deletion")
+# c3f7c9397609 ("nbd: update size when connected")
+# 9e2b19675d13 ("nbd: use bd_set_size when updating disk size")
+# 96d97e17828f ("nbd: clear_sock on netlink disconnect")
+# fe1f9e6659ca ("nbd: fix how we set bd_invalidated")
+# 76aa1d341257 ("nbd: call nbd_bdev_reset instead of bd_set_size on disconnect")
+#
+# Copyright (C) 2018 Josef Bacik
+#
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+DESCRIPTION="tests on partition handling for an nbd device"
+QUICK=1
+
+requires() {
+	_have_nbd_netlink && _have_program parted
+}
+
+test() {
+	echo "Running ${TEST_NAME}"
+	_start_nbd_server
+	nbd-client -N export localhost /dev/nbd0 >> "$FULL" 2>&1
+
+	parted -s /dev/nbd0 mklabel msdos >> "$FULL" 2>&1
+	parted -s /dev/nbd0 mkpart primary 0 100 >> "$FULL" 2>&1
+
+	# We need to wait for udev to do its thing before we disconnect or else
+	# we'll get timed out requests.
+	udevadm settle
+
+	nbd-client -d /dev/nbd0 >> "$FULL" 2>&1
+
+	if ! _wait_for_nbd_disconnect; then
+		echo "Disconnect didn't happen?"
+		_stop_nbd_server
+		return 1
+	fi
+
+	udevadm settle
+
+	if stat /dev/nbd0p1 >> "$FULL" 2>&1; then
+		echo "Had partition after disconnect?"
+		_stop_nbd_server
+		return 1
+	fi
+
+	# Do it with ioctls
+
+	echo "Testing IOCTL path"
+
+	nbd-client -N export localhost /dev/nbd0 >> "$FULL" 2>&1
+
+	if ! _wait_for_nbd_connect; then
+		echo "Connect didn't happen?"
+		nbd-client -d /dev/nbd0 >> "$FULL" 2>&1
+		_stop_nbd_server
+		return 1
+	fi
+
+	udevadm settle
+
+	if ! stat /dev/nbd0p1 >> "$FULL" 2>&1; then
+		echo "Didn't have partition on ioctl path"
+		nbd-client -d /dev/nbd0 >> "$FULL" 2>&1
+		_stop_nbd_server
+		return 1
+	fi
+
+	nbd-client -d /dev/nbd0 >> "$FULL" 2>&1
+
+	udevadm settle
+
+	if stat /dev/nbd0p1 >> "$FULL" 2>&1; then
+		echo "Partition still exists after disconnect"
+		_stop_nbd_server
+		return 1
+	fi
+
+	# Do it with netlink
+	echo "Testing the netlink path"
+	nbd-client -L -N export localhost /dev/nbd0 >> "$FULL" 2>&1
+
+	if ! _wait_for_nbd_connect; then
+		echo "Connect didn't happen?"
+		nbd-client -d /dev/nbd0 >> "$FULL" 2>&1
+		_stop_nbd_server
+		return 1
+	fi
+
+	udevadm settle
+
+	if  ! stat /dev/nbd0p1 >/dev/null 2>&1; then
+		echo "Didn't have parition on the netlink path"
+		nbd-client -L -d /dev/nbd0 >> "$FULL" 2>&1
+		_stop_nbd_server
+		return 1
+	fi
+
+	nbd-client -L -d /dev/nbd0 >> "$FULL" 2>&1
+
+	if ! _wait_for_nbd_disconnect; then
+		echo "Disconnect didn't happen?"
+		_stop_nbd_server
+		return 1
+	fi
+
+	udevadm settle
+
+	if stat /dev/nbd0p1 >> "$FULL" 2>&1; then
+		echo "Partition still exists after netlink disconnect"
+		_stop_nbd_server
+		return 1
+	fi
+
+	echo "Test complete"
+	_stop_nbd_server
+	return 0
+}
