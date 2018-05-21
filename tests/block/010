@@ -76,5 +76,6 @@ test() {
 	FIO_PERF_FIELDS=("read iops")
 	run_fio_job
 
+	modprobe -r null_blk
 	echo "Test complete"
 }
