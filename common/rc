@@ -51,10 +51,9 @@ _have_root() {
 _have_module() {
 	if modprobe -n -q "$1"; then
 		return 0
-	else
-		SKIP_REASON="$1 module is not available"
-		return 1
 	fi
+	SKIP_REASON="$1 module is not available"
+	return 1
 }
 
 _have_module_param() {
@@ -62,15 +61,15 @@ _have_module_param() {
 		SKIP_REASON="$1 module does not have parameter $2"
 		return 1
 	fi
+	return 0
 }
 
 _have_program() {
 	if command -v "$1" >/dev/null 2>&1; then
 		return 0
-	else
-		SKIP_REASON="$1 is not available"
-		return 1
 	fi
+	SKIP_REASON="$1 is not available"
+	return 1
 }
 
 _have_src_program() {
