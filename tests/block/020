@@ -1,0 +1,52 @@
+#!/bin/bash
+#
+# Test blk-mq request allocation when hardware tags are limited. Regression
+# test for commit e6fc46498784 ("blk-mq: avoid starving tag allocation after
+# allocating process migrates").
+#
+# Copyright (C) 2018 Ming Lei <ming.lei@redhat.com>
+#
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+DESCRIPTION="run null-blk on different schedulers with only one hardware tag"
+QUICK=1
+
+requires() {
+	_have_module null_blk && _have_fio
+}
+
+test() {
+	echo "Running ${TEST_NAME}"
+
+	modprobe -r null_blk
+	modprobe null_blk queue_mode=2 irqmode=2 completion_nsec=2000000 \
+		shared_tags=1 submit_queues=4 hw_queue_depth=1
+
+	local scheds
+	# shellcheck disable=SC2207
+	scheds=($(sed 's/[][]//g' /sys/block/nullb0/queue/scheduler))
+
+	for sched in "${scheds[@]}"; do
+		echo "Testing $sched" >> "$FULL"
+		echo "$sched" > /sys/block/nullb0/queue/scheduler
+		_fio_perf --bs=4k --ioengine=libaio --iodepth=1024 \
+			--numjobs="$(nproc)" --rw=randread --name=async \
+			--filename=/dev/nullb0 --size=1g --direct=1 \
+			--runtime=10
+	done
+
+	modprobe -r null_blk
+
+	echo "Test complete"
+}
