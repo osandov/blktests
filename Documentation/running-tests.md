@@ -66,3 +66,23 @@ command line option.
 QUICK_RUN=1
 TIMEOUT=30
 ```
+
+### Custom Setup
+
+The `config` file is really just a bash file that is sourced at the beginning
+of the test run, so it can be used to do any special setup you need. For
+example, you could configure `PATH` to find an executable you built from
+source:
+
+```sh
+export PATH="/root/fio:$PATH"
+```
+
+Or, if your setup doesn't mount `configfs` automatically (it probably does),
+you could mount it:
+
+```sh
+if ! findmnt -t configfs /sys/kernel/config > /dev/null; then
+	mount -t configfs configfs /sys/kernel/config
+fi
+```
