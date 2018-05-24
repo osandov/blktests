@@ -63,5 +63,6 @@ _exit_scsi_debug() {
 	unset SCSI_DEBUG_HOSTS
 	unset SCSI_DEBUG_TARGETS
 	unset SCSI_DEBUG_DEVICES
+	udevadm settle
 	modprobe -r scsi_debug
 }
