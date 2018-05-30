@@ -31,7 +31,7 @@ test() {
 
 	modprobe -r null_blk
 	modprobe null_blk queue_mode=2 irqmode=2 completion_nsec=2000000 \
-		shared_tags=1 submit_queues=4 hw_queue_depth=1
+		submit_queues=4 hw_queue_depth=1
 
 	local scheds
 	# shellcheck disable=SC2207
