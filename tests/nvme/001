@@ -27,13 +27,14 @@ requires() {
 }
 
 filter_trace() {
-	sed -r -e  's/dd-[0-9]+/dd-XXX/' \
+	sed -r -e  's/dd-[0-9]+\s+/dd-XXX   /' \
 		-e 's/\[[0-9]+\]/[XXX]/' \
-		-e 's/\.{4}\s+/....    /' \
-		-e 's/[0-9]+\.[0-9]+/X.XXXXXX/' \
+		-e 's/[0-9\.]{4}/..../' \
+		-e 's/\s+[0-9]+\.[0-9]+/     X.XXXXXX/' \
 		-e 's/qid=[0-9-]+/qid=X/' \
 		-e 's/nsid=[0-9-]+/nsid=X/' \
-		-e 's/cmdid=[0-9-]+/cmdid=X/'
+		-e 's/cmdid=[0-9-]+/cmdid=X/' \
+		-e 's/slba=[0-9]+/slba=X/'
 }
 
 test_device() {
