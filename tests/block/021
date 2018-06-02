@@ -1,0 +1,53 @@
+#!/bin/bash
+#
+# Test reading and writing nr_requests with different schedulers. Regression
+# test for 32a50fabb334 ("blk-mq: update nr_requests when switching to 'none'
+# scheduler").
+#
+# Copyright (C) 2018 Ming Lei <ming.lei@redhat.com>
+#
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+DESCRIPTION="read/write nr_requests on null-blk with different schedulers"
+QUICK=1
+
+requires() {
+	_have_module null_blk
+}
+
+test() {
+	echo "Running ${TEST_NAME}"
+
+	modprobe -r null_blk
+	modprobe null_blk
+
+	local max_nr
+	local nr
+	local scheds
+	# shellcheck disable=SC2207
+	scheds=($(sed 's/[][]//g' /sys/block/nullb0/queue/scheduler))
+
+	for sched in "${scheds[@]}"; do
+		echo "Testing $sched" >> "$FULL"
+		echo "$sched" > /sys/block/nullb0/queue/scheduler
+		max_nr="$(cat /sys/block/nullb0/queue/nr_requests)"
+		for ((nr = 4; nr <= max_nr; nr++)); do
+			echo "$nr" > /sys/block/nullb0/queue/nr_requests
+		done
+	done
+
+	modprobe -r null_blk
+
+	echo "Test complete"
+}
