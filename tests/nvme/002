@@ -53,5 +53,7 @@ test() {
 
 	_remove_nvmet_port "${port}"
 
+	modprobe -r nvme-loop
+	modprobe -r nvmet
 	echo "Test complete"
 }

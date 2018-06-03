@@ -58,5 +58,7 @@ test() {
 	losetup -d "$loop_dev"
 	rm "$TMPDIR/img"
 
+	modprobe -r nvme-loop
+	modprobe -r nvmet
 	echo "Test complete"
 }
