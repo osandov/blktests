@@ -21,7 +21,7 @@ DESCRIPTION="disable PCI device while doing I/O"
 TIMED=1
 
 requires() {
-	_have_fio
+	_have_fio && _have_program setpci
 }
 
 device_requires() {
@@ -43,10 +43,11 @@ test_device() {
 	_run_fio_rand_io --filename="$TEST_DEV" --size="$size" \
 			--ignore_error=EIO,ENXIO,ENODEV &
 
+	# toggle PCI Command Register's Bus Master Enabling
 	while kill -0 $! 2>/dev/null; do
-		echo 0 > "/sys/bus/pci/devices/${pdev}/enable"
+		setpci -s "${pdev}" 4.w=0:4
 		sleep .2
-		echo 1 > "/sys/bus/pci/devices/${pdev}/enable"
+		setpci -s "${pdev}" 4.w=4:4
 		sleep .2
 	done
 
