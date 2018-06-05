@@ -23,7 +23,7 @@ _have_cpu_hotplug() {
 	CPUS_ONLINE_SAVED=()
 
 	local cpu_dir cpu
-	for cpu_dir in /sys/devices/system/cpu/cpu+([0-9]); do
+	for cpu_dir in /sys/devices/system/cpu/cpu[1-9]*([0-9]); do
 		if [[ -w ${cpu_dir}/online ]]; then
 			cpu="${cpu_dir#/sys/devices/system/cpu/cpu}"
 			HOTPLUGGABLE_CPUS+=("$cpu")
