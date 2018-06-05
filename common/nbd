@@ -32,6 +32,30 @@ _have_nbd_netlink() {
 	_have_nbd && _have_nbd_netlink_support
 }
 
+_wait_for_nbd_connect() {
+	_ret=1
+	for i in $(seq  0 3); do
+		if [ -e /sys/kernel/debug/nbd/nbd0/tasks ]; then
+			_ret=0
+			break
+		fi
+		sleep 1
+	done
+	return $_ret
+}
+
+_wait_for_nbd_disconnect() {
+	_ret=1
+	for i in $(seq  0 3); do
+		if [ ! -e /sys/kernel/debug/nbd/nbd0/tasks ]; then
+			_ret=0
+			break
+		fi
+		sleep 1
+	done
+	return $_ret
+}
+
 _start_nbd_server() {
 	truncate -s 10G "${TMPDIR}/export"
 	cat > "${TMPDIR}/nbd.conf" << EOF
@@ -44,5 +68,6 @@ EOF
 
 _stop_nbd_server() {
 	kill -SIGTERM "$(cat "${TMPDIR}/nbd.pid")"
+	rm -f "${TMPDIR}/nbd.pid"
 	rm -f "${TMPDIR}/export"
 }
