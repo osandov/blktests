@@ -1,6 +1,13 @@
 #!/bin/bash
 #
-# Test nbd device resizing.
+# Test nbd device resizing, regression test for the following fixes
+#
+# nbd: fix nbd device deletion
+# nbd: update size when connected
+# nbd: use bd_set_size when updating disk size
+# nbd: clear_sock on netlink disconnect
+# nbd: fix how we set bd_invalidated
+# nbd: call nbd_bdev_reset instead of bd_set_size on disconnect
 #
 # Copyright (C) 2018 Josef Bacik
 #
