@@ -18,8 +18,20 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 _have_nbd() {
-	_have_module nbd && _have_program nbd-server && \
-		_have_program nbd-client
+	if ! _have_module nbd; then
+		return 1
+	fi
+	if ! _have_program nbd-server; then
+		return 1
+	fi
+	if ! _have_program nbd-client; then
+		return 1
+	fi
+	if ! nbd-client --help 2>&1 | grep -q -- -L; then
+		SKIP_REASON="nbd-client does not have -nonetlink/-L option"
+		return 1
+	fi
+	return 0
 }
 
 _have_nbd_netlink() {

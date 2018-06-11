@@ -28,7 +28,7 @@ requires() {
 test() {
 	echo "Running ${TEST_NAME}"
 	_start_nbd_server
-	nbd-client -N export localhost /dev/nbd0 >> "$FULL" 2>&1
+	nbd-client -L -N export localhost /dev/nbd0 >> "$FULL" 2>&1
 	parted -s /dev/nbd0 print 2>> "$FULL" | grep 'Disk /dev/nbd0'
 	lsblk -n /dev/nbd0
 
