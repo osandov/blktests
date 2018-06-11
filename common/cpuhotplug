@@ -17,13 +17,15 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-# Also initializes the HOTPLUGGABLE_CPUS array.
+# Also initializes the ALL_CPUS and HOTPLUGGABLE_CPUS arrays.
 _have_cpu_hotplug() {
+	ALL_CPUS=()
 	HOTPLUGGABLE_CPUS=()
 	CPUS_ONLINE_SAVED=()
 
 	local cpu_dir cpu
 	for cpu_dir in /sys/devices/system/cpu/cpu+([0-9]); do
+		ALL_CPUS+=("$cpu")
 		if [[ -w ${cpu_dir}/online ]]; then
 			cpu="${cpu_dir#/sys/devices/system/cpu/cpu}"
 			HOTPLUGGABLE_CPUS+=("$cpu")
@@ -31,7 +33,7 @@ _have_cpu_hotplug() {
 		fi
 	done
 
-	if [[ ${#HOTPLUGGABLE_CPUS[@]} -eq 0 ]]; then
+	if [[ ${#ALL_CPUS[@]} -eq 1 || ${#HOTPLUGGABLE_CPUS[@]} -eq 0 ]]; then
 		SKIP_REASON="CPU hotplugging is not supported"
 		return 1
 	fi
@@ -40,10 +42,10 @@ _have_cpu_hotplug() {
 
 _online_cpu() {
 	RESTORE_CPUS_ONLINE=1
-	echo 1 >"/sys/devices/system/cpu/cpu$1/online"
+	echo 1 > "/sys/devices/system/cpu/cpu$1/online"
 }
 
 _offline_cpu() {
 	RESTORE_CPUS_ONLINE=1
-	echo 0 >"/sys/devices/system/cpu/cpu$1/online"
+	echo 0 > "/sys/devices/system/cpu/cpu$1/online"
 }

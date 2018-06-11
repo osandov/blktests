@@ -38,14 +38,45 @@ test_device() {
 	# start fio job
 	_run_fio_rand_io --filename="$TEST_DEV" --size="$size" &
 
-	# while job is running, hotplug CPUs randomly
-	while kill -0 $! 2>/dev/null; do
-		idx=$((RANDOM % ${#HOTPLUGGABLE_CPUS[@]}))
-		if (( RANDOM % 2 )); then
-			_online_cpu "${HOTPLUGGABLE_CPUS[$idx]}"
+	local online_cpus=()
+	local offline_cpus=()
+	local offlining=1
+	local max_offline=${#HOTPLUGGABLE_CPUS[@]}
+	if [[ ${#HOTPLUGGABLE_CPUS[@]} -eq ${#ALL_CPUS[@]} ]]; then
+		(( max_offline-- ))
+	fi
+	for cpu in "${HOTPLUGGABLE_CPUS[@]}"; do
+		if (( "$(cat "/sys/devices/system/cpu/cpu${cpu}/online")" )); then
+			online_cpus+=("$cpu")
 		else
-			_offline_cpu "${HOTPLUGGABLE_CPUS[$idx]}"
+			offline_cpus+=("$cpu")
 		fi
+	done
+
+	# while job is running, hotplug CPUs
+	while kill -0 $! 2> /dev/null; do
+		if (( offlining && ${#offline_cpus[@]} == max_offline )); then
+			offlining=0
+		elif (( ! offlining && ${#online_cpus[@]} == ${#HOTPLUGGABLE_CPUS[@]} )); then
+			offlining=1
+		fi
+
+		if (( offlining )); then
+			idx=$((RANDOM % ${#online_cpus[@]}))
+			echo "offlining $idx (online=${online_cpus[@]} offline=${offline_cpus[@]})" >> /dev/kmsg
+			_offline_cpu "${online_cpus[$idx]}"
+			offline_cpus+=("${online_cpus[$idx]}")
+			unset online_cpus[$idx]
+			online_cpus=("${online_cpus[@]}")
+		else
+			idx=$((RANDOM % ${#offline_cpus[@]}))
+			echo "onlining $idx (online=${online_cpus[@]} offline=${offline_cpus[@]})" >> /dev/kmsg
+			_online_cpu "${offline_cpus[$idx]}"
+			online_cpus+=("${offline_cpus[$idx]}")
+			unset offline_cpus[$idx]
+			offline_cpus=("${offline_cpus[@]}")
+		fi
+
 		sleep .2
 	done
 
