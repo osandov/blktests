@@ -162,10 +162,15 @@ _fio_perf() {
 # tests that should run for a specific amount of time.
 _run_fio() {
 	local args=("--output=$TMPDIR/fio_perf" "--output-format=terse" "--terse-version=4" "--group_reporting=1")
+
 	if [[ -v TIMEOUT ]]; then
 		args+=("--runtime=$TIMEOUT")
 	fi
-	fio "${args[@]}" "$@"
+
+	if ! fio "${args[@]}" "$@"; then
+		echo "fio exited with status $?"
+		cat "$TMPDIR"/fio_perf
+	fi
 }
 
 # Wrapper around _run_fio used if you need some I/O but don't really care much
@@ -173,6 +178,11 @@ _run_fio() {
 _run_fio_rand_io() {
 	_run_fio --bs=4k --rw=randread --norandommap --numjobs="$(nproc)" \
 		--name=reads --direct=1 "$@"
+}
+
+_run_fio_verify_io() {
+	_run_fio --name=verify --rw=randwrite --direct=1 --ioengine=libaio --bs=4k \
+		--norandommap --iodepth=16 --verify=crc32c "$@"
 }
 
 _fio_perf_report() {
