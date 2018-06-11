@@ -63,17 +63,15 @@ test_device() {
 
 		if (( offlining )); then
 			idx=$((RANDOM % ${#online_cpus[@]}))
-			echo "offlining $idx (online=${online_cpus[@]} offline=${offline_cpus[@]})" >> /dev/kmsg
 			_offline_cpu "${online_cpus[$idx]}"
 			offline_cpus+=("${online_cpus[$idx]}")
-			unset online_cpus[$idx]
+			unset online_cpus["$idx"]
 			online_cpus=("${online_cpus[@]}")
 		else
 			idx=$((RANDOM % ${#offline_cpus[@]}))
-			echo "onlining $idx (online=${online_cpus[@]} offline=${offline_cpus[@]})" >> /dev/kmsg
 			_online_cpu "${offline_cpus[$idx]}"
 			online_cpus+=("${offline_cpus[$idx]}")
-			unset offline_cpus[$idx]
+			unset offline_cpus["$idx"]
 			offline_cpus=("${offline_cpus[@]}")
 		fi
 
