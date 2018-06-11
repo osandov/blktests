@@ -17,7 +17,15 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-_have_nbd_netlink_support() {
+_have_nbd() {
+	_have_module nbd && _have_program nbd-server && \
+		_have_program nbd-client
+}
+
+_have_nbd_netlink() {
+	if ! _have_nbd; then
+		return 1
+	fi
 	if ! _have_program genl-ctrl-list; then
 		return 1
 	fi
@@ -26,10 +34,6 @@ _have_nbd_netlink_support() {
 		return 1
 	fi
 	return 0
-}
-
-_have_nbd_netlink() {
-	_have_nbd && _have_nbd_netlink_support
 }
 
 _start_nbd_server() {

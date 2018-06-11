@@ -18,8 +18,6 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-. common/nbd
-
 DESCRIPTION="resize a connected nbd device"
 QUICK=1
 
@@ -30,16 +28,16 @@ requires() {
 test() {
 	echo "Running ${TEST_NAME}"
 	_start_nbd_server
-	nbd-client -N export localhost /dev/nbd0 > /dev/null 2>&1
-	parted -s /dev/nbd0 print 2> /dev/null | grep 'Disk /dev/nbd0'
+	nbd-client -N export localhost /dev/nbd0 >> "$FULL" 2>&1
+	parted -s /dev/nbd0 print 2>> "$FULL" | grep 'Disk /dev/nbd0'
 	lsblk -n /dev/nbd0
 
 	echo "Setting size to 1gib"
 	src/nbdsetsize /dev/nbd0 1073741824
 
 	lsblk -n /dev/nbd0
-	parted -s /dev/nbd0 print 2> /dev/null | grep 'Disk /dev/nbd0'
+	parted -s /dev/nbd0 print 2>> "$FULL" | grep 'Disk /dev/nbd0'
 
-	nbd-client -d /dev/nbd0 > /dev/null 2>&1
+	nbd-client -d /dev/nbd0 >> "$FULL" 2>&1
 	_stop_nbd_server
 }
