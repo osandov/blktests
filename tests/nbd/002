@@ -34,10 +34,11 @@ requires() {
 test() {
 	echo "Running ${TEST_NAME}"
 	_start_nbd_server
-	nbd-client -N export localhost /dev/nbd0 >> "$FULL" 2>&1
-
-	parted -s /dev/nbd0 mklabel msdos >> "$FULL" 2>&1
-	parted -s /dev/nbd0 mkpart primary 0 100 >> "$FULL" 2>&1
+	{
+	nbd-client -N export localhost /dev/nbd0
+	parted -s /dev/nbd0 mklabel msdos
+	parted -s /dev/nbd0 mkpart primary 0 100
+	} >> "$FULL" 2>&1
 
 	# We need to wait for udev to do its thing before we disconnect or else
 	# we'll get timed out requests.
