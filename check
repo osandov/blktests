@@ -53,6 +53,9 @@ _found_test() {
 	fi
 
 	if (( ! explicit )); then
+		if [[ $DEVICE_ONLY -ne 0 ]] && ! declare -fF test_device >/dev/null; then
+			return
+		fi
 		if (( QUICK_RUN && !QUICK && !TIMED )); then
 			return
 		fi
@@ -539,11 +542,14 @@ usage: $0 [options] [group-or-test...]
 Run blktests
 
 Test runs:
-  -q, --quick=SECONDS    do a quick run (only run quick tests and limit the
+  -d, --device-only	 only run tests which use a test device from the
+			 TEST_DEVS config setting
+
+  -q, --quick=SECONDS	 do a quick run (only run quick tests and limit the
 			 runtime of longer tests to the given timeout,
 			 defaulting to 30 seconds)
 
-  -x, --exclude=TEST     exclude a test (or test group) from the list of
+  -x, --exclude=TEST	 exclude a test (or test group) from the list of
 			 tests to run
 
 Miscellaneous:
@@ -561,7 +567,7 @@ Miscellaneous:
 	esac
 }
 
-if ! TEMP=$(getopt -o 'q::x:h' --long 'quick::,exclude:,help' -n "$0" -- "$@"); then
+if ! TEMP=$(getopt -o 'dq::x:h' --long 'quick::,exclude:,help' -n "$0" -- "$@"); then
 	exit 1
 fi
 
@@ -569,6 +575,7 @@ eval set -- "$TEMP"
 unset TEMP
 
 # Default configuration.
+DEVICE_ONLY=0
 QUICK_RUN=0
 EXCLUDE=()
 TEST_DEVS=()
@@ -580,6 +587,10 @@ fi
 
 while true; do
 	case "$1" in
+		'-d'|'--device-only')
+			DEVICE_ONLY=1
+			shift
+			;;
 		'-q'|'--quick')
 			QUICK_RUN=1
 			# Use the timeout specified on the command line, from
@@ -598,7 +609,7 @@ while true; do
 		'--')
 			shift
 			break
-		;;
+			;;
 		*)
 			usage err
 			;;
@@ -607,6 +618,10 @@ done
 
 if [[ $QUICK_RUN -ne 0 && ! -v TIMEOUT ]]; then
 	_error "QUICK_RUN specified without TIMEOUT"
+fi
+
+if [[ $DEVICE_ONLY -ne 0 && ${#TEST_DEVS[@]} -eq 0 ]]; then
+	_error "DEVICE_ONLY specified without TEST_DEVS"
 fi
 
 # Convert the exclude list to an associative array.

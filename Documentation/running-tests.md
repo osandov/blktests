@@ -67,6 +67,16 @@ QUICK_RUN=1
 TIMEOUT=30
 ```
 
+### Device-Only Runs
+
+Sometimes it's useful to only run tests which exercise the configured test
+devices (e.g., in order to test the device driver itself). This can be done by
+passing the `-d` command line option or setting the `DEVICE_ONLY` variable.
+
+```sh
+DEVICE_ONLY=1
+```
+
 ### Custom Setup
 
 The `config` file is really just a bash file that is sourced at the beginning
