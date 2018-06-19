@@ -23,6 +23,7 @@ _found_test() {
 
 	unset DESCRIPTION QUICK TIMED requires device_requires test test_device
 
+	# shellcheck disable=SC1090
 	if ! . "tests/${test_name}"; then
 		return 1
 	fi
@@ -395,6 +396,7 @@ _run_test() {
 	CHECK_DMESG=1
 	DMESG_FILTER=cat
 
+	# shellcheck disable=SC1090
 	. "tests/${TEST_NAME}"
 
 	if declare -fF test >/dev/null; then
@@ -435,6 +437,7 @@ _run_group() {
 	local tests=("$@")
 	local group="${tests[0]%/*}"
 
+	# shellcheck disable=SC1090
 	. "tests/${group}/group"
 
 	if declare -fF group_requires >/dev/null && ! group_requires; then
