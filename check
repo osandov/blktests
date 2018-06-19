@@ -394,7 +394,7 @@ _call_test() {
 _run_test() {
 	TEST_NAME="$1"
 	CHECK_DMESG=1
-	DMESG_FILTER=cat
+	DMESG_FILTER="cat"
 
 	# shellcheck disable=SC1090
 	. "tests/${TEST_NAME}"
