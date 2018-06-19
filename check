@@ -159,11 +159,11 @@ declare -A TEST_RUN
 _read_last_test_run() {
 	local seqres="${RESULTS_DIR}/${TEST_NAME}"
 
-	LAST_TEST_RUN[date]=""
-	LAST_TEST_RUN[status]=""
-	LAST_TEST_RUN[reason]=""
-	LAST_TEST_RUN[exit_status]=""
-	LAST_TEST_RUN[runtime]=""
+	LAST_TEST_RUN["date"]=""
+	LAST_TEST_RUN["status"]=""
+	LAST_TEST_RUN["reason"]=""
+	LAST_TEST_RUN["exit_status"]=""
+	LAST_TEST_RUN["runtime"]=""
 
 	if [[ ! -e $seqres ]]; then
 		return
@@ -250,9 +250,9 @@ _output_test_run() {
 	fi
 
 	if [[ -v TEST_DEV ]]; then
-		_output_status "$TEST_NAME => $(basename "$TEST_DEV")" "${TEST_RUN[status]}ed"
+		_output_status "$TEST_NAME => $(basename "$TEST_DEV")" "${TEST_RUN["status"]}ed"
 	else
-		_output_status "$TEST_NAME" "${TEST_RUN[status]}ed"
+		_output_status "$TEST_NAME" "${TEST_RUN["status"]}ed"
 	fi
 
 	(
@@ -309,14 +309,14 @@ _call_test() {
 	_read_last_test_run
 	_output_last_test_run
 
-	TEST_RUN[date]="$(date "+%F %T")"
+	TEST_RUN["date"]="$(date "+%F %T")"
 
 	mkdir -p "$(dirname "$seqres")"
 	# Remove leftovers from last time.
 	rm -f "${seqres}" "${seqres}."*
 
 	if [[ -w /dev/kmsg ]]; then
-		local dmesg_marker="run blktests $TEST_NAME at ${TEST_RUN[date]}"
+		local dmesg_marker="run blktests $TEST_NAME at ${TEST_RUN["date"]}"
 		echo "$dmesg_marker" >> /dev/kmsg
 	else
 		local dmesg_marker=""
@@ -331,35 +331,35 @@ _call_test() {
 	TIMEFORMAT="%Rs"
 	pushd . >/dev/null || return
 	{ time "$test_func" >"${seqres}.out" 2>&1; } 2>"${seqres}.runtime"
-	TEST_RUN[exit_status]=$?
+	TEST_RUN["exit_status"]=$?
 	popd >/dev/null || return
-	TEST_RUN[runtime]="$(cat "${seqres}.runtime")"
+	TEST_RUN["runtime"]="$(cat "${seqres}.runtime")"
 	rm -f "${seqres}.runtime"
 
 	_cleanup
 
 	if ! diff "tests/${TEST_NAME}.out" "${seqres}.out" >/dev/null; then
 		mv "${seqres}.out" "${seqres}.out.bad"
-		TEST_RUN[status]=fail
-		TEST_RUN[reason]=output
-	elif [[ ${TEST_RUN[exit_status]} -ne 0 ]]; then
-		TEST_RUN[status]=fail
-		TEST_RUN[reason]="exit"
+		TEST_RUN["status"]=fail
+		TEST_RUN["reason"]=output
+	elif [[ ${TEST_RUN["exit_status"]} -ne 0 ]]; then
+		TEST_RUN["status"]=fail
+		TEST_RUN["reason"]="exit"
 	elif ! _check_dmesg "$dmesg_marker"; then
-		TEST_RUN[status]=fail
-		TEST_RUN[reason]=dmesg
+		TEST_RUN["status"]=fail
+		TEST_RUN["reason"]=dmesg
 	else
-		TEST_RUN[status]=pass
+		TEST_RUN["status"]=pass
 	fi
 	rm -f "${seqres}.out"
 
 	_write_test_run
 	_output_test_run
 
-	if [[ ${TEST_RUN[status]} = pass ]]; then
+	if [[ ${TEST_RUN["status"]} = pass ]]; then
 		return 0
 	else
-		case "${TEST_RUN[reason]}" in
+		case "${TEST_RUN["reason"]}" in
 		output)
 			diff -u "tests/${TEST_NAME}.out" "${seqres}.out.bad" | awk "
 			{
@@ -372,7 +372,7 @@ _call_test() {
 			}"
 			;;
 		exit)
-			echo "    exited with status ${TEST_RUN[exit_status]}"
+			echo "    exited with status ${TEST_RUN["exit_status"]}"
 			;;
 		dmesg)
 			echo "    something found in dmesg:"
@@ -435,7 +435,7 @@ _run_test() {
 
 _run_group() {
 	local tests=("$@")
-	local group="${tests[0]%/*}"
+	local group="${tests["0"]%/*}"
 
 	# shellcheck disable=SC1090
 	. "tests/${group}/group"
