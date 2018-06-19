@@ -94,6 +94,23 @@ _have_configfs() {
 	return 0
 }
 
+_have_kernel_option() {
+	local f opt=$1
+
+	SKIP_REASON="kernel $(uname -r) config not found"
+	for f in /proc/config.gz /boot/config-$(uname -r); do
+		[ -e "$f" ] || continue
+		if zgrep -q "^CONFIG_${opt}=[my]$" "$f"; then
+			SKIP_REASON=""
+			return 0
+		else
+			SKIP_REASON="kernel option $opt has not been enabled"
+		fi
+	done
+
+	return 1
+}
+
 _have_tracefs() {
 	stat /sys/kernel/debug/tracing/trace > /dev/null 2>&1
 	if ! findmnt -t tracefs /sys/kernel/debug/tracing >/dev/null; then

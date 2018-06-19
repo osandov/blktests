@@ -13,6 +13,14 @@ The dependencies are minimal, but make sure you have them installed:
 - GNU awk
 - util-linux
 - fio
+- gcc
+- make
+
+Some tests require the following:
+
+- e2fsprogs and xfsprogs
+- multipath-tools (Debian, openSUSE) or device-mapper-multipath (Fedora)
+- dmsetup (Debian) or device-mapper (Fedora, openSUSE, Arch Linux)
 
 Add the list of block devices you want to test on in a file named `config`:
 

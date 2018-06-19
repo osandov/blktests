@@ -1,0 +1,41 @@
+#!/bin/bash
+#
+# Copyright (c) 2016-2018 Western Digital Corporation or its affiliates
+#
+# This program is free software; you can redistribute it and/or
+# modify it under the terms of the GNU General Public License
+# as published by the Free Software Foundation; either version 2
+# of the License, or (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program; if not, write to the Free Software
+# Foundation, Inc.
+
+. tests/srp/rc
+
+DESCRIPTION="Direct I/O with large transfer sizes, cmd_sg_entries=255 and bs=8M"
+QUICK=1
+
+test_large_transfer_size() {
+	local dev m
+
+	srp_login_params+=ch_count=1,queue_size=32,max_cmd_per_lun=32,max_sect=$((1<<17))
+	use_blk_mq y y cmd_sg_entries=255 || return $?
+	dev=$(get_bdev 0) || return $?
+	run_fio --verify=md5 --rw=randwrite --bs=8M --loops=$((10**6)) \
+		--iodepth=4 --group_reporting --sync=1 --direct=1 \
+		--ioengine=libaio \
+		--filename="$dev" --name=large-io-test --thread --numjobs=1 \
+		--runtime=10 --output="${RESULTS_DIR}/srp/fio-output-006.txt" \
+		>>"$FULL"
+}
+
+test() {
+	trap 'trap "" EXIT; teardown' EXIT
+	setup && test_large_transfer_size && echo Passed
+}
