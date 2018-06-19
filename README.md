@@ -13,6 +13,19 @@ The dependencies are minimal, but make sure you have them installed:
 - GNU awk
 - util-linux
 - fio
+- gcc
+- make
+- multipath-tools (Debian, openSUSE) or device-mapper-multipath (Fedora)
+- dmsetup (Debian) or device-mapper (Fedora, openSUSE, Arch Linux)
+- e2fsprogs and xfsprogs
+
+For the SRP tests, tell multipathd to use the SRP multipath configuration
+file:
+
+```pushd /etc
+ln -s ${BLKTESTS_PATH}/tests/srp/multipath.conf
+popd
+```
 
 Add the list of block devices you want to test on in a file named `config`:
 

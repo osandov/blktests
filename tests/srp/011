@@ -1,0 +1,47 @@
+#!/bin/bash
+#
+# Copyright (c) 2016-2018 Western Digital Corporation or its affiliates
+#
+# This program is free software; you can redistribute it and/or
+# modify it under the terms of the GNU General Public License
+# as published by the Free Software Foundation; either version 2
+# of the License, or (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program; if not, write to the Free Software
+# Foundation, Inc.
+
+. tests/srp/rc
+
+DESCRIPTION="Block I/O on top of multipath concurrently with logout and login"
+TIMED=1
+
+test_disconnect_repeatedly() {
+	local dev fio_status m
+
+	use_blk_mq y y || return $?
+	dev=$(get_bdev 0) || return $?
+	simulate_network_failure_loop "$dev" "$TIMEOUT" &
+	run_fio --verify=md5 --rw=randwrite --bs=4K --loops=10000 \
+		--ioengine=libaio --iodepth=64 --iodepth_batch=32 \
+		--group_reporting --sync=1 --direct=1 --filename="$dev" \
+		--name=data-integrity-test-06 --thread --numjobs=1 \
+		--runtime="${TIMEOUT}" \
+		--output="${RESULTS_DIR}/srp/fio-output-011.txt" \
+		>>"$FULL"
+	fio_status=$?
+	wait
+	[ -z "$nvme" ] && log_in
+	return $fio_status
+}
+
+test() {
+	: "${TIMEOUT:=30}"
+	trap 'trap "" EXIT; teardown' EXIT
+	setup && test_disconnect_repeatedly && echo Passed
+}

@@ -1,0 +1,73 @@
+#!/bin/bash
+#
+# Copyright (c) 2016-2018 Western Digital Corporation or its affiliates
+#
+# This program is free software; you can redistribute it and/or
+# modify it under the terms of the GNU General Public License
+# as published by the Free Software Foundation; either version 2
+# of the License, or (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program; if not, write to the Free Software
+# Foundation, Inc.
+
+. tests/srp/rc
+
+DESCRIPTION="Create and remove LUNs"
+QUICK=1
+
+# Count the number of LUNs created by start_srpt() from the initiator side.
+count_srp_luns() {
+	local h luns=0 p
+
+	for p in /sys/class/srp_remote_ports/*; do
+		[ -e "$p" ] || continue
+		h="${p##*/}"; h="${h#port-}"; h="${h%:1}";
+		for d in "/sys/class/scsi_device/${h}:"*; do
+			[ -e "$d" ] && ((luns++))
+		done
+		[ "$luns" -gt 0 ] && break
+	done
+	echo $luns
+}
+
+count_nvme_devs() {
+	local d devs=0
+
+	for d in /sys/class/nvme-fabrics/ctl/*/*/device; do
+		[ -d "$d" ] && ((devs++))
+	done
+	echo $devs
+}
+
+count_luns() {
+	if [ -n "$nvme" ]; then
+		count_nvme_devs
+	else
+		count_srp_luns
+	fi
+}
+
+wait_for_luns() {
+	local i luns
+
+	use_blk_mq y y || return $?
+	for ((i=0;i<100;i++)); do
+		luns=$(count_luns)
+		[ "$luns" -ge ${#vdev_path[@]} ] && break
+		sleep .1
+	done
+	echo "count_luns(): $luns <> ${#vdev_path[@]}" >>"$FULL"
+	echo "count_luns(): $luns <> ${#vdev_path[@]}"
+	[ "$luns" -ge ${#vdev_path[@]} ]
+}
+
+test() {
+	trap 'trap "" EXIT; teardown' EXIT
+	setup && wait_for_luns && echo Passed
+}
