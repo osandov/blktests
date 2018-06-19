@@ -35,7 +35,6 @@ test() {
 	modprobe nvme-loop
 
 	local port
-	local ret=0
 	local nvmedev
 	local file_path
 	local file_path="${TMPDIR}/img"
@@ -63,7 +62,7 @@ test() {
 	_remove_nvmet_port "${port}"
 
 	rm "${file_path}"
-	rm -f local-write-and-verify*state "${fio_out}"
+	rm -f local-write-and-verify*state
 
 	modprobe -r nvme_loop
 	modprobe -r nvmet

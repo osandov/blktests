@@ -26,10 +26,7 @@ requires() {
 }
 
 test() {
-	local loop_dev
 	echo "Running ${TEST_NAME}"
-
-	loop_dev="$(losetup -f)"
 
 	# In a subshell so TIMEFORMAT doesn't get clobbered.
 	(

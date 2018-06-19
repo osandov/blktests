@@ -36,7 +36,6 @@ test() {
 	modprobe nvme-loop
 
 	local port
-	local ret=0
 	local nvmedev
 	local mount_dir="/mnt/blktests/"
 	local file_path="${TMPDIR}/img"

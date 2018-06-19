@@ -36,7 +36,6 @@ test() {
 	modprobe nvme-loop
 
 	local port
-	local ret=0
 	local nvmedev
 	local loop_dev
 	local file_path="${TMPDIR}/img"
@@ -68,7 +67,7 @@ test() {
 	losetup -d "${loop_dev}"
 
 	rm "${file_path}"
-	rm -f local*verify*state "${fio_out}"
+	rm -f local*verify*state
 
 	modprobe -r nvme_loop
 	modprobe -r nvmet
