@@ -112,6 +112,8 @@ _have_tracefs() {
 }
 
 _have_tracepoint() {
+	local event=$1
+
 	if [[ ! -d /sys/kernel/debug/tracing/events/${event} ]]; then
 		SKIP_REASON="tracepoint ${event} does not exist"
 		return 1
