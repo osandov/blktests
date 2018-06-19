@@ -19,7 +19,7 @@
 
 . tests/block/rc
 
-DESCRIPTION="run null-blk with timeout injection configured"
+DESCRIPTION="run null-blk with blk-mq and timeout injection configured"
 
 requires() {
 	_have_module null-blk && _have_module_param null_blk timeout
