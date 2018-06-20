@@ -6,9 +6,13 @@ C_TARGETS := \
 	sg/syzkaller1 \
 	nbdsetsize
 
-TARGETS := $(C_TARGETS)
+CXX_TARGETS := \
+	discontiguous-io
+
+TARGETS := $(C_TARGETS) $(CXX_TARGETS)
 
 CFLAGS := -O2 -Wall
+CXXFLAGS := -O2 -Wall -Wextra -Wno-sign-compare -Werror
 
 all: $(TARGETS)
 
@@ -17,5 +21,8 @@ clean:
 
 $(C_TARGETS): %: %.c
 	$(CC) $(CPPFLAGS) $(CFLAGS) -o $@ $^
+
+$(CXX_TARGETS): %: %.cpp
+	$(CXX) $(CPPFLAGS) $(CXXFLAGS) -o $@ $^
 
 .PHONY: all clean
