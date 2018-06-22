@@ -11,7 +11,8 @@ clean:
 SHELLCHECK_EXCLUDE := SC2034,SC2119
 
 check:
-	shellcheck -x -e $(SHELLCHECK_EXCLUDE) -f gcc check new common/* tests/*/[0-9]*[0-9]
+	shellcheck -x -e $(SHELLCHECK_EXCLUDE) -f gcc check new common/* \
+		tests/*/group tests/*/[0-9]*[0-9]
 	! grep TODO tests/*/[0-9]*[0-9]
 
 .PHONY: all check
