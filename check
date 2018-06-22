@@ -324,7 +324,7 @@ _call_test() {
 	fi
 
 	trap _cleanup EXIT
-	if ! TMPDIR="$(mktemp --tmpdir -p results -d "tmpdir.${TEST_NAME//\//.}.XXX")"; then
+	if ! TMPDIR="$(mktemp --tmpdir -p "$PWD/results" -d "tmpdir.${TEST_NAME//\//.}.XXX")"; then
 		return
 	fi
 
