@@ -76,7 +76,7 @@ RIP: blk_dev_init+0x4/0x6 RSP: ffffc9000031fe70
 ---[ end trace d9ab35f734a89f58 ]---
 EOF
 
-	cat "$TMPDIR/dmesg" | while IFS= read -r line; do
+	while IFS= read -r line; do
 		echo "$line" >> /dev/kmsg
-	done
+	done < "$TMPDIR/dmesg"
 }
