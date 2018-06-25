@@ -605,7 +605,7 @@ while true; do
 	esac
 done
 
-if [[ QUICK_RUN -ne 0 && ! -v TIMEOUT ]]; then
+if [[ $QUICK_RUN -ne 0 && ! -v TIMEOUT ]]; then
 	_error "QUICK_RUN specified without TIMEOUT"
 fi
 
