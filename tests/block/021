@@ -19,6 +19,8 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
+. tests/block/rc
+
 DESCRIPTION="read/write nr_requests on null-blk with different schedulers"
 QUICK=1
 

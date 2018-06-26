@@ -20,6 +20,8 @@
 #   Author: Chaitanya Kulkarni <chaitanya.kulkarni@wdc.com>
 #
 
+. tests/nvme/rc
+
 DESCRIPTION="run data verification fio job on NVMeOF file-backed ns"
 TIMED=1
 

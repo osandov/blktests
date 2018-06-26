@@ -16,8 +16,12 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 set -e
+shopt -s extglob
 
-. common/rc
+_error() {
+	echo "$0: $*" >&2
+	exit 1
+}
 
 prompt_yes_no() {
 	if [[ $2 =~ ^[Yy] ]]; then
@@ -84,10 +88,8 @@ if [[ ! -e tests/${group} ]]; then
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-# TODO: source any common helpers needed for this group. Anything sourced here
-# will also be available in the test scripts. Additionally, any functions
-# defined here will also be available in the test scripts. Note that common/rc
-# and common/fio are automatically sourced for all tests.
+. common/rc
+# TODO: source any more common helpers needed for this group.
 # . common/foo
 
 # TODO: if this test group has any extra requirements, it should define a
@@ -117,6 +119,8 @@ group_requires() {
 # group_device_requires() {
 # 	_test_dev_is_foo && _test_dev_supports_bar
 # }
+
+# TODO: define any helpers that are specific to this group.
 EOF
 	echo "Created tests/${group}/rc"
 fi
@@ -158,6 +162,9 @@ cat << EOF > "tests/${test_name}"
 #
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+. tests/${group}/rc
+# TODO: source any more common helpers needed for this test.
 
 # TODO: fill in a very brief description of what this test does. The
 # description should complete the sentence "This test will...". For example,
@@ -254,9 +261,9 @@ test() {
 # - Variables set and used by the testing framework are in caps with underscores.
 #   E.g., TEST_NAME and GROUPS. Variables local to the test are lowercase
 #   with underscores.
-# - Functions defined by the testing framework, including helpers, have a leading
-#   underscore. E.g., _have_scsi_debug. Functions local to the test or group
-#   should not have a leading underscore.
+# - Functions defined by the testing framework or group scripts, including
+#   helpers, have a leading underscore. E.g., _have_scsi_debug. Functions local
+#   to the test should not have a leading underscore.
 # - Use the bash [[ ]] form of tests instead of [ ].
 # - Always quote variable expansions unless the variable is a number or inside of
 #   a [[ ]] test.

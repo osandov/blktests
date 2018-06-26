@@ -15,7 +15,16 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-. common/rc
+shopt -s extglob
+
+_warning() {
+	echo "$0: $*" >&2
+}
+
+_error() {
+	echo "$0: $*" >&2
+	exit 1
+}
 
 _found_test() {
 	local test_name="$1"
@@ -303,6 +312,7 @@ _cleanup() {
 _call_test() {
 	local test_func="$1"
 	local seqres="${RESULTS_DIR}/${TEST_NAME}"
+	# shellcheck disable=SC2034
 	FULL="${seqres}.full"
 	declare -A TEST_DEV_QUEUE_SAVED
 
@@ -495,6 +505,7 @@ _find_sysfs_dir() {
 
 declare -A TEST_DEV_SYSFS_DIRS
 _check() {
+	# shellcheck disable=SC2034
 	SRCDIR="$(realpath src)"
 
 	local test_dev

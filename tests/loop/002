@@ -22,7 +22,7 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-. common/loop
+. tests/loop/rc
 
 DESCRIPTION="try various loop device block sizes"
 QUICK=1

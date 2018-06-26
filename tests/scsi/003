@@ -18,6 +18,8 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
+. tests/scsi/rc
+
 DESCRIPTION="ensure re-reading the partition table keeps its read-only flag"
 QUICK=1
 

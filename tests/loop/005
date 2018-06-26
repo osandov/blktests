@@ -19,8 +19,9 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-DESCRIPTION="call LOOP_GET_STATUS{,64} with a NULL arg"
+. tests/loop/rc
 
+DESCRIPTION="call LOOP_GET_STATUS{,64} with a NULL arg"
 QUICK=1
 
 requires() {

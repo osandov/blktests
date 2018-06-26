@@ -1,8 +1,8 @@
 #!/bin/bash
 #
-# Loop device helper functions.
+# Shellcheck workarounds.
 #
-# Copyright (C) 2017 Omar Sandoval
+# Copyright (C) 2018 Omar Sandoval
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -17,12 +17,7 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-
-_have_loop_set_block_size() {
-	src/loblksize "$(losetup -f)" 512 &>/dev/null
-	if [[ $? -eq 2 ]]; then
-		SKIP_REASON="kernel does not support LOOP_SET_BLOCK_SIZE"
-		return 1
-	fi
-	return 0
+# Suppress unused global variable warnings.
+_silence_sc2034() {
+	echo "$CHECK_DMESG $DESCRIPTION $DMESG_FILTER $FIO_PERF_FIELDS $FIO_PERF_PREFIX $QUICK $SKIP_REASON ${TEST_RUN[*]} $TIMED" > /dev/null
 }

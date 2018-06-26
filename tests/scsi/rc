@@ -17,7 +17,7 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-. common/scsi
+. common/rc
 
 group_requires() {
 	_have_root
@@ -25,4 +25,20 @@ group_requires() {
 
 group_device_requires() {
 	_test_dev_is_scsi
+}
+
+_have_scsi_generic() {
+	_have_module sg
+}
+
+_test_dev_is_scsi() {
+	if [[ ! -d ${TEST_DEV_SYSFS}/device/scsi_device ]]; then
+		SKIP_REASON="$TEST_DEV is not a SCSI device"
+		return 1
+	fi
+	return 0
+}
+
+_get_test_dev_sg() {
+	echo "${TEST_DEV_SYSFS}"/device/scsi_generic/sg* | grep -Eo "sg[0-9]+"
 }

@@ -18,6 +18,8 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
+. tests/scsi/rc
+
 DESCRIPTION="perfom a SG_DXFER_FROM_DEV from the /dev/sg read-write interface"
 QUICK=1
 

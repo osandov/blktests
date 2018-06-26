@@ -20,6 +20,8 @@
 #   Author: Chaitanya Kulkarni <chaitanya.kulkarni@wdc.com>
 #
 
+. tests/nvme/rc
+
 DESCRIPTION="create an NVMeOF target with a file-backed ns"
 QUICK=1
 

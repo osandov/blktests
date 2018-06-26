@@ -19,17 +19,9 @@
 
 shopt -s extglob
 
+. common/shellcheck
 # Include fio helpers by default.
 . common/fio
-
-_warning() {
-	echo "$0: $*" >&2
-}
-
-_error() {
-	echo "$0: $*" >&2
-	exit 1
-}
 
 # If a test runs multiple "subtests", then each subtest should typically run
 # for TIMEOUT / number of subtests.

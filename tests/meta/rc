@@ -17,6 +17,8 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
+. common/rc
+
 group_requires() {
 	if [[ -v META_REQUIRES_SKIP ]]; then
 		SKIP_REASON="META_REQUIRES_SKIP was set"

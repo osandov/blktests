@@ -17,7 +17,7 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-. common/loop
+. tests/loop/rc
 . common/scsi_debug
 
 DESCRIPTION="combine loop direct I/O mode and a custom block size"

@@ -17,6 +17,8 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
+. common/shellcheck
+
 # Also initializes the ALL_CPUS and HOTPLUGGABLE_CPUS arrays.
 _have_cpu_hotplug() {
 	ALL_CPUS=()
@@ -29,6 +31,7 @@ _have_cpu_hotplug() {
 		if [[ -w ${cpu_dir}/online ]]; then
 			cpu="${cpu_dir#/sys/devices/system/cpu/cpu}"
 			HOTPLUGGABLE_CPUS+=("$cpu")
+			# shellcheck disable=SC2034
 			CPUS_ONLINE_SAVED["$cpu"]="$(cat "${cpu_dir}/online")"
 		fi
 	done
@@ -41,11 +44,13 @@ _have_cpu_hotplug() {
 }
 
 _online_cpu() {
+	# shellcheck disable=SC2034
 	RESTORE_CPUS_ONLINE=1
 	echo 1 > "/sys/devices/system/cpu/cpu$1/online"
 }
 
 _offline_cpu() {
+	# shellcheck disable=SC2034
 	RESTORE_CPUS_ONLINE=1
 	echo 0 > "/sys/devices/system/cpu/cpu$1/online"
 }
