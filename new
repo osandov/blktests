@@ -64,7 +64,7 @@ if [[ ! -e tests/${group} ]]; then
 		exit 1
 	fi
 	mkdir -p "tests/${group}"
-	cat << EOF > "tests/${group}/group"
+	cat << EOF > "tests/${group}/rc"
 #!/bin/bash
 #
 # TODO: provide a brief description of the group here.
@@ -118,7 +118,7 @@ group_requires() {
 # 	_test_dev_is_foo && _test_dev_supports_bar
 # }
 EOF
-	echo "Created tests/${group}/group"
+	echo "Created tests/${group}/rc"
 fi
 
 for ((i = 1; ; i++)); do

@@ -93,7 +93,7 @@ _find_tests() {
 			if [[ $group_path != tests/meta ]]; then
 				_found_group "${group_path#tests/}" 0
 			fi
-		done < <(find tests -mindepth 2 -type f -name group -printf '%h\0')
+		done < <(find tests -mindepth 2 -type f -name rc -printf '%h\0')
 	else
 		local filter
 		for filter in "$@"; do
@@ -438,7 +438,7 @@ _run_group() {
 	local group="${tests["0"]%/*}"
 
 	# shellcheck disable=SC1090
-	. "tests/${group}/group"
+	. "tests/${group}/rc"
 
 	if declare -fF group_requires >/dev/null && ! group_requires; then
 		_output_notrun "${group}/***"
