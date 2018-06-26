@@ -588,15 +588,27 @@ fi
 eval set -- "$TEMP"
 unset TEMP
 
-# Default configuration.
-DEVICE_ONLY=0
-QUICK_RUN=0
-EXCLUDE=()
-TEST_DEVS=()
-
 if [[ -r config ]]; then
 	# shellcheck disable=SC1091
 	. config
+fi
+
+# Default configuration.
+: "${DEVICE_ONLY:=0}"
+: "${QUICK_RUN:=0}"
+if [[ -v EXCLUDE ]] && ! declare -p EXCLUDE | grep -q '^declare -a'; then
+	# If EXCLUDE was not defined as an array, convert it to one.
+	# shellcheck disable=SC2190,SC2206
+	EXCLUDE=($EXCLUDE)
+elif [[ ! -v EXCLUDE ]]; then
+	EXCLUDE=()
+fi
+if [[ -v TEST_DEVS ]] && ! declare -p TEST_DEVS | grep -q '^declare -a'; then
+	# If TEST_DEVS was not defined as an array, convert it to one.
+	# shellcheck disable=SC2206
+	TEST_DEVS=($TEST_DEVS)
+else
+	TEST_DEVS=()
 fi
 
 while true; do

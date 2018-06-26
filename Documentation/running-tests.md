@@ -20,7 +20,8 @@ will run all tests in the `loop` group and the `block/002` test.
 ## Configuration
 
 Test configuration goes in the `config` file at the top-level directory of the
-blktests repository.
+blktests repository. Test configuration options can also be set as environment
+variables instead of in the `config` file.
 
 ### Test Devices
 
@@ -33,7 +34,8 @@ TEST_DEVS=(/dev/nvme0n1 /dev/sdb)
 ```
 
 If `TEST_DEVS` is not defined or is empty, only tests which do not require a
-device will be run.
+device will be run. If `TEST_DEVS` is defined as a normal variable instead of
+an array, it will be converted to an array by splitting on whitespace.
 
 ### Excluding Tests
 
@@ -47,6 +49,9 @@ EXCLUDE=(loop block/001)
 
 Tests specified explicitly on the command line will always run even if they are
 in `EXCLUDE`.
+
+If `EXCLUDE` is defined as a normal variable instead of an array, it will be
+converted to an array by splitting on whitespace.
 
 ### Quick Runs and Test Timeouts
 
