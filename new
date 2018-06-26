@@ -47,11 +47,7 @@ prompt_yes_no() {
 }
 
 echo "Available test groups:"
-while IFS= read -r -d '' group; do
-	if [[ $group != meta ]]; then
-		echo "    ${group}"
-	fi
-done < <(find tests -mindepth 1 -maxdepth 1 -type d -printf '%P\0')
+find tests -mindepth 1 -maxdepth 1 -type d -not -name meta -printf '    %P\n' | sort
 
 read -r -p "Category for new test (pick one of the above or create a new one): " group
 
