@@ -607,7 +607,7 @@ if [[ -v TEST_DEVS ]] && ! declare -p TEST_DEVS | grep -q '^declare -a'; then
 	# If TEST_DEVS was not defined as an array, convert it to one.
 	# shellcheck disable=SC2206
 	TEST_DEVS=($TEST_DEVS)
-else
+elif [[ ! -v TEST_DEVS ]]; then
 	TEST_DEVS=()
 fi
 
