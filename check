@@ -313,7 +313,7 @@ _call_test() {
 	local test_func="$1"
 	local seqres="${RESULTS_DIR}/${TEST_NAME}"
 	# shellcheck disable=SC2034
-	FULL="${seqres}.full"
+	FULL="$PWD/${seqres}.full"
 	declare -A TEST_DEV_QUEUE_SAVED
 
 	_read_last_test_run
