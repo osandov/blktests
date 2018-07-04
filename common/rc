@@ -165,6 +165,19 @@ _test_dev_queue_set() {
 
 _test_dev_is_pci() {
 	if ! readlink -f "$TEST_DEV_SYSFS/device" | grep -q pci; then
+		# nvme needs some special casing
+		if readlink -f "$TEST_DEV_SYSFS/device" | grep -q nvme; then
+			local blkdev
+			local ctrldev
+			# First get the controller device from the namespace blockdev
+			blkdev="$(echo "$TEST_DEV_SYSFS" | cut -d '/' -f 7)"
+			ctrldev="$(echo "$blkdev" | grep -Eo 'nvme[0-9]+')"
+			# Then get the pci device from the controller device
+			if readlink -f "$ctrldev/device" | grep -1 pci; then
+				return 0
+			fi
+		fi
+
 		SKIP_REASON="$TEST_DEV is not a PCI device"
 		return 1
 	fi
