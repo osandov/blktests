@@ -69,6 +69,7 @@ test() {
 		wait
 		show_times
 
+		udevadm settle
 		modprobe -r null_blk
 
 		unset init_read_ms init_write_ms read_ms write_ms

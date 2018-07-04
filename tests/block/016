@@ -53,6 +53,7 @@ test() {
 	kill -USR1 $!
 	wait
 
+	udevadm settle
 	modprobe -r null_blk
 
 	echo "Test complete"

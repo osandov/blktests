@@ -49,6 +49,7 @@ test() {
 		done
 	done
 
+	udevadm settle
 	modprobe -r null_blk
 
 	echo "Test complete"

@@ -58,6 +58,7 @@ test() {
 		wait
 		show_inflight
 
+		udevadm settle
 		modprobe -r null_blk
 	done
 

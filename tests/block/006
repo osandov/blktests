@@ -49,6 +49,7 @@ test() {
 		--rw=randread --norandommap --name=async \
 		--filename=/dev/nullb0 --size=5g --direct=1
 
+	udevadm settle
 	modprobe -r null_blk
 
 	echo "Test complete"

@@ -69,6 +69,7 @@ test() {
 	FIO_PERF_FIELDS=("read iops")
 	run_fio_job
 
+	udevadm settle
 	modprobe -r null_blk
 	if ! modprobe null_blk queue_mode=2 submit_queues=16 nr_devices=32 shared_tags=1; then
 		return 1
@@ -78,6 +79,7 @@ test() {
 	FIO_PERF_FIELDS=("read iops")
 	run_fio_job
 
+	udevadm settle
 	modprobe -r null_blk
 	echo "Test complete"
 }
