@@ -20,12 +20,13 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 . tests/block/rc
+. common/null_blk
 
 DESCRIPTION="do I/O and check the inflight counter"
 QUICK=1
 
 requires() {
-	_have_module null_blk
+	_have_null_blk
 }
 
 show_inflight() {
@@ -41,11 +42,10 @@ test() {
 	for ((queue_mode = 1; queue_mode <= 2; queue_mode++)) do
 		echo "queue mode $queue_mode"
 
-		modprobe -r null_blk
-		modprobe null_blk queue_mode="$queue_mode" irqmode=2 \
-			completion_nsec=500000000 || continue
-
-		udevadm settle
+		if ! _init_null_blk queue_mode="$queue_mode" irqmode=2 \
+		     completion_nsec=500000000; then
+			continue
+		fi
 
 		dd if=/dev/nullb0 of=/dev/null bs=4096 iflag=direct count=1 status=none &
 		sleep 0.1
@@ -58,8 +58,7 @@ test() {
 		wait
 		show_inflight
 
-		udevadm settle
-		modprobe -r null_blk
+		_exit_null_blk
 	done
 
 	echo "Test complete"

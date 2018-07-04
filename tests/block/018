@@ -18,12 +18,13 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 . tests/block/rc
+. common/null_blk
 
 DESCRIPTION="do I/O and check iostats times"
 QUICK=1
 
 requires() {
-	_have_module null_blk
+	_have_null_blk
 }
 
 init_times() {
@@ -48,9 +49,10 @@ test() {
 
 		echo "queue mode $queue_mode"
 
-		modprobe -r null_blk
-		modprobe null_blk queue_mode="$queue_mode" irqmode=2 \
-			completion_nsec=1000000000 || continue
+		if ! modprobe null_blk queue_mode="$queue_mode" irqmode=2 \
+		     completion_nsec=1000000000; then
+			continue
+		fi
 
 		udevadm settle
 
@@ -69,8 +71,7 @@ test() {
 		wait
 		show_times
 
-		udevadm settle
-		modprobe -r null_blk
+		_exit_null_blk
 
 		unset init_read_ms init_write_ms read_ms write_ms
 	done

@@ -20,20 +20,22 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 . tests/block/rc
+. common/null_blk
 
 DESCRIPTION="run null-blk on different schedulers with only one hardware tag"
 QUICK=1
 
 requires() {
-	_have_module null_blk && _have_fio
+	_have_null_blk && _have_fio
 }
 
 test() {
 	echo "Running ${TEST_NAME}"
 
-	modprobe -r null_blk
-	modprobe null_blk queue_mode=2 irqmode=2 completion_nsec=2000000 \
-		submit_queues=4 hw_queue_depth=1
+	if ! _init_null_blk queue_mode=2 irqmode=2 completion_nsec=2000000 \
+	     submit_queues=4 hw_queue_depth=1; then
+		return 1
+	fi
 
 	local scheds
 	# shellcheck disable=SC2207
@@ -48,8 +50,7 @@ test() {
 			--runtime=10
 	done
 
-	udevadm settle
-	modprobe -r null_blk
+	_exit_null_blk
 
 	echo "Test complete"
 }

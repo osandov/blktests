@@ -20,19 +20,21 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 . tests/block/rc
+. common/null_blk
 
 DESCRIPTION="read/write nr_requests on null-blk with different schedulers"
 QUICK=1
 
 requires() {
-	_have_module null_blk
+	_have_null_blk
 }
 
 test() {
 	echo "Running ${TEST_NAME}"
 
-	modprobe -r null_blk
-	modprobe null_blk
+	if ! _init_null_blk; then
+		return 1
+	fi
 
 	local max_nr
 	local nr
@@ -49,8 +51,7 @@ test() {
 		done
 	done
 
-	udevadm settle
-	modprobe -r null_blk
+	_exit_null_blk
 
 	echo "Test complete"
 }

@@ -21,12 +21,13 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 . tests/block/rc
+. common/null_blk
 
 DESCRIPTION="run null-blk in blocking mode"
 TIMED=1
 
 requires() {
-	_have_module null_blk && _have_module_param null_blk blocking && _have_fio
+	_have_null_blk && _have_module_param null_blk blocking && _have_fio
 }
 
 test() {
@@ -35,8 +36,7 @@ test() {
 	_divide_timeout 2
 	FIO_PERF_FIELDS=("read iops")
 
-	modprobe -r null_blk
-	if ! modprobe null_blk queue_mode=2 submit_queues=2 blocking=1; then
+	if ! _init_null_blk queue_mode=2 submit_queues=2 blocking=1; then
 		return 1
 	fi
 
@@ -49,8 +49,7 @@ test() {
 		--rw=randread --norandommap --name=async \
 		--filename=/dev/nullb0 --size=5g --direct=1
 
-	udevadm settle
-	modprobe -r null_blk
+	_exit_null_blk
 
 	echo "Test complete"
 }

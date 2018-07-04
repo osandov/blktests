@@ -18,21 +18,22 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 . tests/block/rc
+. common/null_blk
 
 DESCRIPTION="run null-blk with blk-mq and timeout injection configured"
 
 requires() {
-	_have_module null-blk && _have_module_param null_blk timeout
+	_have_null_blk && _have_module_param null_blk timeout
 }
 
 test() {
 	echo "Running ${TEST_NAME}"
 
-	modprobe -r null_blk
-
 	# The format is "<interval>,<probability>,<space>,<times>". Here, we
 	# fail 50% of I/Os.
-	modprobe null_blk queue_mode=2 timeout='1,50,0,-1'
+	if ! _init_null_blk queue_mode=2 timeout='1,50,0,-1'; then
+		return 1
+	fi
 
 	local scheds
 	# shellcheck disable=SC2207
@@ -51,8 +52,7 @@ test() {
 		wait
 	done
 
-	udevadm settle
-	modprobe -r null_blk
+	_exit_null_blk
 
 	echo "Test complete"
 }
