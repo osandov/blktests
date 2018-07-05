@@ -8,7 +8,7 @@ C_TARGETS := \
 
 TARGETS := $(C_TARGETS)
 
-CFLAGS := -O2
+CFLAGS := -O2 -Wall
 
 all: $(TARGETS)
 
@@ -16,6 +16,6 @@ clean:
 	rm -f $(TARGETS)
 
 $(C_TARGETS): %: %.c
-	$(CC) -Wall -o $@ $(CPPFLAGS) $(CFLAGS) $^
+	$(CC) $(CPPFLAGS) $(CFLAGS) -o $@ $^
 
 .PHONY: all clean
