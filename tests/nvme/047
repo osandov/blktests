@@ -1,0 +1,199 @@
+#!/bin/bash
+# SPDX-License-Identifier: GPL-3.0+
+# Copyright (C) 2023 Hannes Reinecke, SUSE Labs
+#
+# Regression test for ANA base support
+
+. tests/nvme/rc
+. common/xfs
+
+DESCRIPTION="test ANA optimized/transitioning/inaccessible support"
+
+requires() {
+	_nvme_requires
+	_have_loop
+	_have_xfs
+	_have_fio
+	_require_nvme_trtype_is_fabrics
+}
+
+switch_nvmet_anagroup() {
+	local port1="$1"
+	local port2="$2"
+	local mode="$3"
+
+	echo "ANA state ${mode}"
+
+	if [ "${mode}" = "change" ] ; then
+		_set_nvmet_anagroup_state "${port1}" "1" "change"
+		_set_nvmet_anagroup_state "${port1}" "2" "change"
+		_set_nvmet_anagroup_state "${port2}" "1" "change"
+		_set_nvmet_anagroup_state "${port2}" "2" "change"
+	elif [ "${mode}" = "failover" ] ; then
+		_set_nvmet_anagroup_state "${port1}" "1" "inaccessible"
+		_set_nvmet_anagroup_state "${port1}" "2" "optimized"
+		_set_nvmet_anagroup_state "${port2}" "1" "optimized"
+		_set_nvmet_anagroup_state "${port2}" "2" "inaccessible"
+	elif [ "${mode}" = "soft-failover" ] ; then
+		_set_nvmet_anagroup_state "${port1}" "1" "non-optimized"
+		_set_nvmet_anagroup_state "${port1}" "2" "optimized"
+		_set_nvmet_anagroup_state "${port2}" "1" "optimized"
+		_set_nvmet_anagroup_state "${port2}" "2" "non-optimized"
+	elif [ "${mode}" = "soft-failback" ] ; then
+		_set_nvmet_anagroup_state "${port1}" "1" "optimized"
+		_set_nvmet_anagroup_state "${port1}" "2" "non-optimized"
+		_set_nvmet_anagroup_state "${port2}" "1" "non-optimized"
+		_set_nvmet_anagroup_state "${port2}" "2" "optimized"
+	else
+		_set_nvmet_anagroup_state "${port1}" "1" "optimized"
+		_set_nvmet_anagroup_state "${port1}" "2" "inaccessible"
+		_set_nvmet_anagroup_state "${port2}" "1" "inaccessible"
+		_set_nvmet_anagroup_state "${port2}" "2" "optimized"
+	fi
+}
+
+execute_ana_test() {
+	local nvmedev=$1
+	local subsys_name=$2
+	local port1=$3
+	local port2=$4
+	local mount_dir="/mnt/blktests"
+	local nproc=$(nproc)
+
+	switch_nvmet_anagroup "${port1}" "${port2}" "failover"
+
+	# Insert a delay to allow the AEN to be processed
+	sleep 1
+
+	_display_ana_state "${subsys_name}"
+
+	_xfs_mkfs_and_mount "/dev/${nvmedev}n1" "${mount_dir}/ns1" >> "${FULL}" 2>&1
+
+	_xfs_mkfs_and_mount "/dev/${nvmedev}n2" "${mount_dir}/ns2" >> "${FULL}" 2>&1
+
+	if (( nproc > 8 )); then
+		nproc=8
+	fi
+
+	_run_fio_rand_io --size=48m --numjobs="${nproc}" \
+			   --directory="${mount_dir}/ns1" \
+			   --runtime=20s --time_based &
+	trap 'kill %1' EXIT
+
+	_run_fio_rand_io --size=48m --numjobs="${nproc}" \
+			   --directory="${mount_dir}/ns2" \
+			   --runtime=20s --time_based &
+	trap 'kill %2' EXIT
+
+	sleep 3
+
+	switch_nvmet_anagroup "${port1}" "${port2}" "change"
+
+	# Insert a delay to allow the AEN to be processed
+	sleep 1
+
+	_display_ana_state "${subsys_name}"
+
+	sleep 1
+
+	switch_nvmet_anagroup "${port1}" "${port2}" "failback"
+
+	# Insert a delay to allow the AEN to be processed
+	sleep 1
+
+	_display_ana_state "${subsys_name}"
+
+	sleep 3
+
+	switch_nvmet_anagroup "${port1}" "${port2}" "soft-failover"
+
+	# Insert a delay to allow the AEN to be processed
+	sleep 1
+
+	_display_ana_state "${subsys_name}"
+
+	sleep 3
+
+	switch_nvmet_anagroup "${port1}" "${port2}" "soft-failback"
+
+	# Insert a delay to allow the AEN to be processed
+	sleep 1
+
+	_display_ana_state "${subsys_name}"
+
+	wait %2
+	wait %1
+	trap - EXIT
+
+	umount "${mount_dir}/ns2" > /dev/null
+	umount "${mount_dir}/ns1" > /dev/null
+	rmdir "${mount_dir}/ns2"
+	rmdir "${mount_dir}/ns1"
+	rmdir "${mount_dir}"
+}
+
+test() {
+	local port1
+	local port2
+	local subsys_name="blktests-subsystem-1"
+	local file_path1="${TMPDIR}/img1"
+	local file_path2="${TMPDIR}/img2"
+	local loop_dev1
+	local loop_dev2
+	local nvmedev
+
+	echo "Running ${TEST_NAME}"
+
+	_setup_nvmet
+
+	_create_nvmet_subsystem "${subsys_name}"
+
+	port1="$(_create_nvmet_port "${nvme_trtype}")"
+	_create_nvmet_anagroup "${port1}" > /dev/null
+
+	truncate -s 512M "${file_path1}"
+	loop_dev1="$(losetup -f --show "${file_path1}")"
+
+	_create_nvmet_ns "${subsys_name}" "1" "${loop_dev1}" "" "1"
+
+	port2="$(_create_nvmet_port "${nvme_trtype}")"
+	_create_nvmet_anagroup "${port2}" > /dev/null
+
+	truncate -s 512M "${file_path2}"
+	loop_dev2="$(losetup -f --show "${file_path2}")"
+
+	_create_nvmet_ns "${subsys_name}" "2" "${loop_dev2}" "" "2"
+
+	_add_nvmet_subsys_to_port "${port1}" "${subsys_name}"
+	_add_nvmet_subsys_to_port "${port2}" "${subsys_name}"
+
+	traddr=$(_nvmet_traddr_from_port "${port1}")
+	trsvcid=$(_nvmet_trsvcid_from_port "${port1}")
+	_nvme_connect_subsys "${nvme_trtype}" "${subsys_name}" "${traddr}" "${trsvcid}"
+	traddr=$(_nvmet_traddr_from_port "${port2}")
+	trsvcid=$(_nvmet_trsvcid_from_port "${port2}")
+	_nvme_connect_subsys "${nvme_trtype}" "${subsys_name}" "${traddr}" "${trsvcid}"
+
+	udevadm settle
+
+	nvmedev=$(_find_nvme_dev "${subsys_name}")
+	if [[ -n "${nvmedev}" ]]; then
+		execute_ana_test "${nvmedev}" "${subsys_name}" \
+				 "${port1}" "${port2}"
+	fi
+
+	nvme disconnect -n "${subsys_name}"
+
+	_remove_nvmet_subsystem_from_port "${port1}" "${subsys_name}"
+	_remove_nvmet_subsystem_from_port "${port2}" "${subsys_name}"
+	_remove_nvmet_ns "${subsys_name}" "2"
+	_remove_nvmet_subsystem "${subsys_name}"
+	_remove_nvmet_port "${port1}"
+	_remove_nvmet_port "${port2}"
+	losetup --detach "${loop_dev2}"
+	rm "${file_path2}"
+	losetup --detach "${loop_dev1}"
+	rm "${file_path1}"
+
+	echo "Test complete"
+}
