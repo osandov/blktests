@@ -21,12 +21,13 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 . tests/block/rc
+. common/null_blk
 
 DESCRIPTION="run I/O on null_blk with shared and non-shared tags"
 TIMED=1
 
 requires() {
-	_have_module null_blk && _have_module_param null_blk shared_tags && _have_fio
+	_have_null_blk && _have_module_param null_blk shared_tags && _have_fio
 }
 
 run_fio_job() {
@@ -60,8 +61,7 @@ test() {
 
 	_divide_timeout 2
 
-	modprobe -r null_blk
-	if ! modprobe null_blk queue_mode=2 submit_queues=16 nr_devices=32; then
+	if ! _init_null_blk queue_mode=2 submit_queues=16 nr_devices=32; then
 		return 1
 	fi
 
@@ -69,8 +69,8 @@ test() {
 	FIO_PERF_FIELDS=("read iops")
 	run_fio_job
 
-	modprobe -r null_blk
-	if ! modprobe null_blk queue_mode=2 submit_queues=16 nr_devices=32 shared_tags=1; then
+	_exit_null_blk
+	if ! _init_null_blk queue_mode=2 submit_queues=16 nr_devices=32 shared_tags=1; then
 		return 1
 	fi
 
@@ -78,6 +78,6 @@ test() {
 	FIO_PERF_FIELDS=("read iops")
 	run_fio_job
 
-	modprobe -r null_blk
+	_exit_null_blk
 	echo "Test complete"
 }
