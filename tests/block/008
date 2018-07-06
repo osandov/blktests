@@ -55,7 +55,7 @@ test_device() {
 	done
 
 	# while job is running, hotplug CPUs
-	while kill -0 $! 2> /dev/null; do
+	while sleep .2; kill -0 $! 2> /dev/null; do
 		if (( offlining && ${#offline_cpus[@]} == max_offline )); then
 			offlining=0
 		elif (( ! offlining && ${#online_cpus[@]} == ${#HOTPLUGGABLE_CPUS[@]} )); then
@@ -75,8 +75,6 @@ test_device() {
 			unset offline_cpus["$idx"]
 			offline_cpus=("${offline_cpus[@]}")
 		fi
-
-		sleep .2
 	done
 
 	FIO_PERF_FIELDS=("read iops")
