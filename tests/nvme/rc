@@ -229,8 +229,7 @@ _cleanup_nvmet() {
 	for port in "${NVMET_CFS}"/ports/*; do
 		name=$(basename "${port}")
 		echo "WARNING: Test did not clean up port: ${name}"
-		rm -f "${port}"/subsystems/*
-		rmdir "${port}"
+		_remove_nvmet_port "${name}"
 	done
 
 	for subsys in "${NVMET_CFS}"/subsystems/*; do
@@ -388,7 +387,63 @@ _create_nvmet_port() {
 
 _remove_nvmet_port() {
 	local port="$1"
-	rmdir "${NVMET_CFS}/ports/${port}"
+	local port_cfs="${NVMET_CFS}/ports/${port}"
+	for grp in "${port_cfs}"/ana_groups/*; do
+		[ -d "${grp}" ] || continue
+		if [[ "${grp##*/}" != "1" ]]; then
+			rmdir "${grp}"
+		fi
+	done
+	rm -f "${port_cfs}"/subsystems/*
+	rmdir "${port_cfs}"
+}
+
+_create_nvmet_anagroup() {
+	local port="$1"
+	local port_cfs="${NVMET_CFS}/ports/${port}"
+	local grpid
+
+	for ((grpid = 1; ; grpid++)); do
+		if [[ ! -e "${port_cfs}/ana_groups/${grpid}" ]]; then
+			break
+		fi
+	done
+
+	mkdir "${port_cfs}/ana_groups/${grpid}"
+
+	echo "${grpid}"
+}
+
+_set_nvmet_anagroup_state() {
+	local port="$1"
+	local grpid="$2"
+	local state="$3"
+	local ana_cfs="${NVMET_CFS}/ports/${port}/ana_groups/${grpid}"
+
+	echo "${state}" > "${ana_cfs}/ana_state"
+}
+
+_display_ana_state() {
+	local nvmet_subsystem="$1"
+	local grpid state cntlid
+
+	for nvme in /sys/class/nvme/* ; do
+		[ -f ${nvme}/subsysnqn ] || continue
+		subsys="$(cat "${nvme}/subsysnqn")"
+		if [ "${subsys}" != "${nvmet_subsystem}" ] ; then
+			continue
+		fi
+		cntlid="$(cat "${nvme}/cntlid")"
+		for c in ${nvme}/nvme* ; do
+			if [ ! -d ${c} ] ; then
+				echo "${cntlid}: ANA disabled"
+				continue
+			fi
+			grpid="$(cat "${c}/ana_grpid")"
+			state="$(cat "${c}/ana_state")"
+			echo "${cntlid}: grpid ${grpid} state ${state}"
+		done
+	done
 }
 
 _create_nvmet_ns() {
@@ -398,26 +453,48 @@ _create_nvmet_ns() {
 	local uuid="00000000-0000-0000-0000-000000000000"
 	local subsys_path="${NVMET_CFS}/subsystems/${nvmet_subsystem}"
 	local ns_path="${subsys_path}/namespaces/${nsid}"
+	local ana_grpid
 
 	if [[ $# -eq 4 ]]; then
-		uuid="$4"
+		ana_grpid="$4"
+	fi
+
+	if [[ $# -ge 5 ]]; then
+		uuid="$5"
 	fi
 
 	mkdir "${ns_path}"
 	printf "%s" "${blkdev}" > "${ns_path}/device_path"
 	printf "%s" "${uuid}" > "${ns_path}/device_uuid"
+	if [ -n "${ana_grpid}" ] ; then
+		printf "%s" "${ana_grpid}" > "${ns_path}/ana_grpid"
+	fi
 	printf 1 > "${ns_path}/enable"
 }
 
 _create_nvmet_subsystem() {
 	local nvmet_subsystem="$1"
-	local blkdev="$2"
-	local uuid=$3
+	local blkdev
+	local uuid
+	local ana_grpid
 	local cfs_path="${NVMET_CFS}/subsystems/${nvmet_subsystem}"
 
 	mkdir -p "${cfs_path}"
 	echo 1 > "${cfs_path}/attr_allow_any_host"
-	_create_nvmet_ns "${nvmet_subsystem}" "1" "${blkdev}" "${uuid}"
+	if [[ $# -ge 2 ]]; then
+		blkdev="$2"
+	fi
+	if [[ $# -ge 3 ]]; then
+		uuid="$3"
+	fi
+	if [[ $# -ge 4 ]]; then
+		ana_grpid="$4"
+	fi
+	if [ -z "$blkdev" ]; then
+		return
+	fi
+	_create_nvmet_ns "${nvmet_subsystem}" "1" "${blkdev}" \
+			"${uuid}" "${ana_grpid}"
 }
 
 _create_nvmet_host() {
@@ -548,8 +625,11 @@ _find_nvme_dev() {
 		[ -e "$dev" ] || continue
 		dev="$(basename "$dev")"
 		subsysnqn="$(cat "/sys/class/nvme/${dev}/subsysnqn")"
-		if [[ "$subsysnqn" == "$subsys" ]]; then
+		if [[ "${subsysnqn}" == "${subsys}" ]]; then
 			echo "$dev"
+			if [[ ! -d /sys/block/${dev} ]] ; then
+				return
+			fi
 			for ((i = 0; i < 10; i++)); do
 				if [[ -e /sys/block/$dev/uuid &&
 					-e /sys/block/$dev/wwid ]]; then
