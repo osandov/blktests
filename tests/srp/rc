@@ -1,0 +1,1441 @@
+#!/bin/bash
+#
+# Copyright (c) 2018 Western Digital Corporation or its affiliates
+#
+# This program is free software; you can redistribute it and/or
+# modify it under the terms of the GNU General Public License
+# as published by the Free Software Foundation; either version 2
+# of the License, or (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program; if not, write to the Free Software
+# Foundation, Inc.
+
+. common/rc
+
+vdev_path=(/dev/nullb0 /dev/nullb1 scsi_debug_dev_path_will_be_set_later)
+vdevs=(iblock_0/vdev0 iblock_1/vdev1 iblock_2/vdev2)
+scsi_serial=(nullb0 nullb1 scsidbg)
+memtotal=$(sed -n 's/^MemTotal:[[:blank:]]*\([0-9]*\)[[:blank:]]*kB$/\1/p' /proc/meminfo)
+max_ramdisk_size=$((1<<25))
+ramdisk_size=$((memtotal*(1024/16)))  # in bytes
+if [ $ramdisk_size -gt $max_ramdisk_size ]; then
+	ramdisk_size=$max_ramdisk_size
+fi
+debug=
+elevator=none
+filesystem_type=ext4
+fio_aux_path=/tmp/fio-state-files
+nvme=
+nvme_subsysnqn="nvme-test"
+nvme_port=7777
+scsi_timeout=1
+srp_login_params=
+srp_rdma_cm_port=5555
+
+is_lio_configured() {
+	(
+		cd /sys/kernel/config/target >&/dev/null || return 1
+		for e in target/* core/fileio* core/iblock* core/pscsi*; do
+			if [ -d "$e" ] && [ "$e" != core ]; then
+				return 0
+			fi
+		done
+	)
+
+	return 1
+}
+
+group_requires() {
+	local m name p required_modules
+
+	_have_configfs || return $?
+	if is_lio_configured; then
+		SKIP_REASON="LIO must be unloaded before the SRP tests are run"
+		return 1
+	fi
+	required_modules=(
+		dm_multipath
+		dm_queue_length
+		dm_service_time
+		ib_srp
+		ib_srpt
+		sd_mod
+		null_blk
+		sd_mod
+		sg
+		rdma_cm
+		ib_ipoib
+		ib_umad
+		rdma_rxe
+		scsi_debug
+		scsi_dh_alua
+		scsi_dh_emc
+		scsi_dh_rdac
+		target_core_mod
+		target_core_iblock
+	)
+	for m in "${required_modules[@]}"; do
+		_have_module "$m" || return $?
+	done
+
+	for p in mkfs.ext4 mkfs.xfs multipath multipathd pidof sg_reset; do
+		_have_program "$p" || return $?
+	done
+
+	_have_root || return $?
+
+	_have_src_program discontiguous-io || return $?
+
+	_have_kernel_option DM_UEVENT || return $?
+
+	for name in srp_daemon multipathd; do
+		if pidof "$name" >/dev/null; then
+			SKIP_REASON="$name must be stopped before the SRP tests are run"
+			return 1
+		fi
+	done
+	if [ -e /etc/multipath.conf ] &&
+	    ! diff -q /etc/multipath.conf tests/srp/multipath.conf >&/dev/null
+	then
+		SKIP_REASON="/etc/multipath.conf already exists"
+		return 1
+	fi
+	if [ ! -e /etc/multipath.conf ]; then
+		(
+			srcdir=$PWD
+			cd /etc && ln -s "$srcdir/tests/srp/multipath.conf" .
+		)
+	fi
+}
+
+# Log out, set dm and SCSI use_blk_mq parameters and log in. $1: device mapper
+# use_blk_mq mode; $2: SCSI use_blk_mq mode; $3..${$#}: SRP kernel module
+# parameters.
+use_blk_mq() {
+	local dm_mode=$1 scsi_mode=$2 kmod_params
+
+	shift
+	shift
+	kmod_params=("$@")
+
+	(
+		cd /sys/module/dm_mod/parameters || return $?
+		if [ -e use_blk_mq ]; then
+			echo "$dm_mode" >use_blk_mq || return $?
+		fi
+	)
+	(
+		cd /sys/module/scsi_mod/parameters || return $?
+		echo "$scsi_mode" >use_blk_mq || return $?
+	)
+
+	log_out &&
+		remove_mpath_devs &&
+		stop_client &&
+		start_client indirect_sg_entries=2048 "${kmod_params[@]}" &&
+		log_in
+}
+
+get_ipv4_addr() {
+	ip -4 -o addr show dev "$1" |
+		sed -n 's/.*[[:blank:]]inet[[:blank:]]*\([^[:blank:]/]*\).*/\1/p'
+}
+
+# Convert e.g. ::1 into 0000:0000:0000:0000:0000:0000:0000:0001.
+expand_ipv6_addr() {
+	awk -F : 'BEGIN{left=1} { for(i=1;i<=NF;i++) { a=substr("0000", 1+length($i)) $i; if ($i == "") left=0; else if (left) pre = pre ":" a; else suf = suf ":" a }; mid=substr(":0000:0000:0000:0000:0000:0000:0000:0000", (pre!="")+length(pre)+length(suf)); print substr(pre,2) mid suf}'
+}
+
+get_ipv6_addr() {
+	ip -6 -o addr show dev "$1" |
+		sed -n 's/.*[[:blank:]]inet6[[:blank:]]*\([^[:blank:]/]*\).*/\1/p'
+}
+
+# Write SRP login string $1 into SRP login sysfs attribute $2.
+srp_single_login() {
+	{
+		echo "echo $1 > $PWD/$2"
+		echo "$1" >"$2"
+	} &>>"$FULL"
+}
+
+# Tell the SRP initiator to log in to an SRP target using the IB/CM.
+# Arguments: $1: SRP target IOC GUID; $2: IB device to log in to; $3: IB device
+# port to log in to; $4: additional login parameters.
+do_ib_cm_login() {
+	local add_param gid ibdev ioc_guid p port
+
+	ioc_guid=$1
+	ibdev=$2
+	port=$3
+	add_param=$4
+	gid=$(<"/sys/class/infiniband/$ibdev/ports/$port/gids/0")
+	gid=${gid//:}
+	for p in /sys/class/infiniband_srp/*; do
+		[ -e "$p" ] || continue
+		srp_single_login "id_ext=$ioc_guid,ioc_guid=$ioc_guid,dgid=$gid,pkey=7fff,service_id=$ioc_guid,$add_param" "$p/add_target"
+	done
+}
+
+# Tell the SRP initiator to log in to an SRP target using the RDMA/CM.
+# Arguments: $1: SRP target IOC GUID; $2: IB device to log in to; $3: additional
+# login parameters.
+do_rdma_cm_login() {
+	local a b add_param d dest dests ibdev ioc_guid pd
+
+	ioc_guid=$1
+	ibdev=$2
+	add_param=$3
+	pd=/sys/class/infiniband/$ibdev/parent
+	if [ -e "$pd" ]; then
+		d=$(<"$pd")
+		a=$(get_ipv4_addr "$(basename "$d")")
+		b=$(get_ipv6_addr "$(basename "$d")")
+	fi
+	[ -n "$a$b" ] || return 1
+	dests=()
+	[ -n "$a" ] && dests+=("${a}:${srp_rdma_cm_port}")
+	[ -n "$b" ] && dests+=("[${b}]:${srp_rdma_cm_port}")
+	for dest in "${dests[@]}"; do
+		for p in /sys/class/infiniband_srp/*; do
+			[ -e "$p" ] || continue
+			srp_single_login "id_ext=$ioc_guid,ioc_guid=$ioc_guid,dest=$dest,$add_param" "$p/add_target"
+		done
+	done
+}
+
+show_srp_connections() {
+	local d f h hd scsi_devs srp_luns p s
+
+	for p in /sys/class/scsi_host/*/orig_dgid; do
+		[ -e "$p" ] || continue
+		hd=${p%/orig_dgid}
+		h=${hd#/sys/class/scsi_host/host}
+		{ s=$(<"$hd/sgid"); } 2>/dev/null
+		s=${s#fe80:0000:0000:0000:}
+		s=${s:-?}
+		d=$(<"$p")
+		d=${d#fe80:0000:0000:0000:}
+		d=${d:-?}
+		srp_luns=()
+		for f in "/sys/class/scsi_device/${h}:"*; do
+			[ -e "$f" ] || continue
+			srp_luns+=("$f")
+		done
+		scsi_devs=()
+		for dev in "/sys/class/scsi_device/${h}:"*/device/block/*; do
+			[ -e "$dev" ] || continue
+			scsi_devs+=("${dev/*\/}")
+		done
+		echo "SCSI host $h: src GUID $s dst GUID $d ${#srp_luns[@]} LUNS; scsi devs: ${scsi_devs[*]}"
+	done
+}
+
+# Make the SRP initiator driver log in to each SRP target port that exists
+# on the local host. $1 are additional SRP login parameters.
+srp_log_in() {
+	local a add_param=$1 d dest gid ibdev ioc_guid port p sysfsdir
+
+	ioc_guid=$(</sys/module/ib_srpt/parameters/srpt_service_guid)
+
+	for ((i=0;i<10;i++)); do
+		for d in /sys/class/infiniband_mad/umad*; do
+			[ -e "$d" ] || continue
+			sysfsdir=/sys/class/infiniband_mad/$(basename "$d")
+			ibdev=$(<"$sysfsdir/ibdev")
+			port=$(<"$sysfsdir/port")
+			link_layer=$(<"/sys/class/infiniband/$ibdev/ports/$port/link_layer")
+			case $link_layer in
+				InfiniBand)
+					do_ib_cm_login   "$ioc_guid" "$ibdev" "$port" "$add_param" ||
+						do_rdma_cm_login "$ioc_guid" "$ibdev" "$add_param";;
+				*)
+					do_rdma_cm_login "$ioc_guid" "$ibdev" "$add_param";;
+			esac || break
+		done
+
+		for p in /sys/class/scsi_host/*/orig_dgid; do
+			if [ -e "$p" ]; then
+				show_srp_connections &>>"$FULL"
+				return 0
+			fi
+		done
+		sleep .1
+	done
+
+	echo "SRP login failed"
+
+	return 1
+}
+
+# Tell the SRP initiator driver to log out.
+srp_log_out() {
+	local p
+
+	if [ -e /sys/class/srp_remote_ports ]; then
+		for p in /sys/class/srp_remote_ports/*; do
+			[ -e "$p" ] && echo 1 >"$p/delete" &
+		done
+	fi
+	wait
+}
+
+# Whether or not $1 is a number.
+is_number() {
+	[ "$1" -eq "0$1" ] 2>/dev/null
+}
+
+# Check whether a device is an RDMA device. An example argument:
+# /sys/devices/pci0000:00/0000:00:03.0/0000:04:00.0
+is_rdma_device() {
+	local d i inode1 inode2
+
+	inode1=$(stat -c %i "$1")
+	# echo "inode1 = $inode1"
+	for i in /sys/class/infiniband/*; do
+		d=/sys/class/infiniband/"$(readlink "$i")"
+		d=$(dirname "$(dirname "$d")")
+		inode2=$(stat -c %i "$d")
+		# echo "inode2 = $inode2"
+		if [ "$inode1" = "$inode2" ]; then
+			return
+		fi
+	done
+	false
+}
+
+# Lists RDMA capable network interface names, e.g. ib0 ib1.
+rdma_network_interfaces() {
+	(
+		cd /sys/class/net &&
+			for i in *; do
+				[ -e "$i" ] || continue
+				# Skip IPoIB (ARPHRD_INFINIBAND) network
+				# interfaces.
+				[ "$(<"$i"/type)" = 32 ] && continue
+				[ -L "$i/device" ] || continue
+				d=$(readlink "$i/device" 2>/dev/null)
+				if [ -n "$d" ] && is_rdma_device "$i/$d"; then
+					echo "$i"
+				fi
+			done
+	)
+}
+
+nvme_log_in() {
+	local i ipv4_addr
+
+	[ -c /dev/nvme-fabrics ] &&
+		for i in $(rdma_network_interfaces); do
+			ipv4_addr=$(get_ipv4_addr "$i")
+			if [ -n "${ipv4_addr}" ]; then
+				echo -n "transport=rdma,traddr=${ipv4_addr},trsvcid=${nvme_port},nqn=$nvme_subsysnqn" > /dev/nvme-fabrics
+			fi
+		done &&
+		echo reconfigure | multipathd -k >&/dev/null
+}
+
+nvme_log_out() {
+	local c
+
+	for c in /sys/class/nvme-fabrics/ctl/*/delete_controller; do
+		[ -e "$c" ] && echo 1 > "$c" &
+	done
+	wait
+}
+
+# Log in.
+log_in() {
+	if [ -n "$nvme" ]; then
+		nvme_log_in
+	else
+		srp_log_in "${srp_login_params}"
+	fi
+}
+
+log_out() {
+	if [ -n "$nvme" ]; then
+		nvme_log_out
+	else
+		srp_log_out
+	fi
+}
+
+# Check whether any stacked block device holds block device $1. If so, echo
+# the name of the holder.
+held_by() {
+	local d e dev=$1
+
+	while [ -L "$dev" ]; do
+		dev=$(realpath "$dev")
+	done
+	dev=${dev%/dev/}
+	for d in /sys/class/block/*/holders/*; do
+		[ -e "$d" ] || continue
+		e=$(basename "$d")
+		if [ "$e" = "$dev" ]; then
+			echo "/dev/$(basename "$(dirname "$(dirname "$d")")")"
+		fi
+	done
+}
+
+# System uptime in seconds.
+uptime_s() {
+	local a b
+
+	echo "$(</proc/uptime)" | { read -r a b && echo "${a%%.*}"; }
+}
+
+# Sleep until either $1 seconds have elapsed or until the deadline $2 has been
+# reached. Return 1 if and only if the deadline has been met.
+sleep_until() {
+	local duration=$1 deadline=$2 u
+
+	u=$(uptime_s)
+	if [ $((u + duration)) -le "$deadline" ]; then
+		sleep "$duration"
+	else
+		[ "$deadline" -gt "$u" ] && sleep $((deadline - u))
+		return 1
+	fi
+}
+
+# Simulate network failures for device $1 during $2 seconds.
+simulate_network_failure_loop() {
+	local d dev="$1" duration="$2" deadline i rc=0 s
+
+	[ -e "$dev" ] || return $?
+	[ -n "$duration" ] || return $?
+	deadline=$(($(uptime_s) + duration))
+	s=5
+	while [ $rc = 0 ]; do
+		sleep_until 5 ${deadline} || break
+		if [ -n "$nvme" ]; then
+			for d in $(held_by "$dev"); do
+				echo 1 >"$d/device/reset_controller"
+			done
+		else
+			log_out
+			sleep_until $s ${deadline}
+			rc=$?
+			s=$(((((s + 5) & 0xff) ^ 0xa6) * scsi_timeout / 60))
+			log_in
+		fi
+	done
+
+	for ((i=0;i<5;i++)); do
+		log_in && break
+		sleep 1
+	done
+}
+
+# Kill all processes that have opened block device $1.
+stop_bdev_users() {
+	[ -n "$1" ] || return $?
+	lsof -F p "$1" 2>/dev/null | while read -r line; do
+		p="${line#p}"
+		if [ "$p" != "$line" ]; then
+			echo -n " (pid $p)" >>"$FULL"
+			kill -9 "$p"
+		fi
+	done
+}
+
+# RHEL 6 dmsetup accepts mpath<n> but not /dev/dm-<n> as its first argument.
+# Hence this function that converts /dev/dm-<n> into mpath<n>.
+dev_to_mpath() {
+	local d e mm
+
+	d="${1#/dev/mapper/}";
+	if [ "$d" != "$1" ]; then
+		echo "$d"
+		return 0
+	fi
+
+	[ -e "$1" ] || return $?
+
+	if [ -L "$1" ]; then
+		e=$(readlink -f "$1")
+	else
+		e="$1"
+	fi
+	if ! mm=$(stat -c %t:%T "$e"); then
+		echo "stat $1 -> $e failed"
+		return 1
+	fi
+
+	for d in /dev/mapper/mpath*; do
+		if [ -L "$d" ]; then
+			e=$(readlink -f "$d")
+		elif [ -e "$d" ]; then
+			e="$d"
+		else
+			continue
+		fi
+		if [ "$(stat -c %t:%T "$e")" = "$mm" ]; then
+			basename "$d"
+			return 0
+		fi
+	done
+	return 1
+}
+
+# Modify mpath device $1 to fail_if_no_path mode, unmount the filesystem on top
+# of it and remove the mpath device.
+remove_mpath_dev() {
+	local cmd dm i output t1 t2
+
+	{
+		for ((i=10;i>0;i--)); do
+			cmd="dm=\$(dev_to_mpath \"$1\")"
+			if ! eval "$cmd"; then
+				echo "$cmd: failed"
+			else
+				t1=$(dmsetup table "$dm")
+				cmd="dmsetup message $dm 0 fail_if_no_path"
+				if ! eval "$cmd"; then
+					echo "$cmd: failed"
+				else
+					t2=$(dmsetup table "$dm")
+					if echo "$t2" | grep -qw queue_if_no_path; then
+						echo "$dm: $t1 -> $t2"
+					fi
+					echo "Attempting to unmount /dev/mapper/$dm"
+					umount "/dev/mapper/$dm"
+					cmd="dmsetup remove $dm"
+					if ! output=$(eval "$cmd" 2>&1); then
+						echo "$cmd: $output; retrying"
+					else
+						echo "done"
+						break
+					fi
+				fi
+			fi
+			if [ ! -e "$1" ]; then
+				break
+			fi
+			ls -l "$1"
+			stop_bdev_users "$(readlink -f "$1")"
+			sleep .5
+		done
+		if [ $i = 0 ]; then
+			echo "failed"
+			return 1
+		fi
+	} &>>"$FULL"
+}
+
+# Check whether one or more arguments contain stale device nodes (/dev/...).
+mpath_has_stale_dev() {
+	local d
+
+	for d in "$@"; do
+		if [ "${d/://}" != "$d" ]; then
+			grep -qw "$d" /sys/class/block/*/dev 2>/dev/null ||
+				return 0
+		fi
+	done
+
+	return 1
+}
+
+# Check whether multipath definition $1 includes the queue_if_no_path keyword.
+is_qinp_def() {
+	case "$1" in
+		" 3 queue_if_no_path queue_mode mq ")
+			return 0;;
+		" 1 queue_if_no_path ")
+			return 0;;
+		*)
+			return 1;;
+	esac
+}
+
+# Remove all mpath devices that refer to one or more SRP devices or that refer
+# to an already deleted block device.
+remove_srp_mpath_devs() {
+	local b d dm h p s
+
+	{
+		echo "Examining all SRP LUNs"
+		for p in /sys/class/srp_remote_ports/*; do
+			[ -e "$p" ] || continue
+			h="${p##*/}"; h="${h#port-}"; h="${h%:1}"
+			for d in "/sys/class/scsi_device/${h}:"*/device/block/*; do
+				[ -e "$d" ] || continue
+				s=$(dirname "$(dirname "$(dirname "$d")")")
+				s=$(basename "$s")
+				b=$(basename "$d")
+				for h in "/sys/class/block/$b/holders/"*; do
+					[ -e "$h" ] || continue
+					dm=/dev/$(basename "$h")
+					{
+						echo -n "SRP LUN $s / $b: removing $dm: "
+						if ! remove_mpath_dev "$dm"; then
+							echo "failed"
+							[ -z "$debug" ] || return 1
+						fi
+					}
+				done
+			done
+		done
+		# Find all multipaths with one or more deleted devices and remove these
+		echo "Examining all multipaths"
+		dmsetup table | while read -r mpdev fs ls type def; do
+			echo "$fs $ls" >/dev/null
+			# shellcheck disable=SC2086
+			if [ "$type" = multipath ] &&
+				   { is_qinp_def "$def" || mpath_has_stale_dev $def; }; then
+				echo "${mpdev%:}"
+			fi
+		done |
+			sort -u |
+			while read -r mpdev; do
+				mpdev="/dev/mapper/$mpdev"
+				echo -n "removing $mpdev: "
+				if ! remove_mpath_dev "$mpdev"; then
+					echo "failed"
+					[ -z "$debug" ] || return 1
+				fi
+			done
+		echo "Finished examining multipaths"
+	} &>> "$FULL"
+}
+
+remove_nvme_mpath_devs() {
+	local dm h
+
+	for h in /sys/class/block/nvme*/holders/*; do
+		[ -e "$h" ] || continue
+		d=$(basename "$(dirname "$(dirname "$h")")")
+		dm=/dev/$(basename "$h")
+		{
+			echo -n "NVME dev $d: removing $dm: "
+			dmsetup remove "$(dev_to_mpath "$dm")" && echo "done"
+		} &>> "$FULL"
+	done
+}
+
+remove_mpath_devs() {
+	if [ -n "$nvme" ]; then
+		remove_nvme_mpath_devs
+	else
+		remove_srp_mpath_devs
+	fi
+}
+
+# Arguments: module to unload ($1) and retry count ($2).
+unload_module() {
+	local i m=$1 rc=${2:-1}
+
+	[ ! -e "/sys/module/$m" ] && return 0
+	for ((i=rc;i>0;i--)); do
+		modprobe -r "$m"
+		[ ! -e "/sys/module/$m" ] && return 0
+		sleep .1
+	done
+	return 1
+}
+
+# Load the SRP initiator driver with kernel module parameters $1..$n.
+start_srp() {
+	modprobe scsi_transport_srp || return $?
+	modprobe ib_srp "$@" dyndbg=+pmf || return $?
+}
+
+# Unload the SRP initiator driver.
+stop_srp() {
+	local i
+
+	srp_log_out
+	for ((i=40;i>=0;i--)); do
+		remove_mpath_devs || return $?
+		unload_module ib_srp >/dev/null 2>&1 && break
+		sleep 1
+	done
+	if [ -e /sys/module/ib_srp ]; then
+		echo "Error: unloading kernel module ib_srp failed"
+		return 1
+	fi
+	unload_module scsi_transport_srp || return $?
+}
+
+start_nvme_client() {
+	modprobe nvme dyndbg=+pmf &&
+		modprobe nvme-core dyndbg=+pmf &&
+		modprobe nvme-fabrics dyndbg=+pmf &&
+		modprobe nvme-rdma dyndbg=+pmf
+}
+
+stop_nvme_client() {
+	unload_module nvme_rdma &&
+		unload_module nvme
+}
+
+# Load the initiator kernel driver with kernel module parameters $1..$n.
+start_client() {
+	if [ -n "$nvme" ]; then
+		start_nvme_client "$@"
+	else
+		start_srp "$@"
+	fi
+}
+
+stop_client() {
+	if [ -n "$nvme" ]; then
+		stop_nvme_client
+	else
+		stop_srp
+	fi
+}
+
+# Load the configfs kernel module and mount it.
+mount_configfs() {
+	if [ ! -e /sys/module/configfs ]; then
+		modprobe configfs || return $?
+	fi
+	if ! mount | grep -qw configfs; then
+		mount -t configfs none /sys/kernel/config || return $?
+	fi
+}
+
+# Associate the LIO device with name $1/$2 with file $3 and SCSI serial $4.
+configure_lio_vdev() {
+	local dirname=$1 vdev=$2 path=$3 serial=$4
+
+	(
+		cd /sys/kernel/config/target/core &&
+			mkdir "$dirname" &&
+			cd "$dirname" &&
+			mkdir "$vdev" &&
+			cd "$vdev" &&
+			if [ -b "$(readlink -f "$path")" ]; then
+				echo "udev_path=$path," >control
+			elif [ -e "$path" ]; then
+				size=$(stat -c %s "${path}") &&
+					[ "$size" -gt 0 ] &&
+					echo "fd_dev_name=$path,fd_dev_size=$size," >control
+			else
+				{
+					ls -l "$path"
+					readlink -f "$path"
+				} &>>"$FULL"
+				false
+			fi &&
+			echo "${serial}" >wwn/vpd_unit_serial &&
+			echo 1 > enable
+	)
+}
+
+# Return the multipath ID of LIO device $1. $1 is an index in the $scsi_serial
+# array.
+lio_scsi_mpath_id() {
+	local i=$1 hs
+
+	is_number "$i" || return $?
+	hs=$(echo -n "${scsi_serial[i]}" | od -v -tx1 -w99 |
+		     { read -r offset bytes;
+		       echo "${bytes// }";
+		       echo "$offset" > /dev/null
+		     })
+	while [ ${#hs} -lt 25 ]; do
+		hs="${hs}0"
+	done
+	# See also spc_emulate_evpd_83() in drivers/target/target_core_spc.c.
+	echo "36001405$hs"
+}
+
+scsi_mpath_id() {
+	lio_scsi_mpath_id "$@"
+}
+
+get_nvme_bdev() {
+	local i=$1 j=0
+
+	for d in /sys/class/nvme-fabrics/ctl/*/*/device; do
+		[ -d "$d" ] || continue
+		if [ $j -ge "$i" ]; then
+			echo "/dev/$(basename "$(dirname "$d")")"
+			return 0
+		fi
+		((j++))
+	done
+	return 1
+}
+
+# Get a the uuid or wwid of LIO device $1. $1 is an index in the $scsi_serial
+# array.
+get_bdev_uid() {
+	local i=$1
+
+	is_number "$i" || return $?
+	if [ -n "$nvme" ]; then
+		bdev=$(get_nvme_bdev "$i") || return $?
+		wwid=$(<"/sys/block/${bdev#/dev/}/wwid")
+		wwid=${wwid#nvme.0000-}
+		echo "${wwid%-4c696e75780000000000000000000000000000000000000000000000000000000000000000000000-00000001}"
+	else
+		scsi_mpath_id "$i"
+	fi
+}
+
+# Set scheduler of block device $1 to $2.
+set_scheduler() {
+	local b=$1 p s=$2
+
+	p=/sys/class/block/$b/queue/scheduler
+	if [ -e "/sys/block/$b/mq" ]; then
+		case "$s" in
+			noop)        s=none;;
+			deadline)    s=mq-deadline;;
+			bfq)         s=bfq;;
+		esac
+	else
+		case "$s" in
+			none)        s=noop;;
+			mq-deadline) s=deadline;;
+			bfq-mq)      s=bfq;;
+		esac
+	fi
+	if ! echo "$s" > "$p"; then
+		echo "Changing scheduler of $b from $(<"$p") into $s failed"
+		return 1
+	fi
+}
+
+# Get a /dev/... path that points at dm device number $1. $1 is an index in
+# the $scsi_serial.
+get_bdev() {
+	local b d dev h i=$1 j realdev
+
+	is_number "$i" || return $?
+	echo reconfigure | multipathd -k >&/dev/null
+	dev="/dev/disk/by-id/dm-uuid-mpath-$(get_bdev_uid "$i")" || return $?
+	for ((j=0;j<50;j++)); do
+		[ -e "$dev" ] && break
+		sleep .1
+	done
+	if [ ! -e "$dev" ]; then
+		echo "$dev: not found"
+		return 1
+	fi
+	if [ ! -L "$dev" ]; then
+		echo "$dev: not a soft link"
+		return 1
+	fi
+	realdev=$(readlink "$dev" 2>/dev/null || echo "?")
+	echo "Using $dev -> ${realdev}" >>"$FULL"
+	for ((j=0; j<50; j++)); do
+		blockdev --getbsz "$dev" >&/dev/null && break
+		echo reconfigure | multipathd -k >& /dev/null
+		sleep .1
+	done
+	if ! blockdev --getbsz "$dev" >&/dev/null; then
+		return 1
+	fi
+	b=$(basename "$realdev")
+	set_scheduler "$b" "${elevator}"
+	for d in /sys/class/block/*"/holders/$b"; do
+		[ -e "$d" ] || continue
+		h="$(basename "$(dirname "$(dirname "$d")")")"
+		set_scheduler "$h" "${elevator}"
+		if [ -e "/sys/class/block/$h/device/timeout" ]; then
+			echo $scsi_timeout > "/sys/class/block/$h/device/timeout"
+		fi
+	done
+	echo "$dev"
+}
+
+# Configure zero or more target ports such that these accept connections from
+# zero or more initiator ports. Target and initiator port lists are separated
+# by "--".
+configure_target_ports() {
+	local i ini initiators target_port target_ports
+
+	target_ports=()
+	while [ $# -gt 0 ]; do
+		if [ "$1" = "--" ]; then
+			shift
+			break
+		fi
+		target_ports+=("$1")
+		shift
+	done
+
+	initiators=()
+	while [ $# -gt 0 ]; do
+		initiators+=("$1")
+		shift
+	done
+
+	for target_port in "${target_ports[@]}"; do
+		mkdir "$target_port" || return $?
+		[ -e "$target_port" ] || continue
+		#echo "$target_port"
+		mkdir "$target_port/$target_port" || continue
+		i=0
+		for v in "${vdevs[@]}"; do
+			mkdir "$target_port/$target_port/lun/lun_$i" || return $?
+			(
+				cd "$target_port/$target_port/lun/lun_$i" &&
+					ln -s "../../../../../core/$v" .
+			) || return $?
+			i=$((i+1))
+		done
+		for ini in "${initiators[@]}"; do
+			(
+				cd "$target_port/$target_port/acls" &&
+					mkdir "${ini}" &&
+					cd "${ini}" &&
+					for ((i = 0; i < ${#vdevs[@]}; i++)) do
+					    (
+						    mkdir lun_$i &&
+							    cd lun_$i &&
+							    ln -s ../../../lun/lun_$i .
+					    ) || return $?
+					done
+			) || return $?
+		done
+		echo 1 >"$target_port/$target_port/enable"
+	done
+}
+
+function mountpoint() {
+	if [ -z "$TMPDIR" ]; then
+		echo "Error: \$TMPDIR has not been set." 1>&2
+		exit 1
+	fi
+	if [ -z "$1" ]; then
+		echo "Error: missing argument" 1>&2
+		exit 1
+	fi
+	echo "$TMPDIR/mnt$1"
+}
+
+all_primary_gids() {
+	find /sys/devices -name infiniband | while read -r p; do
+		cat "$p"/*/ports/*/gids/0
+	done | grep -v ':0000:0000:0000:0000$'
+}
+
+# Load LIO and configure the SRP target driver and LUNs.
+start_lio_srpt() {
+	local b d gid guid i ini_gids ini_guids opts p target_gids target_guids vdev
+
+	# shellcheck disable=SC2207
+	target_guids=($(all_primary_gids | sed 's/^fe80:0000:0000:0000://'))
+	# shellcheck disable=SC2207
+	target_gids=($(all_primary_gids | sed 's/^/0x/;s/://g'))
+	for p in /sys/class/infiniband/*/ports/*; do
+		[ -e "$p" ] || continue
+		link_layer=$(<"$p/link_layer")
+		case "$link_layer" in
+			InfiniBand)
+				guid=$(<"$p/gids/0")
+				gid=$(echo "${guid}" | sed 's/^fe8/0x000/;s/://g')
+				guid=${guid#fe80:0000:0000:0000:}
+				[ "$guid" = "0000:0000:0000:0000" ] && continue
+				ini_guids+=("$guid")
+				ini_gids+=("$gid")
+				;;
+			*)
+				d=$(<"$(dirname "$(dirname "$p")")/parent")
+				for b in $(get_ipv4_addr "$d") \
+						 $(get_ipv6_addr "$d"|expand_ipv6_addr); do
+					ini_guids+=("$b")
+					ini_gids+=("$b")
+				done
+				;;
+		esac
+	done
+	mount_configfs || return $?
+	modprobe target_core_mod || return $?
+	modprobe target_core_iblock || return $?
+	opts=("srp_max_req_size=4200" "dyndbg=+pmf")
+	if modinfo ib_srpt | grep -q '^parm:[[:blank:]]*rdma_cm_port:'; then
+		opts+=("rdma_cm_port=${srp_rdma_cm_port}")
+	fi
+	insmod "/lib/modules/$(uname -r)/kernel/drivers/infiniband/ulp/srpt/ib_srpt.ko" "${opts[@]}" || return $?
+	i=0
+	for r in "${vdev_path[@]}"; do
+		if [ -b "$(readlink -f "$r")" ]; then
+			oflag=oflag=direct
+		else
+			oflag=
+		fi
+		echo -n "Zero-initializing $r ... " >>"$FULL"
+		dd if=/dev/zero of="${r}" bs=1M count=$((ramdisk_size>>20)) ${oflag} >/dev/null 2>&1 || return $?
+		echo "done" >>"$FULL"
+		mkdir -p "$(mountpoint $i)" || return $?
+		((i++))
+	done
+	for ((i=0; i < ${#vdevs[@]}; i++)); do
+		d="$(dirname "${vdevs[i]}")"
+		b="$(basename "${vdevs[i]}")"
+		hs=$(lio_scsi_mpath_id "$i")
+		hs=${hs#36001405}
+		configure_lio_vdev "$d" "$b" "${vdev_path[i]}" "$hs" ||
+			return $?
+	done
+	(
+		cd /sys/kernel/config/target || return $?
+		mkdir srpt || return $?
+		cd srpt || return $?
+		if [ -e discovery_auth/rdma_cm_port ]; then
+			echo "${srp_rdma_cm_port}" > discovery_auth/rdma_cm_port ||
+				return $?
+		fi
+		configure_target_ports "${target_guids[@]}" -- "${ini_guids[@]}" || {
+			echo "Retrying with old port name format"
+			configure_target_ports "${target_gids[@]}" -- "${ini_gids[@]}"
+		}
+	)
+}
+
+# Check whether or not an rdma_rxe instance has been associated with network
+# interface $1.
+has_rdma_rxe() {
+	local f
+
+	for f in /sys/class/infiniband/*/parent; do
+		if [ -e "$f" ] && [ "$(<"$f")" = "$1" ]; then
+			return 0
+		fi
+	done
+
+	return 1
+}
+
+# Load the rdma_rxe kernel module and associate it with all network interfaces.
+start_rdma_rxe() {
+	{
+		modprobe rdma_rxe || return $?
+		(
+			cd /sys/class/net &&
+				for i in *; do
+					if [ -e "$i" ] && ! has_rdma_rxe "$i"; then
+						echo "$i" > /sys/module/rdma_rxe/parameters/add
+					fi
+				done
+		)
+	} >>"$FULL"
+}
+
+# Dissociate the rdma_rxe kernel module from all network interfaces and unload
+# the rdma_rxe kernel module.
+stop_rdma_rxe() {
+	(
+		cd /sys/class/net &&
+			for i in *; do
+				if [ -e "$i" ] && has_rdma_rxe "$i"; then
+					{ echo "$i" > /sys/module/rdma_rxe/parameters/remove; } \
+						2>/dev/null
+				fi
+			done
+	)
+	if ! unload_module rdma_rxe; then
+		echo "Unloading rdma_rxe failed"
+		return 1
+	fi
+}
+
+scsi_debug_dev_path() {
+	local bd="" d
+
+	for d in /sys/bus/pseudo/drivers/scsi_debug/adapter*/host*/target*/*/block/*; do
+		[ -e "$d" ] || continue
+		bd=${d/*\//}
+	done
+	[ -n "$bd" ] || return 1
+	echo "/dev/$bd"
+}
+
+# Unload the LIO SRP target driver.
+stop_lio_srpt() {
+	local e m
+
+	mkdir -p /etc/target
+	for e in /sys/kernel/config/target/srpt/*/*/enable; do
+		if [ -e "$e" ]; then
+			echo 0 >"$e"
+		fi
+	done
+
+	if [ -e /sys/kernel/config/target/srpt ]; then
+		(
+			cd /sys/kernel/config/target/srpt && (
+				for d in */*/acls/*/*/lun*; do [ -L "$d" ] && rm "$d"; done
+				for d in */*/acls/*/lun*; do [ -d "$d" ] && rmdir "$d"; done
+				for d in */*/acls/*; do [ -d "$d" ] && rmdir "$d"; done
+				for d in */*/lun/lun*/*; do [ -L "$d" ] && rm "$d"; done
+				for d in */*/lun/lun*; do [ -d "$d" ] && rmdir "$d"; done
+				for d in */*; do [ -e "$d/lun" ] && rmdir "$d"; done
+				for d in *; do [ -e "$d/fabric_statistics" ] && rmdir "$d"; done
+				true
+			) &&
+				cd .. &&
+				for ((i=0;i<10;i++)); do
+					rmdir srpt
+					[ -e srpt ] || break
+					sleep .1
+				done &&
+				[ ! -e srpt ] &&
+				unload_module ib_srpt 10
+		) || return $?
+	fi
+
+	rmdir /sys/kernel/config/target/core/*/* >&/dev/null
+	rmdir /sys/kernel/config/target/core/* >&/dev/null
+
+	for m in ib_srpt target_core_pscsi target_core_iblock target_core_file \
+			 target_core_stgt target_core_user target_core_mod
+	do
+		unload_module $m 10 || return $?
+	done
+}
+
+# Load and configure the SRP target driver
+start_srpt() {
+	local bd i
+
+	modprobe scsi_debug delay=0 dif=3 dix=1 dev_size_mb=$((ramdisk_size>>20))
+	for ((i=0;i<10;i++)); do
+		bd=$(scsi_debug_dev_path) && break
+		sleep .1
+	done
+	if [ -z "$bd" ]; then
+		echo "scsi_debug device instance not found"
+		return 1
+	fi
+	vdev_path[2]=$bd
+	modprobe ib_uverbs
+	modprobe ib_umad
+	modprobe rdma_cm
+	start_lio_srpt || return $?
+	echo "Configured SRP target driver"
+}
+
+# Unload the SRP target driver.
+stop_srpt() {
+	stop_lio_srpt || return $?
+	unload_module scsi_debug
+}
+
+configure_nvmet_port() {
+	local p=$1 ipv4_addr=$2 i
+
+	echo "Configuring $p with address $ipv4_addr as an NVMeOF target port" \
+	     >>"$FULL"
+	(
+		cd /sys/kernel/config/nvmet/ports &&
+			for ((i=1;1;i++)); do [ -e "$i" ] || break; done &&
+			mkdir "$i" &&
+			cd "$i" &&
+			echo ipv4            > addr_adrfam &&
+			echo rdma            > addr_trtype &&
+			echo -n "$ipv4_addr" > addr_traddr &&
+			echo -n ${nvme_port} > addr_trsvcid
+	)
+}
+
+start_nvme_target() {
+	local d i ipv4_addr num_ports=0 nvme_dev=1
+
+	if have_brd; then
+		modprobe brd rd_nr=${#vdev_path[@]} rd_size=$((ramdisk_size>>10))
+	fi &&
+		modprobe nvme dyndbg=+pmf &&
+		modprobe nvmet-rdma dyndbg=+pmf &&
+		sleep .1 &&
+		(
+			cd /sys/kernel/config/nvmet/subsystems &&
+				mkdir ${nvme_subsysnqn} &&
+				cd ${nvme_subsysnqn} &&
+				cd namespaces &&
+				mkdir "${nvme_dev}" &&
+				cd "${nvme_dev}" &&
+				echo 00000000-0000-0000-0000-000000000000 >device_nguid &&
+				echo -n /dev/ram0 >device_path &&
+				echo 1 >enable &&
+				cd ../.. &&
+				echo 1 >attr_allow_any_host
+		) && for i in $(rdma_network_interfaces); do
+			ipv4_addr=$(get_ipv4_addr "$i")
+			if [ -n "${ipv4_addr}" ]; then
+				configure_nvmet_port "$i" "${ipv4_addr}"
+				((num_ports++))
+				true
+			fi
+		done &&
+		if [ $num_ports = 0 ]; then
+			echo "No NVMeOF target ports"
+			false
+		fi && (
+			cd /sys/kernel/config/nvmet/ports &&
+				for i in *; do
+					[ -e "$i" ] && (
+						cd "$i/subsystems" &&
+							ln -s "../../../subsystems/${nvme_subsysnqn}" .
+					)
+				done
+		)
+}
+
+stop_nvme_target() {
+	local d
+
+	(
+		cd /sys/kernel/config/nvmet 2>/dev/null &&
+			rm -f -- ports/*/subsystems/* &&
+			for d in {*/*/*/*,*/*}; do
+				[ -e "$d" ] && rmdir "$d"
+			done
+	)
+	unload_module nvmet_rdma &&
+		unload_module nvmet &&
+		have_brd && unload_module brd
+}
+
+start_target() {
+	start_rdma_rxe
+	(
+		echo "RDMA interfaces:"
+		cd /sys/class/infiniband &&
+			for i in *; do
+				[ -e "$i" ] || continue
+				for p in "$i/ports/"*; do
+					echo "$i, port $(basename "$p"): $(<"$p/gids/0")"
+				done
+			done
+	) &>>"$FULL"
+	if [ -n "$nvme" ]; then
+		start_nvme_target
+	else
+		start_srpt
+	fi
+}
+
+stop_target() {
+	if [ -n "$nvme" ]; then
+		stop_nvme_target
+	else
+		stop_srpt
+	fi
+	stop_rdma_rxe || return $?
+}
+
+# Look up the block device below the filesystem for directory $1.
+block_dev_of_dir() {
+	df "$1" | {
+		read -r header
+		echo "$header" >/dev/null
+		read -r blockdev rest
+		echo "$blockdev"
+	}
+}
+
+create_filesystem() {
+	local dev=$1
+
+	case "$filesystem_type" in
+		ext4)
+			mkfs.ext4 -F -O ^has_journal -q "$dev";;
+		xfs)
+			mkfs.xfs -f -q "$dev";;
+		*)
+			return 1;;
+	esac
+}
+
+is_mountpoint() {
+	[ -n "$1" ] &&
+		[ -d "$1" ] &&
+		[ "$(block_dev_of_dir "$1")" != \
+					     "$(block_dev_of_dir "$(dirname "$1")")" ]
+}
+
+# Execute mount "$@" and check whether the mount command has succeeded by
+# verifying whether after mount has finished that ${$#} is a mountpoint.
+mount_and_check() {
+	local dir last
+
+	dir=$(for last; do :; done; echo "$last")
+	mount "$@"
+	if ! is_mountpoint "$dir"; then
+		echo "Error: mount $* failed"
+		return 1
+	fi
+}
+
+# Unmount the filesystem mounted at mountpoint $1. In contrast with the umount
+# command, this function does not accept a block device as argument.
+unmount_and_check() {
+	local bd m=$1 mp
+
+	if is_mountpoint "$m"; then
+		bd=$(block_dev_of_dir "$m")
+		mp=$(dev_to_mpath "$bd") 2>/dev/null
+		if [ -n "$mp" ]; then
+			dmsetup message "$mp" 0 fail_if_no_path
+		fi
+		stop_bdev_users "$bd"
+		echo "Unmounting $m from $bd" >> "$FULL"
+		umount "$m" || umount --lazy "$m"
+	fi
+	if is_mountpoint "$m"; then
+		echo "Error: unmounting $m failed"
+		return 1
+	fi
+}
+
+# Test whether fio supports command-line options "$@"
+test_fio_opt() {
+	local opt
+
+	for opt in "$@"; do
+		opt=${opt//=*}
+		fio --help |& grep -q -- "${opt}=" && continue
+		opt=${opt#--}
+		fio --cmdhelp=all |& grep -q "^${opt}[[:blank:]]" && continue
+		return 1
+	done
+}
+
+run_fio() {
+	local a args avail_kb="" bd="" d="" j opt output
+
+	args=("$@")
+	j=1
+	for opt in "${args[@]}"; do
+		case "$opt" in
+			--directory=*) d="${opt#--directory=}";;
+			--filename=*)  bd="${opt#--filename=}";;
+			--numjobs=*)   j="${opt#--numjobs=}";;
+			--output=*)    output="${opt#--output=}";;
+		esac
+	done
+	if [ -n "$d" ]; then
+		a=$(df "$d" | grep "^/" |
+			    {
+				    if read -r fs blocks used avail use mnt; then
+					    echo "$avail"
+					    echo "$fs $blocks $used $use $mnt" >/dev/null
+				    fi
+			    }
+		 )
+		avail_kb=$a
+	fi
+	if [ -n "$bd" ]; then
+		avail_kb=$(("$(blockdev --getsz "$bd")" / 2))
+	fi
+	if [ -n "$avail_kb" ]; then
+		args+=("--size=$(((avail_kb * 1024 * 7 / 10) / j & ~4095))")
+	fi
+	for opt in --exitall_on_error=1 --gtod_reduce=1 --aux-path=${fio_aux_path}
+	do
+		if test_fio_opt "$opt"; then
+			args+=("$opt")
+		fi
+	done
+	mkdir -p "${fio_aux_path}"
+	echo "fio ${args[*]}" >>"$FULL"
+	fio "${args[@]}" 2>&1 || return $?
+	if [ -n "$output" ]; then
+		# Return exit code 1 if no I/O has been performed.
+		grep -q ', io=[0-9].*, run=[0-9]' "$output"
+	fi
+}
+
+# Configure two null_blk instances.
+configure_null_blk() {
+	local i
+
+	(
+		cd /sys/kernel/config/nullb || return $?
+		for i in nullb0 nullb1; do (
+			{ mkdir -p $i &&
+				  cd $i &&
+				  echo 0 > completion_nsec &&
+				  echo 512 > blocksize &&
+				  echo $((ramdisk_size>>20)) > size &&
+				  echo 1 > memory_backed &&
+				  echo 1 > power; } || exit $?
+		) done
+	)
+	ls -l /dev/nullb* &>>"$FULL"
+}
+
+unload_null_blk() {
+	local d
+
+	for d in /sys/kernel/config/nullb/*; do [ -d "$d" ] && rmdir "$d"; done
+	unload_module null_blk
+}
+
+shutdown_client() {
+	remove_mpath_devs &&
+		log_out &&
+		stop_client
+}
+
+# Undo setup()
+teardown() {
+	killall -9 multipathd >&/dev/null
+	stop_target
+	unload_null_blk
+}
+
+# Set up test configuration
+setup() {
+	local i m modules
+
+	set -u
+
+	shutdown_client || return $?
+
+	if ! teardown; then
+		echo "teardown() failed"
+		return 1
+	fi
+
+	modules=(
+		configfs
+		dm-multipath
+		dm_mod
+		scsi_dh_alua
+		scsi_dh_emc
+		scsi_dh_rdac
+		scsi_mod
+	)
+	for m in "${modules[@]}"; do
+		[ -e "/sys/module/$m" ] || modprobe "$m" || return $?
+	done
+
+	modprobe null_blk nr_devices=0 || return $?
+
+	configure_null_blk
+
+	multipathd
+
+	# Load the I/O scheduler kernel modules
+	(
+		cd "/lib/modules/$(uname -r)/kernel/block" &&
+			for m in *.ko; do
+				[ -e "$m" ] && modprobe "${m%.ko}"
+			done
+	)
+
+	if [ -d /sys/kernel/debug/dynamic_debug ]; then
+		for m in ; do
+			echo "module $m +pmf" >/sys/kernel/debug/dynamic_debug/control
+		done
+	fi
+
+	start_target
+}

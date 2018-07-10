@@ -1,4 +1,4 @@
-TARGETS := \
+C_TARGETS := \
 	loblksize \
 	loop_get_status_null \
 	openclose \
@@ -6,14 +6,23 @@ TARGETS := \
 	sg/syzkaller1 \
 	nbdsetsize
 
-CFLAGS := -O2
+CXX_TARGETS := \
+	discontiguous-io
+
+TARGETS := $(C_TARGETS) $(CXX_TARGETS)
+
+CFLAGS := -O2 -Wall
+CXXFLAGS := -O2 -Wall -Wextra -Wno-sign-compare -Werror
 
 all: $(TARGETS)
 
 clean:
 	rm -f $(TARGETS)
 
-$(TARGETS): %: %.c
-	$(CC) -Wall -o $@ $(CPPFLAGS) $(CFLAGS) $^
+$(C_TARGETS): %: %.c
+	$(CC) $(CPPFLAGS) $(CFLAGS) -o $@ $^
+
+$(CXX_TARGETS): %: %.cpp
+	$(CXX) $(CPPFLAGS) $(CXXFLAGS) -o $@ $^
 
 .PHONY: all clean

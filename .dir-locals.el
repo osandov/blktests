@@ -1,4 +1,6 @@
 ((sh-mode . ((sh-basic-offset . 8)
 	     (sh-indentation . 8)
-	     (fill-column . 80)
-	     (indent-tabs-mode . t))))
+	     (fill-column . 80)))
+ (c-mode .  ((c-basic-offset . 8)
+	     (c-label-minimum-indentation . 0)))
+ (nil .     ((indent-tabs-mode . t))))
