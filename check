@@ -313,7 +313,7 @@ _call_test() {
 	local test_func="$1"
 	local seqres="${RESULTS_DIR}/${TEST_NAME}"
 	# shellcheck disable=SC2034
-	FULL="$PWD/${seqres}.full"
+	FULL="${seqres}.full"
 	declare -A TEST_DEV_QUEUE_SAVED
 
 	_read_last_test_run
@@ -334,7 +334,7 @@ _call_test() {
 	fi
 
 	trap _cleanup EXIT
-	if ! TMPDIR="$(mktemp --tmpdir -p "$PWD/results" -d "tmpdir.${TEST_NAME//\//.}.XXX")"; then
+	if ! TMPDIR="$(mktemp --tmpdir -p "$OUTPUT" -d "tmpdir.${TEST_NAME//\//.}.XXX")"; then
 		return
 	fi
 
@@ -415,7 +415,7 @@ _run_test() {
 			return 0
 		fi
 
-		RESULTS_DIR="results/nodev"
+		RESULTS_DIR="$OUTPUT/nodev"
 		_call_test test
 	else
 		if [[ ${#TEST_DEVS[@]} -eq 0 ]]; then
@@ -434,7 +434,7 @@ _run_test() {
 				_output_notrun "$TEST_NAME => $(basename "$TEST_DEV")"
 				continue
 			fi
-			RESULTS_DIR="results/$(basename "$TEST_DEV")"
+			RESULTS_DIR="$OUTPUT/$(basename "$TEST_DEV")"
 			if ! _call_test test_device; then
 				ret=1
 			fi
@@ -559,6 +559,9 @@ Test runs:
   -d, --device-only	 only run tests which use a test device from the
 			 TEST_DEVS config setting
 
+  -o, --output=DIR	 output results to the given directory (the default is
+			 ./results)
+
   -q, --quick=SECONDS	 do a quick run (only run quick tests and limit the
 			 runtime of longer tests to the given timeout,
 			 defaulting to 30 seconds)
@@ -581,7 +584,7 @@ Miscellaneous:
 	esac
 }
 
-if ! TEMP=$(getopt -o 'dq::x:h' --long 'quick::,exclude:,help' -n "$0" -- "$@"); then
+if ! TEMP=$(getopt -o 'do:q::x:h' --long 'quick::,exclude:,output:,help' -n "$0" -- "$@"); then
 	exit 1
 fi
 
@@ -596,6 +599,7 @@ fi
 # Default configuration.
 : "${DEVICE_ONLY:=0}"
 : "${QUICK_RUN:=0}"
+: "${OUTPUT:=results}"
 if [[ -v EXCLUDE ]] && ! declare -p EXCLUDE | grep -q '^declare -a'; then
 	# If EXCLUDE was not defined as an array, convert it to one.
 	# shellcheck disable=SC2190,SC2206
@@ -616,6 +620,10 @@ while true; do
 		'-d'|'--device-only')
 			DEVICE_ONLY=1
 			shift
+			;;
+		'-o'|'--output')
+			OUTPUT="$2"
+			shift 2
 			;;
 		'-q'|'--quick')
 			QUICK_RUN=1
@@ -658,5 +666,8 @@ for filter in "${TEMP_EXCLUDE[@]}"; do
 	EXCLUDE["$filter"]=1
 done
 unset TEMP_EXCLUDE
+
+mkdir -p "$OUTPUT"
+OUTPUT="$(realpath "$OUTPUT")"
 
 _check "$@"
