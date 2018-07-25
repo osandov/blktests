@@ -12,7 +12,7 @@ CXX_TARGETS := \
 TARGETS := $(C_TARGETS) $(CXX_TARGETS)
 
 CFLAGS := -O2 -Wall
-CXXFLAGS := -O2 -Wall -Wextra -Wno-sign-compare -Werror
+CXXFLAGS := -O2 -std=c++11 -Wall -Wextra -Wno-sign-compare -Werror
 
 all: $(TARGETS)
 
