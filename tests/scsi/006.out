@@ -1,0 +1,6 @@
+Running scsi/006
+write through
+none
+write back
+write back, no read (daft)
+Test complete

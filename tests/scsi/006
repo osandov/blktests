@@ -1,0 +1,52 @@
+#!/bin/bash
+#
+# Test that changing the cache type on a SCSI disk succeeds. Regression test
+# for commit d772a65d8a6c ("Revert "scsi: core: avoid host-wide host_busy
+# counter for scsi_mq""). Without the revert, this test will hang.
+#
+# Copyright (C) 2018 Omar Sandoval
+#
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+. tests/scsi/rc
+
+DESCRIPTION="toggle SCSI cache type"
+
+QUICK=1
+
+device_requires() {
+	_test_dev_is_scsi_disk
+}
+
+test_device() {
+	echo "Running ${TEST_NAME}"
+
+	local cache_types=(
+		"write through"
+		"none"
+		"write back"
+		"write back, no read (daft)"
+	)
+	local cache_type
+	local original_cache_type
+
+	original_cache_type="$(cat "${TEST_DEV_SYSFS}"/device/scsi_disk/*/cache_type)"
+	for cache_type in "${cache_types[@]}"; do
+		echo "$cache_type" > "${TEST_DEV_SYSFS}"/device/scsi_disk/*/cache_type
+		cat "${TEST_DEV_SYSFS}"/device/scsi_disk/*/cache_type
+	done
+	echo "$original_cache_type" > "${TEST_DEV_SYSFS}"/device/scsi_disk/*/cache_type
+
+	echo "Test complete"
+}
