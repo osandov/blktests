@@ -1,0 +1,54 @@
+#!/bin/bash
+#
+# Copyright (c) 2018 Western Digital Corporation or its affiliates
+#
+# This program is free software; you can redistribute it and/or
+# modify it under the terms of the GNU General Public License
+# as published by the Free Software Foundation; either version 2
+# of the License, or (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program; if not, write to the Free Software
+# Foundation, Inc.
+
+. tests/nvmeof-mp/rc
+
+DESCRIPTION="dm-mpath on top of multiple I/O schedulers"
+QUICK=1
+
+test_io_schedulers() {
+	local dev m
+
+	# Load all I/O scheduler kernel modules
+	for m in "/lib/modules/$(uname -r)/kernel/block/"*.ko; do
+		modprobe "$(basename "$m")" >&/dev/null
+	done
+	for mq in y n; do
+		use_blk_mq ${mq} || return $?
+		dev=$(get_bdev 0) || return $?
+		for sched in noop deadline bfq cfq; do
+			set_scheduler "$(basename "$(readlink -f "${dev}")")" $sched \
+				      >>"$FULL" 2>&1 || continue
+			echo "I/O scheduler: $sched; use_blk_mq: $mq" >>"$FULL"
+			run_fio --verify=md5 --rw=randwrite --bs=4K --size=64K \
+				--ioengine=libaio --iodepth=64 \
+				--iodepth_batch=32 --group_reporting --sync=1 \
+				--direct=1 --filename="$dev" \
+				--name=${sched} --thread --numjobs=1 \
+				--output="${RESULTS_DIR}/nvmeof-mp/012-${sched}-${mq}.txt" \
+				>>"$FULL" ||
+				return $?
+		done
+	done
+	return 0
+}
+
+test() {
+	trap 'trap "" EXIT; teardown' EXIT
+	setup && test_io_schedulers && echo Passed
+}

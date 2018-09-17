@@ -1,0 +1,313 @@
+#!/bin/bash
+#
+# Copyright (c) 2018 Western Digital Corporation or its affiliates
+#
+# This program is free software; you can redistribute it and/or
+# modify it under the terms of the GNU General Public License
+# as published by the Free Software Foundation; either version 2
+# of the License, or (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program; if not, write to the Free Software
+# Foundation, Inc.
+
+. common/rc
+. common/multipath-over-rdma
+
+namespace=(1)
+elevator=none
+nvme_subsysnqn="nvme-test"
+nvme_port=7777
+ini_timeout=1
+
+group_requires() {
+	local m name p required_modules
+
+	# Since the nvmeof-mp tests are based on the dm-mpath driver, these
+	# tests are incompatible with the NVME_MULTIPATH kernel configuration
+	# option.
+	if _have_kernel_option NVME_MULTIPATH; then
+		SKIP_REASON="CONFIG_NVME_MULTIPATH has been set in .config"
+		return 1
+	fi
+
+	_have_configfs || return $?
+	required_modules=(
+		dm_multipath
+		dm_queue_length
+		dm_service_time
+		null_blk
+		rdma_cm
+		ib_ipoib
+		ib_umad
+		nvme-rdma
+		nvmet-rdma
+		rdma_rxe
+		scsi_dh_alua
+		scsi_dh_emc
+		scsi_dh_rdac
+	)
+	for m in "${required_modules[@]}"; do
+		_have_module "$m" || return $?
+	done
+
+	for p in mkfs.ext4 mkfs.xfs multipath multipathd pidof sg_reset; do
+		_have_program "$p" || return $?
+	done
+
+	_have_root || return $?
+
+	_have_kernel_option DM_UEVENT || return $?
+
+	# shellcheck disable=SC2043
+	for name in multipathd; do
+		if pidof "$name" >/dev/null; then
+			SKIP_REASON="$name must be stopped before the nvmeof-mp tests are run"
+			return 1
+		fi
+	done
+	if [ -e /etc/multipath.conf ] &&
+	    ! diff -q /etc/multipath.conf tests/nvmeof-mp/multipath.conf >&/dev/null
+	then
+		SKIP_REASON="/etc/multipath.conf already exists"
+		return 1
+	fi
+}
+
+# Log out, set dm use_blk_mq parameter to $1 and log in.
+use_blk_mq() {
+	local dm_mode=$1
+
+	(
+		cd /sys/module/dm_mod/parameters || return $?
+		if [ -e use_blk_mq ]; then
+			echo "$dm_mode" >use_blk_mq || return $?
+		fi
+	)
+
+	log_out &&
+		remove_mpath_devs &&
+		start_client &&
+		log_in &&
+		return 0
+
+	echo "use_blk_mq $* failed" >>"$FULL"
+	return 1
+}
+
+log_in() {
+	local i ipv4_addr
+
+	[ -c /dev/nvme-fabrics ] &&
+		for i in $(rdma_network_interfaces); do
+			ipv4_addr=$(get_ipv4_addr "$i")
+			if [ -n "${ipv4_addr}" ]; then
+				{ echo -n "transport=rdma,traddr=${ipv4_addr},trsvcid=${nvme_port},nqn=$nvme_subsysnqn" > /dev/nvme-fabrics; } 2>>"$FULL"
+			fi
+		done
+}
+
+log_out() {
+	local c
+
+	for c in /sys/class/nvme-fabrics/ctl/*/delete_controller; do
+		[ -e "$c" ] && echo 1 > "$c" &
+	done
+	wait
+}
+
+# Simulate network failures for device $1 during $2 seconds.
+simulate_network_failure_loop() {
+	local d dev="$1" duration="$2" deadline i rc=0
+
+	[ -e "$dev" ] || return $?
+	[ -n "$duration" ] || return $?
+	deadline=$(($(uptime_s) + duration))
+	while [ $rc = 0 ]; do
+		sleep_until 5 ${deadline} || break
+		for d in $(held_by "$dev"); do
+			echo 1 >"$d/device/reset_controller"
+		done
+	done
+
+	for ((i=0;i<5;i++)); do
+		log_in && break
+		sleep 1
+	done
+}
+
+remove_mpath_devs() {
+	local dm h
+
+	{
+		for h in /sys/class/block/nvme*/holders/*; do
+			[ -e "$h" ] || continue
+			d=$(basename "$(dirname "$(dirname "$h")")")
+			dm=/dev/$(basename "$h")
+			echo -n "NVME dev $d: removing $dm: "
+			dmsetup remove "$(dev_to_mpath "$dm")" && echo "done"
+		done
+
+		remove_stale_mpath_devs
+	} &>> "$FULL"
+}
+
+# Arguments: module to unload ($1) and retry count ($2).
+unload_module() {
+	local i m=$1 rc=${2:-1}
+
+	[ ! -e "/sys/module/$m" ] && return 0
+	for ((i=rc;i>0;i--)); do
+		modprobe -r "$m"
+		[ ! -e "/sys/module/$m" ] && return 0
+		sleep .1
+	done
+	return 1
+}
+
+start_nvme_client() {
+	modprobe nvme-core dyndbg=+pmf &&
+		modprobe nvme dyndbg=+pmf &&
+		modprobe nvme-fabrics dyndbg=+pmf &&
+		modprobe nvme-rdma dyndbg=+pmf &&
+		mkdir -p "$(mountpoint 0)"
+	udevadm settle
+	if [ ! -c /dev/nvme-fabrics ]; then
+		echo "Error:  /dev/nvme-fabrics not available"
+	fi
+}
+
+stop_nvme_client() {
+	unload_module nvme-rdma || return $?
+	unload_module nvme-fabrics || return $?
+	# Ignore nvme and nvme-core unload errors - this test may be run on a
+	# system equipped with one or more NVMe SSDs.
+	unload_module nvme >&/dev/null
+	unload_module nvme-core >&/dev/null
+	return 0
+}
+
+# Load the initiator kernel driver with kernel module parameters $1..$n.
+start_client() {
+	start_nvme_client
+}
+
+stop_client() {
+	stop_nvme_client
+}
+
+# Get the name of the initiator device node that communicates with target
+# device $1. $1 is an index in the $namespace array.
+get_bdev_path() {
+	local i=$1 uuid
+
+	is_number "$i" || return $?
+	uuid=$(<"/sys/kernel/config/nvmet/subsystems/${nvme_subsysnqn}/namespaces/${namespace[$1]}/device_uuid") || return $?
+	echo "/dev/disk/by-id/dm-uuid-mpath-uuid.$uuid"
+}
+
+# Get a /dev/... path that points at dm device number $1. $1 is an index in
+# the $namespace array.
+get_bdev() {
+	get_bdev_n "$1" "$elevator" "$ini_timeout"
+}
+
+configure_nvmet_port() {
+	local p=$1 ipv4_addr=$2 i
+
+	echo "Configuring $p with address $ipv4_addr as an NVMeOF target port" \
+	     >>"$FULL"
+	(
+		cd /sys/kernel/config/nvmet/ports &&
+			for ((i=1;1;i++)); do [ -e "$i" ] || break; done &&
+			mkdir "$i" &&
+			cd "$i" &&
+			echo ipv4            > addr_adrfam &&
+			echo rdma            > addr_trtype &&
+			echo -n "$ipv4_addr" > addr_traddr &&
+			echo -n ${nvme_port} > addr_trsvcid
+	)
+}
+
+start_nvme_target() {
+	local d i ipv4_addr num_ports=0
+
+	echo "Configuring NVMe target driver ..." >>"$FULL"
+	modprobe nvmet dyndbg=+pmf &&
+		modprobe nvmet-rdma dyndbg=+pmf &&
+		sleep .1 &&
+		(
+			cd /sys/kernel/config/nvmet/subsystems &&
+				mkdir ${nvme_subsysnqn} &&
+				cd ${nvme_subsysnqn} &&
+				cd namespaces &&
+				mkdir "${namespace[0]}" &&
+				cd "${namespace[0]}" &&
+				echo 00000000-0000-0000-0000-000000000000 >device_nguid &&
+				echo -n /dev/nullb0 >device_path &&
+				echo 1 >enable &&
+				cd ../.. &&
+				echo 1 >attr_allow_any_host
+		) && for i in $(rdma_network_interfaces); do
+			ipv4_addr=$(get_ipv4_addr "$i")
+			if [ -n "${ipv4_addr}" ]; then
+				configure_nvmet_port "$i" "${ipv4_addr}"
+				((num_ports++))
+				true
+			fi
+		done &&
+		if [ $num_ports = 0 ]; then
+			echo "No NVMeOF target ports"
+			false
+		fi && (
+			cd /sys/kernel/config/nvmet/ports &&
+				for i in *; do
+					[ -e "$i" ] && (
+						cd "$i/subsystems" &&
+							ln -s "../../../subsystems/${nvme_subsysnqn}" .
+					)
+				done
+		)
+	echo "Configured NVMe target driver"
+}
+
+stop_nvme_target() {
+	local d
+
+	(
+		cd /sys/kernel/config/nvmet 2>/dev/null &&
+			rm -f -- ports/*/subsystems/* &&
+			for d in {*/*/*/*,*/*}; do
+				[ -e "$d" ] &&
+					[ "$(basename "$(dirname "$d")")" != ana_groups ] &&
+					rmdir "$d"
+			done
+	)
+	unload_module nvmet_rdma &&
+		unload_module nvmet &&
+		unload_null_blk
+}
+
+start_target() {
+	start_nvme_target
+}
+
+stop_target() {
+	stop_nvme_target
+}
+
+shutdown_client() {
+	remove_mpath_devs &&
+		log_out &&
+		stop_client
+}
+
+# Set up test configuration
+setup() {
+	setup_test "$PWD/tests/nvmeof-mp/multipath.conf"
+}

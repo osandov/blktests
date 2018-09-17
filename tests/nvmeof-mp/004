@@ -1,0 +1,50 @@
+#!/bin/bash
+#
+# Copyright (c) 2016-2018 Western Digital Corporation or its affiliates
+#
+# This program is free software; you can redistribute it and/or
+# modify it under the terms of the GNU General Public License
+# as published by the Free Software Foundation; either version 2
+# of the License, or (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program; if not, write to the Free Software
+# Foundation, Inc.
+
+. tests/nvmeof-mp/rc
+
+DESCRIPTION="File I/O on top of multipath concurrently with logout and login (sq-on-mq)"
+TIMED=1
+
+test_disconnect_repeatedly() {
+	local dev fio_status m
+
+	use_blk_mq n || return $?
+	dev=$(get_bdev 0) || return $?
+	m=$(mountpoint 0) || return $?
+	create_filesystem "$dev" || return $?
+	mount_and_check "$dev" "$m" || return $?
+	# shellcheck disable=SC2064
+	trap "unmount_and_check $m" RETURN
+	simulate_network_failure_loop "$dev" "$TIMEOUT" &
+	run_fio --verify=md5 --rw=randwrite --bs=4K --loops=$((10**6)) \
+		--iodepth=64 --group_reporting --sync=1 --direct=1 \
+		--ioengine=libaio --directory="$m" \
+		--name=data-integrity-test-02-sq-on-mq --thread \
+		--numjobs=16 --runtime="${TIMEOUT}" \
+		--output="${RESULTS_DIR}/nvmeof-mp/fio-output-004.txt" >>"$FULL"
+	fio_status=$?
+	wait
+	return $fio_status
+}
+
+test() {
+	: "${TIMEOUT:=30}"
+	trap 'trap "" EXIT; teardown' EXIT
+	setup && test_disconnect_repeatedly && echo Passed
+}
