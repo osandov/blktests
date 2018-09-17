@@ -103,12 +103,6 @@ group_requires() {
 		SKIP_REASON="/etc/multipath.conf already exists"
 		return 1
 	fi
-	if [ ! -e /etc/multipath.conf ]; then
-		(
-			srcdir=$PWD
-			cd /etc && ln -s "$srcdir/tests/srp/multipath.conf" .
-		)
-	fi
 }
 
 # Log out, set dm and SCSI use_blk_mq parameters and log in. $1: device mapper
@@ -1188,6 +1182,7 @@ shutdown_client() {
 # Undo setup()
 teardown() {
 	killall -9 multipathd >&/dev/null
+	rm -f /etc/multipath.conf
 	stop_target
 	unload_null_blk
 }
@@ -1222,6 +1217,12 @@ setup() {
 
 	configure_null_blk
 
+	if [ ! -e /etc/multipath.conf ]; then
+		(
+			srcdir=$PWD
+			cd /etc && ln -s "$srcdir/tests/srp/multipath.conf" .
+		)
+	fi
 	multipathd
 
 	# Load the I/O scheduler kernel modules
