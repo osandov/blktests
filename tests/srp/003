@@ -40,7 +40,7 @@ test_disconnect_repeatedly() {
 		>>"$FULL"
 	fio_status=$?
 	wait
-	[ -z "$nvme" ] && log_in
+	log_in
 	return $fio_status
 }
 

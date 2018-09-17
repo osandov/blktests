@@ -22,7 +22,7 @@ DESCRIPTION="Create and remove LUNs"
 QUICK=1
 
 # Count the number of LUNs created by start_srpt() from the initiator side.
-count_srp_luns() {
+count_luns() {
 	local h luns=0 p
 
 	for p in /sys/class/srp_remote_ports/*; do
@@ -34,23 +34,6 @@ count_srp_luns() {
 		[ "$luns" -gt 0 ] && break
 	done
 	echo $luns
-}
-
-count_nvme_devs() {
-	local d devs=0
-
-	for d in /sys/class/nvme-fabrics/ctl/*/*/device; do
-		[ -d "$d" ] && ((devs++))
-	done
-	echo $devs
-}
-
-count_luns() {
-	if [ -n "$nvme" ]; then
-		count_nvme_devs
-	else
-		count_srp_luns
-	fi
 }
 
 wait_for_luns() {

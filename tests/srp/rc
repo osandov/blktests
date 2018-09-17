@@ -31,9 +31,6 @@ debug=
 elevator=none
 filesystem_type=ext4
 fio_aux_path=/tmp/fio-state-files
-nvme=
-nvme_subsysnqn="nvme-test"
-nvme_port=7777
 scsi_timeout=1
 srp_login_params=
 srp_rdma_cm_port=5555
@@ -137,8 +134,8 @@ use_blk_mq() {
 
 	log_out &&
 		remove_mpath_devs &&
-		stop_client &&
-		start_client indirect_sg_entries=2048 "${kmod_params[@]}" &&
+		stop_srp_ini &&
+		start_srp_ini indirect_sg_entries=2048 "${kmod_params[@]}" &&
 		log_in
 }
 
@@ -238,9 +235,9 @@ show_srp_connections() {
 }
 
 # Make the SRP initiator driver log in to each SRP target port that exists
-# on the local host. $1 are additional SRP login parameters.
-srp_log_in() {
-	local a add_param=$1 d dest gid ibdev ioc_guid port p sysfsdir
+# on the local host.
+log_in() {
+	local a add_param="${srp_login_params}" d dest gid ibdev ioc_guid port p sysfsdir
 
 	ioc_guid=$(</sys/module/ib_srpt/parameters/srpt_service_guid)
 
@@ -275,7 +272,7 @@ srp_log_in() {
 }
 
 # Tell the SRP initiator driver to log out.
-srp_log_out() {
+log_out() {
 	local p
 
 	if [ -e /sys/class/srp_remote_ports ]; then
@@ -328,45 +325,6 @@ rdma_network_interfaces() {
 	)
 }
 
-nvme_log_in() {
-	local i ipv4_addr
-
-	[ -c /dev/nvme-fabrics ] &&
-		for i in $(rdma_network_interfaces); do
-			ipv4_addr=$(get_ipv4_addr "$i")
-			if [ -n "${ipv4_addr}" ]; then
-				echo -n "transport=rdma,traddr=${ipv4_addr},trsvcid=${nvme_port},nqn=$nvme_subsysnqn" > /dev/nvme-fabrics
-			fi
-		done &&
-		echo reconfigure | multipathd -k >&/dev/null
-}
-
-nvme_log_out() {
-	local c
-
-	for c in /sys/class/nvme-fabrics/ctl/*/delete_controller; do
-		[ -e "$c" ] && echo 1 > "$c" &
-	done
-	wait
-}
-
-# Log in.
-log_in() {
-	if [ -n "$nvme" ]; then
-		nvme_log_in
-	else
-		srp_log_in "${srp_login_params}"
-	fi
-}
-
-log_out() {
-	if [ -n "$nvme" ]; then
-		nvme_log_out
-	else
-		srp_log_out
-	fi
-}
-
 # Check whether any stacked block device holds block device $1. If so, echo
 # the name of the holder.
 held_by() {
@@ -416,17 +374,11 @@ simulate_network_failure_loop() {
 	s=5
 	while [ $rc = 0 ]; do
 		sleep_until 5 ${deadline} || break
-		if [ -n "$nvme" ]; then
-			for d in $(held_by "$dev"); do
-				echo 1 >"$d/device/reset_controller"
-			done
-		else
-			log_out
-			sleep_until $s ${deadline}
-			rc=$?
-			s=$(((((s + 5) & 0xff) ^ 0xa6) * scsi_timeout / 60))
-			log_in
-		fi
+		log_out
+		sleep_until $s ${deadline}
+		rc=$?
+		s=$(((((s + 5) & 0xff) ^ 0xa6) * scsi_timeout / 60))
+		log_in
 	done
 
 	for ((i=0;i<5;i++)); do
@@ -608,26 +560,8 @@ remove_srp_mpath_devs() {
 	} &>> "$FULL"
 }
 
-remove_nvme_mpath_devs() {
-	local dm h
-
-	for h in /sys/class/block/nvme*/holders/*; do
-		[ -e "$h" ] || continue
-		d=$(basename "$(dirname "$(dirname "$h")")")
-		dm=/dev/$(basename "$h")
-		{
-			echo -n "NVME dev $d: removing $dm: "
-			dmsetup remove "$(dev_to_mpath "$dm")" && echo "done"
-		} &>> "$FULL"
-	done
-}
-
 remove_mpath_devs() {
-	if [ -n "$nvme" ]; then
-		remove_nvme_mpath_devs
-	else
-		remove_srp_mpath_devs
-	fi
+	remove_srp_mpath_devs
 }
 
 # Arguments: module to unload ($1) and retry count ($2).
@@ -644,16 +578,16 @@ unload_module() {
 }
 
 # Load the SRP initiator driver with kernel module parameters $1..$n.
-start_srp() {
+start_srp_ini() {
 	modprobe scsi_transport_srp || return $?
 	modprobe ib_srp "$@" dyndbg=+pmf || return $?
 }
 
 # Unload the SRP initiator driver.
-stop_srp() {
+stop_srp_ini() {
 	local i
 
-	srp_log_out
+	log_out
 	for ((i=40;i>=0;i--)); do
 		remove_mpath_devs || return $?
 		unload_module ib_srp >/dev/null 2>&1 && break
@@ -664,35 +598,6 @@ stop_srp() {
 		return 1
 	fi
 	unload_module scsi_transport_srp || return $?
-}
-
-start_nvme_client() {
-	modprobe nvme dyndbg=+pmf &&
-		modprobe nvme-core dyndbg=+pmf &&
-		modprobe nvme-fabrics dyndbg=+pmf &&
-		modprobe nvme-rdma dyndbg=+pmf
-}
-
-stop_nvme_client() {
-	unload_module nvme_rdma &&
-		unload_module nvme
-}
-
-# Load the initiator kernel driver with kernel module parameters $1..$n.
-start_client() {
-	if [ -n "$nvme" ]; then
-		start_nvme_client "$@"
-	else
-		start_srp "$@"
-	fi
-}
-
-stop_client() {
-	if [ -n "$nvme" ]; then
-		stop_nvme_client
-	else
-		stop_srp
-	fi
 }
 
 # Load the configfs kernel module and mount it.
@@ -755,34 +660,13 @@ scsi_mpath_id() {
 	lio_scsi_mpath_id "$@"
 }
 
-get_nvme_bdev() {
-	local i=$1 j=0
-
-	for d in /sys/class/nvme-fabrics/ctl/*/*/device; do
-		[ -d "$d" ] || continue
-		if [ $j -ge "$i" ]; then
-			echo "/dev/$(basename "$(dirname "$d")")"
-			return 0
-		fi
-		((j++))
-	done
-	return 1
-}
-
 # Get a the uuid or wwid of LIO device $1. $1 is an index in the $scsi_serial
 # array.
 get_bdev_uid() {
 	local i=$1
 
 	is_number "$i" || return $?
-	if [ -n "$nvme" ]; then
-		bdev=$(get_nvme_bdev "$i") || return $?
-		wwid=$(<"/sys/block/${bdev#/dev/}/wwid")
-		wwid=${wwid#nvme.0000-}
-		echo "${wwid%-4c696e75780000000000000000000000000000000000000000000000000000000000000000000000-00000001}"
-	else
-		scsi_mpath_id "$i"
-	fi
+	scsi_mpath_id "$i"
 }
 
 # Set scheduler of block device $1 to $2.
@@ -1127,81 +1011,6 @@ stop_srpt() {
 	unload_module scsi_debug
 }
 
-configure_nvmet_port() {
-	local p=$1 ipv4_addr=$2 i
-
-	echo "Configuring $p with address $ipv4_addr as an NVMeOF target port" \
-	     >>"$FULL"
-	(
-		cd /sys/kernel/config/nvmet/ports &&
-			for ((i=1;1;i++)); do [ -e "$i" ] || break; done &&
-			mkdir "$i" &&
-			cd "$i" &&
-			echo ipv4            > addr_adrfam &&
-			echo rdma            > addr_trtype &&
-			echo -n "$ipv4_addr" > addr_traddr &&
-			echo -n ${nvme_port} > addr_trsvcid
-	)
-}
-
-start_nvme_target() {
-	local d i ipv4_addr num_ports=0 nvme_dev=1
-
-	if have_brd; then
-		modprobe brd rd_nr=${#vdev_path[@]} rd_size=$((ramdisk_size>>10))
-	fi &&
-		modprobe nvme dyndbg=+pmf &&
-		modprobe nvmet-rdma dyndbg=+pmf &&
-		sleep .1 &&
-		(
-			cd /sys/kernel/config/nvmet/subsystems &&
-				mkdir ${nvme_subsysnqn} &&
-				cd ${nvme_subsysnqn} &&
-				cd namespaces &&
-				mkdir "${nvme_dev}" &&
-				cd "${nvme_dev}" &&
-				echo 00000000-0000-0000-0000-000000000000 >device_nguid &&
-				echo -n /dev/ram0 >device_path &&
-				echo 1 >enable &&
-				cd ../.. &&
-				echo 1 >attr_allow_any_host
-		) && for i in $(rdma_network_interfaces); do
-			ipv4_addr=$(get_ipv4_addr "$i")
-			if [ -n "${ipv4_addr}" ]; then
-				configure_nvmet_port "$i" "${ipv4_addr}"
-				((num_ports++))
-				true
-			fi
-		done &&
-		if [ $num_ports = 0 ]; then
-			echo "No NVMeOF target ports"
-			false
-		fi && (
-			cd /sys/kernel/config/nvmet/ports &&
-				for i in *; do
-					[ -e "$i" ] && (
-						cd "$i/subsystems" &&
-							ln -s "../../../subsystems/${nvme_subsysnqn}" .
-					)
-				done
-		)
-}
-
-stop_nvme_target() {
-	local d
-
-	(
-		cd /sys/kernel/config/nvmet 2>/dev/null &&
-			rm -f -- ports/*/subsystems/* &&
-			for d in {*/*/*/*,*/*}; do
-				[ -e "$d" ] && rmdir "$d"
-			done
-	)
-	unload_module nvmet_rdma &&
-		unload_module nvmet &&
-		have_brd && unload_module brd
-}
-
 start_target() {
 	start_rdma_rxe
 	(
@@ -1214,19 +1023,11 @@ start_target() {
 				done
 			done
 	) &>>"$FULL"
-	if [ -n "$nvme" ]; then
-		start_nvme_target
-	else
-		start_srpt
-	fi
+	start_srpt
 }
 
 stop_target() {
-	if [ -n "$nvme" ]; then
-		stop_nvme_target
-	else
-		stop_srpt
-	fi
+	stop_srpt
 	stop_rdma_rxe || return $?
 }
 
@@ -1381,7 +1182,7 @@ unload_null_blk() {
 shutdown_client() {
 	remove_mpath_devs &&
 		log_out &&
-		stop_client
+		stop_srp_ini
 }
 
 # Undo setup()

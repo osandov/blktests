@@ -40,7 +40,7 @@ test_disconnect_repeatedly() {
 		--output="${RESULTS_DIR}/srp/fio-output-004.txt" >>"$FULL"
 	fio_status=$?
 	wait
-	[ -z "$nvme" ] && log_in
+	log_in
 	return $fio_status
 }
 
