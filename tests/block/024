@@ -1,0 +1,84 @@
+#!/bin/bash
+#
+# Test the iostats counters for time spent doing I/O where each I/O takes < 1
+# jiffy. Regression test for commit b57e99b4b8b0 ("block: use nanosecond
+# resolution for iostat").
+#
+# Copyright (C) 2018 Omar Sandoval
+#
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+. tests/block/rc
+. common/null_blk
+
+DESCRIPTION="do I/O faster than a jiffy and check iostats times"
+QUICK=1
+
+requires() {
+	_have_null_blk
+}
+
+init_times() {
+	init_read_ms="$(awk '{ print $4 }' /sys/block/nullb0/stat)"
+	init_write_ms="$(awk '{ print $8 }' /sys/block/nullb0/stat)"
+}
+
+show_times() {
+	read_ms="$(awk '{ print $4 }' /sys/block/nullb0/stat)"
+	write_ms="$(awk '{ print $8 }' /sys/block/nullb0/stat)"
+
+	# Print rounded to the nearest second
+	printf 'read %d s\n' $(((read_ms - init_read_ms + 500) / 1000))
+	printf 'write %d s\n' $(((write_ms - init_write_ms + 500) / 1000))
+}
+
+test() {
+	echo "Running ${TEST_NAME}"
+
+	for ((queue_mode = 1; queue_mode <= 2; queue_mode++)) do
+		local init_read_ms init_write_ms read_ms write_ms
+
+		echo "queue mode $queue_mode"
+
+		# The maximum value for CONFIG_HZ is 1000. I.e., a tick is one
+		# millisecond. So, make each I/O take half a millisecond.
+		if ! _init_null_blk queue_mode="$queue_mode" irqmode=2 \
+		     completion_nsec=500000; then
+			continue
+		fi
+
+		init_times
+		show_times
+
+		# 1500 * 0.5 ms is 0.75 seconds, allowing for some overhead so
+		# that it rounds to one second.
+		dd if=/dev/nullb0 of=/dev/null bs=4096 iflag=direct count=1500 status=none
+		show_times
+
+		dd if=/dev/zero of=/dev/nullb0 bs=4096 oflag=direct count=1500 status=none
+		show_times
+
+		dd if=/dev/nullb0 of=/dev/null bs=4096 iflag=direct count=1500 status=none &
+		dd if=/dev/zero of=/dev/nullb0 bs=4096 oflag=direct count=1500 status=none &
+		dd if=/dev/zero of=/dev/nullb0 bs=4096 oflag=direct count=1500 status=none &
+		wait
+		show_times
+
+		_exit_null_blk
+
+		unset init_read_ms init_write_ms read_ms write_ms
+	done
+
+	echo "Test complete"
+}
