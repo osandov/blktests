@@ -49,12 +49,10 @@ test() {
 
 		echo "queue mode $queue_mode"
 
-		if ! modprobe null_blk queue_mode="$queue_mode" irqmode=2 \
+		if ! _init_null_blk queue_mode="$queue_mode" irqmode=2 \
 		     completion_nsec=1000000000; then
 			continue
 		fi
-
-		udevadm settle
 
 		init_times
 		show_times
