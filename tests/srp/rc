@@ -611,17 +611,6 @@ stop_srpt() {
 }
 
 start_target() {
-	start_rdma_rxe
-	(
-		echo "RDMA interfaces:"
-		cd /sys/class/infiniband &&
-			for i in *; do
-				[ -e "$i" ] || continue
-				for p in "$i/ports/"*; do
-					echo "$i, port $(basename "$p"): $(<"$p/gids/0")"
-				done
-			done
-	) &>>"$FULL"
 	start_srpt
 }
 

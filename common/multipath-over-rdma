@@ -585,6 +585,20 @@ unload_null_blk() {
 	unload_module null_blk
 }
 
+setup_rdma() {
+	start_rdma_rxe
+	(
+		echo "RDMA interfaces:"
+		cd /sys/class/infiniband &&
+			for i in *; do
+				[ -e "$i" ] || continue
+				for p in "$i/ports/"*; do
+					echo "$i, port $(basename "$p"): $(<"$p/gids/0")"
+				done
+			done
+	) &>>"$FULL"
+}
+
 # Undo setup()
 teardown() {
 	killall -9 multipathd >&/dev/null
@@ -644,5 +658,6 @@ setup_test() {
 		done
 	fi
 
+	setup_rdma
 	start_target
 }
