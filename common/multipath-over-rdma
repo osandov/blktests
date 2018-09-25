@@ -339,6 +339,7 @@ get_bdev_n() {
 		sleep .1
 	done
 	if ! blockdev --getbsz "$dev" >&/dev/null; then
+		echo "$dev: querying block size failed"
 		return 1
 	fi
 	b=$(basename "$realdev")
@@ -615,7 +616,10 @@ setup_test() {
 
 	set -u
 
-	shutdown_client || return $?
+	if ! shutdown_client; then
+		echo "failed to shutdown client"
+		return 1
+	fi
 
 	if ! teardown; then
 		echo "teardown() failed"
@@ -637,7 +641,7 @@ setup_test() {
 
 	modprobe null_blk nr_devices=0 || return $?
 
-	configure_null_blk
+	configure_null_blk || return $?
 
 	if [ ! -e /etc/multipath.conf ]; then
 		(
@@ -660,6 +664,7 @@ setup_test() {
 		done
 	fi
 
-	setup_rdma
-	start_target
+	setup_rdma || return $?
+	start_target || return $?
+	echo "Test setup finished" >>"$FULL"
 }
