@@ -45,6 +45,7 @@ test_io_schedulers() {
 				return $?
 		done
 	done
+	return 0
 }
 
 test() {
