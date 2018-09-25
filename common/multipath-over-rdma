@@ -601,9 +601,11 @@ setup_rdma() {
 
 # Undo setup()
 teardown() {
+	shutdown_client
 	killall -9 multipathd >&/dev/null
 	rm -f /etc/multipath.conf
 	stop_target
+	stop_rdma_rxe
 	unload_null_blk
 }
 
