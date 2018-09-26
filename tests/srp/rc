@@ -654,13 +654,14 @@ scsi_mpath_id() {
 	lio_scsi_mpath_id "$@"
 }
 
-# Get a the uuid or wwid of LIO device $1. $1 is an index in the $scsi_serial
-# array.
-get_bdev_uid() {
-	local i=$1
-
-	is_number "$i" || return $?
-	scsi_mpath_id "$i"
+# Get a the initiator path for LIO target device $1. $1 is an index in the
+# $scsi_serial array.
+get_bdev_path() {
+	local i=$1 uuid
+ 
+ 	is_number "$i" || return $?
+	uuid=$(scsi_mpath_id "$i") || return $?
+	echo "/dev/disk/by-id/dm-uuid-mpath-$uuid"
 }
 
 # Set scheduler of block device $1 to $2.
@@ -694,13 +695,16 @@ get_bdev() {
 
 	is_number "$i" || return $?
 	echo reconfigure | multipathd -k >&/dev/null
-	dev="/dev/disk/by-id/dm-uuid-mpath-$(get_bdev_uid "$i")" || return $?
+	dev=""
 	for ((j=0;j<50;j++)); do
-		[ -e "$dev" ] && break
+		if dev=$(get_bdev_path "$i") && [ -n "$dev" ] && [ -e "$dev" ]
+		then
+			break
+		fi
 		sleep .1
 	done
-	if [ ! -e "$dev" ]; then
-		echo "$dev: not found"
+	if [ -z "$dev" ] || [ ! -e "$dev" ]; then
+		echo "Could not find device $i -> $dev"
 		return 1
 	fi
 	if [ ! -L "$dev" ]; then
