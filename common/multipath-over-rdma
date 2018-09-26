@@ -516,7 +516,7 @@ test_fio_opt() {
 }
 
 run_fio() {
-	local a args avail_kb="" bd="" d="" j opt output
+	local a args avail_kb="" bd="" d="" j opt output rc
 
 	args=("$@")
 	j=1
@@ -553,11 +553,15 @@ run_fio() {
 	done
 	mkdir -p "${fio_aux_path}"
 	echo "fio ${args[*]}" >>"$FULL"
-	fio "${args[@]}" 2>&1 || return $?
-	if [ -n "$output" ]; then
+	fio "${args[@]}" 2>&1
+	rc=$?
+	if [ $rc = 0 ] && [ -n "$output" ]; then
 		# Return exit code 1 if no I/O has been performed.
 		grep -q ', io=[0-9].*, run=[0-9]' "$output"
+		rc=$?
 	fi
+	echo "run_fio exit code: $rc" >>"$FULL"
+	return $rc
 }
 
 # Configure two null_blk instances.
