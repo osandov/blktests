@@ -1,0 +1,648 @@
+#!/bin/bash
+#
+# Copyright (c) 2017-2018 Western Digital Corporation or its affiliates.
+#
+# This program is free software; you can redistribute it and/or
+# modify it under the terms of the GNU General Public License
+# as published by the Free Software Foundation; either version 2
+# of the License, or (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program; if not, write to the Free Software
+# Foundation, Inc.
+
+#
+# Functions and global variables used by both the srp and nvmeof-mp tests.
+#
+
+debug=
+filesystem_type=ext4
+fio_aux_path=/tmp/fio-state-files
+memtotal=$(sed -n 's/^MemTotal:[[:blank:]]*\([0-9]*\)[[:blank:]]*kB$/\1/p' /proc/meminfo)
+max_ramdisk_size=$((1<<25))
+ramdisk_size=$((memtotal*(1024/16)))  # in bytes
+if [ $ramdisk_size -gt $max_ramdisk_size ]; then
+	ramdisk_size=$max_ramdisk_size
+fi
+
+get_ipv4_addr() {
+	ip -4 -o addr show dev "$1" |
+		sed -n 's/.*[[:blank:]]inet[[:blank:]]*\([^[:blank:]/]*\).*/\1/p'
+}
+
+# Convert e.g. ::1 into 0000:0000:0000:0000:0000:0000:0000:0001.
+expand_ipv6_addr() {
+	awk -F : 'BEGIN{left=1} { for(i=1;i<=NF;i++) { a=substr("0000", 1+length($i)) $i; if ($i == "") left=0; else if (left) pre = pre ":" a; else suf = suf ":" a }; mid=substr(":0000:0000:0000:0000:0000:0000:0000:0000", (pre!="")+length(pre)+length(suf)); print substr(pre,2) mid suf}'
+}
+
+get_ipv6_addr() {
+	ip -6 -o addr show dev "$1" |
+		sed -n 's/.*[[:blank:]]inet6[[:blank:]]*\([^[:blank:]/]*\).*/\1/p'
+}
+
+# Whether or not $1 is a number.
+is_number() {
+	[ "$1" -eq "0$1" ] 2>/dev/null
+}
+
+# Check whether a device is an RDMA device. An example argument:
+# /sys/devices/pci0000:00/0000:00:03.0/0000:04:00.0
+is_rdma_device() {
+	local d i inode1 inode2
+
+	inode1=$(stat -c %i "$1")
+	# echo "inode1 = $inode1"
+	for i in /sys/class/infiniband/*; do
+		d=/sys/class/infiniband/"$(readlink "$i")"
+		d=$(dirname "$(dirname "$d")")
+		inode2=$(stat -c %i "$d")
+		# echo "inode2 = $inode2"
+		if [ "$inode1" = "$inode2" ]; then
+			return
+		fi
+	done
+	false
+}
+
+# Lists RDMA capable network interface names, e.g. ib0 ib1.
+rdma_network_interfaces() {
+	(
+		cd /sys/class/net &&
+			for i in *; do
+				[ -e "$i" ] || continue
+				# Skip IPoIB (ARPHRD_INFINIBAND) network
+				# interfaces.
+				[ "$(<"$i"/type)" = 32 ] && continue
+				[ -L "$i/device" ] || continue
+				d=$(readlink "$i/device" 2>/dev/null)
+				if [ -n "$d" ] && is_rdma_device "$i/$d"; then
+					echo "$i"
+				fi
+			done
+	)
+}
+
+# Check whether any stacked block device holds block device $1. If so, echo
+# the name of the holder.
+held_by() {
+	local d e dev=$1
+
+	while [ -L "$dev" ]; do
+		dev=$(realpath "$dev")
+	done
+	dev=${dev%/dev/}
+	for d in /sys/class/block/*/holders/*; do
+		[ -e "$d" ] || continue
+		e=$(basename "$d")
+		if [ "$e" = "$dev" ]; then
+			echo "/dev/$(basename "$(dirname "$(dirname "$d")")")"
+		fi
+	done
+}
+
+# System uptime in seconds.
+uptime_s() {
+	local a b
+
+	echo "$(</proc/uptime)" | { read -r a b && echo "${a%%.*}"; }
+}
+
+# Sleep until either $1 seconds have elapsed or until the deadline $2 has been
+# reached. Return 1 if and only if the deadline has been met.
+sleep_until() {
+	local duration=$1 deadline=$2 u
+
+	u=$(uptime_s)
+	if [ $((u + duration)) -le "$deadline" ]; then
+		sleep "$duration"
+	else
+		[ "$deadline" -gt "$u" ] && sleep $((deadline - u))
+		return 1
+	fi
+}
+
+# Kill all processes that have opened block device $1.
+stop_bdev_users() {
+	[ -n "$1" ] || return $?
+	lsof -F p "$1" 2>/dev/null | while read -r line; do
+		p="${line#p}"
+		if [ "$p" != "$line" ]; then
+			echo -n " (pid $p)" >>"$FULL"
+			kill -9 "$p"
+		fi
+	done
+}
+
+# RHEL 6 dmsetup accepts mpath<n> but not /dev/dm-<n> as its first argument.
+# Hence this function that converts /dev/dm-<n> into mpath<n>.
+dev_to_mpath() {
+	local d e mm
+
+	d="${1#/dev/mapper/}";
+	if [ "$d" != "$1" ]; then
+		echo "$d"
+		return 0
+	fi
+
+	[ -e "$1" ] || return $?
+
+	if [ -L "$1" ]; then
+		e=$(readlink -f "$1")
+	else
+		e="$1"
+	fi
+	if ! mm=$(stat -c %t:%T "$e"); then
+		echo "stat $1 -> $e failed"
+		return 1
+	fi
+
+	for d in /dev/mapper/mpath*; do
+		if [ -L "$d" ]; then
+			e=$(readlink -f "$d")
+		elif [ -e "$d" ]; then
+			e="$d"
+		else
+			continue
+		fi
+		if [ "$(stat -c %t:%T "$e")" = "$mm" ]; then
+			basename "$d"
+			return 0
+		fi
+	done
+	return 1
+}
+
+# Find all multipaths with one or more deleted devices and remove these.
+remove_stale_mpath_devs() {
+	echo "Examining all multipaths"
+	dmsetup table | while read -r mpdev fs ls type def; do
+		echo "$fs $ls" >/dev/null
+		# shellcheck disable=SC2086
+		if [ "$type" = multipath ] &&
+			   { is_qinp_def "$def" ||
+				     mpath_has_stale_dev $def; }; then
+			echo "${mpdev%:}"
+		fi
+	done |
+		sort -u |
+		while read -r mpdev; do
+			mpdev="/dev/mapper/$mpdev"
+			echo -n "removing $mpdev: "
+			if ! remove_mpath_dev "$mpdev"; then
+				echo "failed"
+				[ -z "$debug" ] || return 1
+			fi
+		done
+	echo "Finished examining multipaths"
+}
+
+# Modify mpath device $1 to fail_if_no_path mode, unmount the filesystem on top
+# of it and remove the mpath device.
+remove_mpath_dev() {
+	local cmd dm i output t1 t2
+
+	{
+		for ((i=10;i>0;i--)); do
+			cmd="dm=\$(dev_to_mpath \"$1\")"
+			if ! eval "$cmd"; then
+				echo "$cmd: failed"
+			else
+				t1=$(dmsetup table "$dm")
+				cmd="dmsetup message $dm 0 fail_if_no_path"
+				if ! eval "$cmd"; then
+					echo "$cmd: failed"
+				else
+					t2=$(dmsetup table "$dm")
+					if echo "$t2" | grep -qw queue_if_no_path; then
+						echo "$dm: $t1 -> $t2"
+					fi
+					echo "Attempting to unmount /dev/mapper/$dm"
+					umount "/dev/mapper/$dm"
+					cmd="dmsetup remove $dm"
+					if ! output=$(eval "$cmd" 2>&1); then
+						echo "$cmd: $output; retrying"
+					else
+						echo "done"
+						break
+					fi
+				fi
+			fi
+			if [ ! -e "$1" ]; then
+				break
+			fi
+			ls -l "$1"
+			stop_bdev_users "$(readlink -f "$1")"
+			sleep .5
+		done
+		if [ $i = 0 ]; then
+			echo "failed"
+			return 1
+		fi
+	} &>>"$FULL"
+}
+
+# Check whether one or more arguments contain stale device nodes (/dev/...).
+mpath_has_stale_dev() {
+	local d
+
+	for d in "$@"; do
+		if [ "${d/://}" != "$d" ]; then
+			grep -qw "$d" /sys/class/block/*/dev 2>/dev/null ||
+				return 0
+		fi
+	done
+
+	return 1
+}
+
+# Check whether multipath definition $1 includes the queue_if_no_path keyword.
+is_qinp_def() {
+	case "$1" in
+		" 3 queue_if_no_path queue_mode mq ")
+			return 0;;
+		" 1 queue_if_no_path ")
+			return 0;;
+		*)
+			return 1;;
+	esac
+}
+
+# Load the configfs kernel module and mount it.
+mount_configfs() {
+	if [ ! -e /sys/module/configfs ]; then
+		modprobe configfs || return $?
+	fi
+	if ! mount | grep -qw configfs; then
+		mount -t configfs none /sys/kernel/config || return $?
+	fi
+}
+
+# Set scheduler of block device $1 to $2.
+set_scheduler() {
+	local b=$1 p s=$2
+
+	p=/sys/class/block/$b/queue/scheduler
+	if [ -e "/sys/block/$b/mq" ]; then
+		case "$s" in
+			noop)        s=none;;
+			deadline)    s=mq-deadline;;
+			bfq)         s=bfq;;
+		esac
+	else
+		case "$s" in
+			none)        s=noop;;
+			mq-deadline) s=deadline;;
+			bfq-mq)      s=bfq;;
+		esac
+	fi
+	if ! echo "$s" > "$p"; then
+		echo "Changing scheduler of $b from $(<"$p") into $s failed"
+		return 1
+	fi
+}
+
+# Get a /dev/... path that points at dm device number $1. Set its I/O scheduler
+# to $2 and its timeout to $3. The shell script that includes this file must
+# define a function get_bdev_path() that translates device number $1 into a
+# /dev/disk/... path.
+get_bdev_n() {
+	local b d dev elevator=$2 h i=$1 j realdev timeout=$3
+
+	is_number "$i" || return $?
+	dev=""
+	for ((j=0;j<50;j++)); do
+		if dev=$(get_bdev_path "$i") && [ -n "$dev" ] && [ -e "$dev" ]
+		then
+			break
+		fi
+		echo reconfigure | multipathd -k >&/dev/null
+		sleep .1
+	done
+	if [ -z "$dev" ] || [ ! -e "$dev" ]; then
+		echo "Could not find device $i -> $dev"
+		return 1
+	fi
+	if [ ! -L "$dev" ]; then
+		echo "$dev: not a soft link"
+		return 1
+	fi
+	realdev=$(readlink "$dev" 2>/dev/null || echo "?")
+	echo "Using $dev -> ${realdev}" >>"$FULL"
+	for ((j=0; j<50; j++)); do
+		blockdev --getbsz "$dev" >&/dev/null && break
+		echo reconfigure | multipathd -k >& /dev/null
+		sleep .1
+	done
+	if ! blockdev --getbsz "$dev" >&/dev/null; then
+		return 1
+	fi
+	b=$(basename "$realdev")
+	set_scheduler "$b" "$elevator"
+	for d in /sys/class/block/*"/holders/$b"; do
+		[ -e "$d" ] || continue
+		h="$(basename "$(dirname "$(dirname "$d")")")"
+		set_scheduler "$h" "${elevator}"
+		if [ -e "/sys/class/block/$h/device/timeout" ]; then
+			echo "$timeout" > "/sys/class/block/$h/device/timeout"
+		fi
+	done
+	echo "get_bdev_n() returned $dev" >>"$FULL"
+	echo "$dev"
+}
+
+# Full path of mountpoint $1. fio will be run on top of the filesystem mounted
+# at the returned mountpoint.
+function mountpoint() {
+	if [ -z "$TMPDIR" ]; then
+		echo "Error: \$TMPDIR has not been set." 1>&2
+		exit 1
+	fi
+	if [ -z "$1" ]; then
+		echo "Error: missing argument" 1>&2
+		exit 1
+	fi
+	echo "$TMPDIR/mnt$1"
+}
+
+# All primary RDMA GIDs
+all_primary_gids() {
+	find /sys/devices -name infiniband | while read -r p; do
+		cat "$p"/*/ports/*/gids/0
+	done | grep -v ':0000:0000:0000:0000$'
+}
+
+# Check whether or not an rdma_rxe instance has been associated with network
+# interface $1.
+has_rdma_rxe() {
+	local f
+
+	for f in /sys/class/infiniband/*/parent; do
+		if [ -e "$f" ] && [ "$(<"$f")" = "$1" ]; then
+			return 0
+		fi
+	done
+
+	return 1
+}
+
+# Load the rdma_rxe kernel module and associate it with all network interfaces.
+start_rdma_rxe() {
+	{
+		modprobe rdma_rxe || return $?
+		(
+			cd /sys/class/net &&
+				for i in *; do
+					if [ -e "$i" ] && ! has_rdma_rxe "$i"; then
+						echo "$i" > /sys/module/rdma_rxe/parameters/add
+					fi
+				done
+		)
+	} >>"$FULL"
+}
+
+# Dissociate the rdma_rxe kernel module from all network interfaces and unload
+# the rdma_rxe kernel module.
+stop_rdma_rxe() {
+	(
+		cd /sys/class/net &&
+			for i in *; do
+				if [ -e "$i" ] && has_rdma_rxe "$i"; then
+					{ echo "$i" > /sys/module/rdma_rxe/parameters/remove; } \
+						2>/dev/null
+				fi
+			done
+	)
+	if ! unload_module rdma_rxe; then
+		echo "Unloading rdma_rxe failed"
+		return 1
+	fi
+}
+
+# /dev/sd... device node assigned to the scsi_debug kernel module.
+scsi_debug_dev_path() {
+	local bd="" d
+
+	for d in /sys/bus/pseudo/drivers/scsi_debug/adapter*/host*/target*/*/block/*; do
+		[ -e "$d" ] || continue
+		bd=${d/*\//}
+	done
+	[ -n "$bd" ] || return 1
+	echo "/dev/$bd"
+}
+
+# Look up the block device below the filesystem for directory $1.
+block_dev_of_dir() {
+	df "$1" | {
+		read -r header
+		echo "$header" >/dev/null
+		read -r blockdev rest
+		echo "$blockdev"
+	}
+}
+
+# Create a filesystem of type "$filesystem_type" on block device $1.
+create_filesystem() {
+	local dev=$1
+
+	case "$filesystem_type" in
+		ext4)
+			mkfs.ext4 -F -O ^has_journal -q "$dev";;
+		xfs)
+			mkfs.xfs -f -q "$dev";;
+		*)
+			return 1;;
+	esac
+}
+
+# Whether or not path "$1" is a mountpoint.
+is_mountpoint() {
+	[ -n "$1" ] &&
+		[ -d "$1" ] &&
+		[ "$(block_dev_of_dir "$1")" != \
+		  "$(block_dev_of_dir "$(dirname "$1")")" ]
+}
+
+# Execute mount "$@" and check whether the mount command has succeeded by
+# verifying whether after mount has finished that ${$#} is a mountpoint.
+mount_and_check() {
+	local dir last
+
+	dir=$(for last; do :; done; echo "$last")
+	mount "$@"
+	if ! is_mountpoint "$dir"; then
+		echo "Error: mount $* failed"
+		return 1
+	fi
+}
+
+# Unmount the filesystem mounted at mountpoint $1. In contrast with the umount
+# command, this function does not accept a block device as argument.
+unmount_and_check() {
+	local bd m=$1 mp
+
+	if is_mountpoint "$m"; then
+		bd=$(block_dev_of_dir "$m")
+		mp=$(dev_to_mpath "$bd") 2>/dev/null
+		if [ -n "$mp" ]; then
+			dmsetup message "$mp" 0 fail_if_no_path
+		fi
+		stop_bdev_users "$bd"
+		echo "Unmounting $m from $bd" >> "$FULL"
+		umount "$m" || umount --lazy "$m"
+	fi
+	if is_mountpoint "$m"; then
+		echo "Error: unmounting $m failed"
+		return 1
+	fi
+}
+
+# Test whether fio supports command-line options "$@"
+test_fio_opt() {
+	local opt
+
+	for opt in "$@"; do
+		opt=${opt//=*}
+		fio --help |& grep -q -- "${opt}=" && continue
+		opt=${opt#--}
+		fio --cmdhelp=all |& grep -q "^${opt}[[:blank:]]" && continue
+		return 1
+	done
+}
+
+run_fio() {
+	local a args avail_kb="" bd="" d="" j opt output
+
+	args=("$@")
+	j=1
+	for opt in "${args[@]}"; do
+		case "$opt" in
+			--directory=*) d="${opt#--directory=}";;
+			--filename=*)  bd="${opt#--filename=}";;
+			--numjobs=*)   j="${opt#--numjobs=}";;
+			--output=*)    output="${opt#--output=}";;
+		esac
+	done
+	if [ -n "$d" ]; then
+		a=$(df "$d" | grep "^/" |
+			    {
+				    if read -r fs blocks used avail use mnt; then
+					    echo "$avail"
+					    echo "$fs $blocks $used $use $mnt" >/dev/null
+				    fi
+			    }
+		 )
+		avail_kb=$a
+	fi
+	if [ -n "$bd" ]; then
+		avail_kb=$(("$(blockdev --getsz "$bd")" / 2))
+	fi
+	if [ -n "$avail_kb" ]; then
+		args+=("--size=$(((avail_kb * 1024 * 7 / 10) / j & ~4095))")
+	fi
+	for opt in --exitall_on_error=1 --gtod_reduce=1 --aux-path=${fio_aux_path}
+	do
+		if test_fio_opt "$opt"; then
+			args+=("$opt")
+		fi
+	done
+	mkdir -p "${fio_aux_path}"
+	echo "fio ${args[*]}" >>"$FULL"
+	fio "${args[@]}" 2>&1 || return $?
+	if [ -n "$output" ]; then
+		# Return exit code 1 if no I/O has been performed.
+		grep -q ', io=[0-9].*, run=[0-9]' "$output"
+	fi
+}
+
+# Configure two null_blk instances.
+configure_null_blk() {
+	local i
+
+	(
+		cd /sys/kernel/config/nullb || return $?
+		for i in nullb0 nullb1; do (
+			{ mkdir -p $i &&
+				  cd $i &&
+				  echo 0 > completion_nsec &&
+				  echo 512 > blocksize &&
+				  echo $((ramdisk_size>>20)) > size &&
+				  echo 1 > memory_backed &&
+				  echo 1 > power; } || exit $?
+		) done
+	)
+	ls -l /dev/nullb* &>>"$FULL"
+}
+
+unload_null_blk() {
+	local d
+
+	for d in /sys/kernel/config/nullb/*; do [ -d "$d" ] && rmdir "$d"; done
+	unload_module null_blk
+}
+
+# Undo setup()
+teardown() {
+	killall -9 multipathd >&/dev/null
+	rm -f /etc/multipath.conf
+	stop_target
+	unload_null_blk
+}
+
+# Set up test configuration with "$1" as multipath configuration file.
+setup_test() {
+	local i m modules
+
+	set -u
+
+	shutdown_client || return $?
+
+	if ! teardown; then
+		echo "teardown() failed"
+		return 1
+	fi
+
+	modules=(
+		configfs
+		dm-multipath
+		dm_mod
+		scsi_dh_alua
+		scsi_dh_emc
+		scsi_dh_rdac
+		scsi_mod
+	)
+	for m in "${modules[@]}"; do
+		[ -e "/sys/module/$m" ] || modprobe "$m" || return $?
+	done
+
+	modprobe null_blk nr_devices=0 || return $?
+
+	configure_null_blk
+
+	if [ ! -e /etc/multipath.conf ]; then
+		(
+			cd /etc && ln -s "$1" .
+		)
+	fi
+	multipathd
+
+	# Load the I/O scheduler kernel modules
+	(
+		cd "/lib/modules/$(uname -r)/kernel/block" &&
+			for m in *.ko; do
+				[ -e "$m" ] && modprobe "${m%.ko}"
+			done
+	)
+
+	if [ -d /sys/kernel/debug/dynamic_debug ]; then
+		for m in ; do
+			echo "module $m +pmf" >/sys/kernel/debug/dynamic_debug/control
+		done
+	fi
+
+	start_target
+}
