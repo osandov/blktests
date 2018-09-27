@@ -694,13 +694,13 @@ get_bdev() {
 	local b d dev h i=$1 j realdev
 
 	is_number "$i" || return $?
-	echo reconfigure | multipathd -k >&/dev/null
 	dev=""
 	for ((j=0;j<50;j++)); do
 		if dev=$(get_bdev_path "$i") && [ -n "$dev" ] && [ -e "$dev" ]
 		then
 			break
 		fi
+		echo reconfigure | multipathd -k >&/dev/null
 		sleep .1
 	done
 	if [ -z "$dev" ] || [ ! -e "$dev" ]; then
