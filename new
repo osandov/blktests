@@ -1,19 +1,6 @@
 #!/bin/bash
-#
+# SPDX-License-Identifier: GPL-3.0+
 # Copyright (C) 2017 Omar Sandoval
-#
-# This program is free software: you can redistribute it and/or modify
-# it under the terms of the GNU General Public License as published by
-# the Free Software Foundation, either version 3 of the License, or
-# (at your option) any later version.
-#
-# This program is distributed in the hope that it will be useful,
-# but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-# GNU General Public License for more details.
-#
-# You should have received a copy of the GNU General Public License
-# along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 set -e
 shopt -s extglob
@@ -66,23 +53,10 @@ if [[ ! -e tests/${group} ]]; then
 	mkdir -p "tests/${group}"
 	cat << EOF > "tests/${group}/rc"
 #!/bin/bash
-#
-# TODO: provide a brief description of the group here.
-#
+# SPDX-License-Identifier: GPL-3.0+
 # Copyright (C) $(date +%Y) TODO YOUR NAME HERE
 #
-# This program is free software: you can redistribute it and/or modify
-# it under the terms of the GNU General Public License as published by
-# the Free Software Foundation, either version 3 of the License, or
-# (at your option) any later version.
-#
-# This program is distributed in the hope that it will be useful,
-# but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-# GNU General Public License for more details.
-#
-# You should have received a copy of the GNU General Public License
-# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+# TODO: provide a brief description of the group here.
 
 . common/rc
 # TODO: source any more common helpers needed for this group.
@@ -131,6 +105,8 @@ done
 
 cat << EOF > "tests/${test_name}"
 #!/bin/bash
+# SPDX-License-Identifier: GPL-3.0+
+# Copyright (C) $(date +%Y) TODO YOUR NAME HERE
 #
 # TODO: provide a description of the test here, i.e., what it tests and how. If
 # this is a regression test for a patch, reference the patch title:
@@ -143,21 +119,6 @@ cat << EOF > "tests/${test_name}"
 #
 # Regression test for commit efd4b81abbe1 ("blk-stat: fix blk_stat_sum() if all
 # samples are batched").
-#
-# Copyright (C) $(date +%Y) TODO YOUR NAME HERE
-#
-# This program is free software: you can redistribute it and/or modify
-# it under the terms of the GNU General Public License as published by
-# the Free Software Foundation, either version 3 of the License, or
-# (at your option) any later version.
-#
-# This program is distributed in the hope that it will be useful,
-# but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-# GNU General Public License for more details.
-#
-# You should have received a copy of the GNU General Public License
-# along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 . tests/${group}/rc
 # TODO: source any more common helpers needed for this test.
