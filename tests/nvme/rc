@@ -118,3 +118,8 @@ _find_nvme_loop_dev() {
 		fi
 	done
 }
+
+_filter_discovery() {
+	sed -r  -e "s/portid:  [0-9]+/portid:  X/" \
+		-e "s/Generation counter [0-9]+/Generation counter X/"
+}
