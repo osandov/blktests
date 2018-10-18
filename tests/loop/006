@@ -1,0 +1,72 @@
+#!/bin/bash
+# SPDX-License-Identifier: GPL-3.0+
+# Copyright (C) 2018 Jan Kara
+#
+# Regression test for patch "block/loop: Use global lock for ioctl() operation."
+# We swap file (through LOOP_CHANGE_FD) under one loopback device while
+# creating and deleting another loopback device pointing to the first one.
+# This checks for races in validation of backing fd.
+
+. tests/loop/rc
+
+DESCRIPTION="change loop backing file while creating/removing another loop device"
+# Try for some time to trigger the race
+TIMED=1
+
+requires() {
+	_have_src_program loop_change_fd
+}
+
+# Setup and tear down loop device pointing to loop_dev
+run_setter() {
+	loop_dev="$1"
+
+	while top_dev=$(losetup -f --show "$loop_dev"); do
+		losetup -d "$top_dev"
+	done
+}
+
+# Switch backing file of loop_dev continuously
+run_switcher() {
+	loop_dev="$1"
+
+	i=1
+	while src/loop_change_fd "$loop_dev" "$TMPDIR/file$i"; do
+		i=$(((i+1)%2))
+	done
+}
+
+test() {
+	echo "Running ${TEST_NAME}"
+
+	truncate -s 1M "$TMPDIR/file0"
+	truncate -s 1M "$TMPDIR/file1"
+
+	if ! loop_dev="$(losetup -r -f --show "$TMPDIR/file0")"; then
+		return 1
+	fi
+
+	run_switcher "$loop_dev" &
+	switch_pid=$!
+	run_setter "$loop_dev" &
+	set_pid=$!
+
+	sleep ${TIMEOUT:-30}
+
+	# Discard KILLED messages from bash...
+	{
+		kill -9 $switch_pid
+		kill -9 $set_pid
+		wait
+		sleep 1
+	} 2>/dev/null
+
+	# Clean up devices
+	top_dev=$(losetup -j "$loop_dev" | sed -e 's/\([^:]*\): .*/\1/')
+	if [[ -n "$top_dev" ]]; then
+		losetup -d "$top_dev"
+	fi
+	losetup -d "$loop_dev"
+
+	echo "Test complete"
+}

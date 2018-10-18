@@ -4,7 +4,8 @@ C_TARGETS := \
 	openclose \
 	sg/dxfer-from-dev \
 	sg/syzkaller1 \
-	nbdsetsize
+	nbdsetsize \
+	loop_change_fd
 
 CXX_TARGETS := \
 	discontiguous-io
