@@ -29,37 +29,33 @@ show_times() {
 }
 
 test() {
+	local init_read_ms init_write_ms read_ms write_ms
+
 	echo "Running ${TEST_NAME}"
 
-	for ((queue_mode = 1; queue_mode <= 2; queue_mode++)) do
-		local init_read_ms init_write_ms read_ms write_ms
+	if ! _init_null_blk queue_mode=2 irqmode=2 \
+	     completion_nsec=1000000000; then
+		return 1
+	fi
 
-		echo "queue mode $queue_mode"
+	init_times
+	show_times
 
-		if ! _init_null_blk queue_mode="$queue_mode" irqmode=2 \
-		     completion_nsec=1000000000; then
-			continue
-		fi
+	dd if=/dev/nullb0 of=/dev/null bs=4096 iflag=direct count=1 status=none
+	show_times
 
-		init_times
-		show_times
+	dd if=/dev/zero of=/dev/nullb0 bs=4096 oflag=direct count=1 status=none
+	show_times
 
-		dd if=/dev/nullb0 of=/dev/null bs=4096 iflag=direct count=1 status=none
-		show_times
+	dd if=/dev/nullb0 of=/dev/null bs=4096 iflag=direct count=1 status=none &
+	dd if=/dev/zero of=/dev/nullb0 bs=4096 oflag=direct count=1 status=none &
+	dd if=/dev/zero of=/dev/nullb0 bs=4096 oflag=direct count=1 status=none &
+	wait
+	show_times
 
-		dd if=/dev/zero of=/dev/nullb0 bs=4096 oflag=direct count=1 status=none
-		show_times
+	_exit_null_blk
 
-		dd if=/dev/nullb0 of=/dev/null bs=4096 iflag=direct count=1 status=none &
-		dd if=/dev/zero of=/dev/nullb0 bs=4096 oflag=direct count=1 status=none &
-		dd if=/dev/zero of=/dev/nullb0 bs=4096 oflag=direct count=1 status=none &
-		wait
-		show_times
-
-		_exit_null_blk
-
-		unset init_read_ms init_write_ms read_ms write_ms
-	done
+	unset init_read_ms init_write_ms read_ms write_ms
 
 	echo "Test complete"
 }

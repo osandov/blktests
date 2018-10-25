@@ -19,7 +19,7 @@ test() {
 	echo "Running ${TEST_NAME}"
 
 	local queue_mode
-	for ((queue_mode = 0; queue_mode <= 2; queue_mode++)); do
+	for queue_mode in 0 2; do
 		if _init_null_blk gb=1 queue_mode="$queue_mode"; then
 			echo "Queue mode $queue_mode"
 			dd if=/dev/nullb0 of=/dev/null iflag=direct bs=64k status=none

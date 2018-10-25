@@ -26,27 +26,23 @@ show_inflight() {
 test() {
 	echo "Running ${TEST_NAME}"
 
-	for ((queue_mode = 1; queue_mode <= 2; queue_mode++)) do
-		echo "queue mode $queue_mode"
+	if ! _init_null_blk queue_mode=2 irqmode=2 \
+	     completion_nsec=500000000; then
+		return 1
+	fi
 
-		if ! _init_null_blk queue_mode="$queue_mode" irqmode=2 \
-		     completion_nsec=500000000; then
-			continue
-		fi
+	dd if=/dev/nullb0 of=/dev/null bs=4096 iflag=direct count=1 status=none &
+	sleep 0.1
+	show_inflight
 
-		dd if=/dev/nullb0 of=/dev/null bs=4096 iflag=direct count=1 status=none &
-		sleep 0.1
-		show_inflight
+	dd if=/dev/zero of=/dev/nullb0 bs=4096 oflag=direct count=1 status=none &
+	sleep 0.1
+	show_inflight
 
-		dd if=/dev/zero of=/dev/nullb0 bs=4096 oflag=direct count=1 status=none &
-		sleep 0.1
-		show_inflight
+	wait
+	show_inflight
 
-		wait
-		show_inflight
-
-		_exit_null_blk
-	done
+	_exit_null_blk
 
 	echo "Test complete"
 }
