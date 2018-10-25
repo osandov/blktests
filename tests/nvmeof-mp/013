@@ -1,0 +1,32 @@
+#!/bin/bash
+# SPDX-License-Identifier: GPL-2.0+
+# Copyright 2018 Google LLC
+
+. tests/nvmeof-mp/rc
+
+DESCRIPTION="Disconnect and reconnect repeatedly"
+QUICK=1
+
+test_repeated_logins() {
+	local dev m n=32 rc
+
+	use_blk_mq y || return $?
+	for ((i = 0; i < n; i++)); do
+		if ! dev=$(get_bdev 0); then
+			rc=$?
+			echo "Executed $i out of $n iterations"
+			return $rc
+		fi
+		log_out
+		# Delay that get_bdev() hits a race condition between device
+		# node removal and creation.
+		sleep 1
+		log_in
+	done
+	return 0
+}
+
+test() {
+	trap 'trap "" EXIT; teardown' EXIT
+	setup && test_repeated_logins && echo Passed
+}
