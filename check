@@ -319,6 +319,7 @@ _call_test() {
 		local dmesg_marker=""
 		CHECK_DMESG=0
 	fi
+	$LOGGER_PROG "run blktests $TEST_NAME"
 
 	trap _cleanup EXIT
 	if ! TMPDIR="$(mktemp --tmpdir -p "$OUTPUT" -d "tmpdir.${TEST_NAME//\//.}.XXX")"; then
@@ -577,6 +578,8 @@ fi
 
 eval set -- "$TEMP"
 unset TEMP
+
+LOGGER_PROG="$(type -P logger)" || LOGGER_PROG=true
 
 if [[ -r config ]]; then
 	# shellcheck disable=SC1091
