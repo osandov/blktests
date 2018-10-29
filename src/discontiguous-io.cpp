@@ -306,17 +306,17 @@ int main(int argc, char **argv)
 					break;
 				}
 			}
-			ssize_t len = sg_write(fd, offs / block_size, iov);
-			if (len >= 0)
-				std::cout << "Wrote " << len << "/"
+			ssize_t written = sg_write(fd, offs / block_size, iov);
+			if (written >= 0)
+				std::cout << "Wrote " << written << "/"
 					  << iov.data_len()
 					  << " bytes of data.\n";
 		} else {
-			ssize_t len = sg_read(fd, offs / block_size, iov);
-			if (len >= 0) {
-				std::cerr << "Read " << len
+			ssize_t read = sg_read(fd, offs / block_size, iov);
+			if (read >= 0) {
+				std::cerr << "Read " << read
 					  << " bytes of data:\n";
-				iov.trunc(len);
+				iov.trunc(read);
 				iov.write(std::cout);
 			}
 		}
