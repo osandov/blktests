@@ -7,6 +7,10 @@
 DESCRIPTION="File I/O on top of multipath concurrently with logout and login (sq)"
 TIMED=1
 
+requires() {
+	_have_legacy_dm
+}
+
 test_disconnect_repeatedly() {
 	local dev fio_status m
 

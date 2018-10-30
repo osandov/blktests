@@ -15,6 +15,7 @@ test_io_schedulers() {
 		modprobe "$(basename "$m")" >&/dev/null
 	done
 	for mq in y n; do
+		[ $mq = n ] && ! _have_legacy_dm && continue
 		use_blk_mq ${mq} ${mq} || return $?
 		dev=$(get_bdev 0) || return $?
 		for sched in noop deadline bfq cfq; do
