@@ -251,7 +251,7 @@ int main(int argc, char **argv)
 	const char *dev;
 	int c;
 	std::vector<uint8_t> buf;
-	size_t len = 512;
+	unsigned long len = 512;
 
 	while ((c = getopt(argc, argv, "hl:o:sw")) != EOF) {
 		switch (c) {
