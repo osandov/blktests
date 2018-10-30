@@ -14,6 +14,14 @@ if [ $ramdisk_size -gt $max_ramdisk_size ]; then
 	ramdisk_size=$max_ramdisk_size
 fi
 
+have_legacy_dm() {
+	if ! _have_kernel_option DM_MQ_DEFAULT; then
+		SKIP_REASON="legacy device mapper support is missing"
+		echo "$SKIP_REASON" >/dev/null # For shellcheck
+		return 1
+	fi
+}
+
 get_ipv4_addr() {
 	ip -4 -o addr show dev "$1" |
 		sed -n 's/.*[[:blank:]]inet[[:blank:]]*\([^[:blank:]/]*\).*/\1/p'
