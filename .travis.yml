@@ -1,0 +1,34 @@
+language: c
+
+os:
+  - linux
+
+# The version of GNU make in the default image is too old. Hence select trusty.
+dist: trusty
+
+compiler:
+  - clang
+  - gcc
+
+env:
+  matrix:
+    - BUILD_ARCH="x86"
+    - BUILD_ARCH="x86_64"
+
+addons:
+  apt:
+    packages:
+      - gcc
+      - gcc-multilib
+      - make
+
+before_install:
+  - CFLAGS="-Werror"
+  - CXXFLAGS="-Werror"
+  - if [ "$BUILD_ARCH" == "x86" ]; then
+        CFLAGS="$CFLAGS -m32";
+        CXXFLAGS="$CXXFLAGS -m32";
+    fi
+
+script:
+  - make CFLAGS="$CFLAGS" CXXFLAGS="$CXXFLAGS"
