@@ -1,0 +1,38 @@
+language: c
+
+os:
+  - linux
+
+sudo: required
+
+compiler:
+  - clang
+  - gcc
+
+env:
+  matrix:
+    - BUILD_ARCH="x86"
+    - BUILD_ARCH="x86_64"
+
+addons:
+  apt:
+    packages:
+      - clang
+      - gcc
+      - make
+
+before_install:
+  - if [ "$TRAVIS_OS_NAME" = "linux" ]; then
+      sudo apt update;
+      sudo apt install -y libc6-dev libc6-dev:i386 'libstdc++-*-dev' 'libstdc++-*-dev:i386' gcc-multilib g++-multilib;
+    fi
+  - CFLAGS="-Werror"
+  - CXXFLAGS="-Werror"
+  - if [ "$BUILD_ARCH" == "x86" ]; then
+        CFLAGS="$CFLAGS -m32";
+        CXXFLAGS="$CXXFLAGS -m32";
+        LDFLAGS="$LDFLAGS -m32";
+    fi
+
+script:
+  - make CFLAGS="$CFLAGS" CXXFLAGS="$CXXFLAGS" LDFLAGS="$LDFLAGS"
