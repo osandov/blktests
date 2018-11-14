@@ -20,10 +20,14 @@ all: $(TARGETS)
 clean:
 	rm -f $(TARGETS)
 
+install: $(TARGETS)
+	install -m755 -d $(dest)
+	install $(TARGETS) $(dest)
+
 $(C_TARGETS): %: %.c
 	$(CC) $(CPPFLAGS) $(CFLAGS) -o $@ $^
 
 $(CXX_TARGETS): %: %.cpp
 	$(CXX) $(CPPFLAGS) $(CXXFLAGS) -o $@ $^
 
-.PHONY: all clean
+.PHONY: all clean install

@@ -22,6 +22,10 @@ Some tests require the following:
 - multipath-tools (Debian, openSUSE) or device-mapper-multipath (Fedora)
 - dmsetup (Debian) or device-mapper (Fedora, openSUSE, Arch Linux)
 
+Build blktests with `make`. Optionally, install it to a known location with
+`make install` (`/usr/local/blktests` by default, but this can be changed by
+passing `DESTDIR` and/or `prefix`).
+
 Add the list of block devices you want to test on in a file named `config`:
 
 ```sh

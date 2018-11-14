@@ -1,8 +1,17 @@
+prefix ?= /usr/local
+dest = $(DESTDIR)$(prefix)/blktests
+
 all:
 	$(MAKE) -C src all
 
 clean:
 	$(MAKE) -C src clean
+
+install:
+	install -m755 -d $(dest)
+	install check $(dest)
+	cp -R tests common $(dest)
+	$(MAKE) -C src dest=$(dest)/src install
 
 # SC2119: "Use foo "$@" if function's $1 should mean script's $1". False
 # positives on helpers like _init_scsi_debug.
@@ -13,4 +22,4 @@ check:
 		tests/*/rc tests/*/[0-9]*[0-9]
 	! grep TODO tests/*/rc tests/*/[0-9]*[0-9]
 
-.PHONY: all check
+.PHONY: all check install
