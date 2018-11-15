@@ -1,0 +1,34 @@
+#!/bin/bash
+# SPDX-License-Identifier: GPL-3.0+
+# Copyright (C) 2018 Ming Lei <ming.lei@redhat.com>
+#
+# Test two corner cases of BLKDISCARD. Regression test for commits 1adfc5e4136f
+# ("block: make sure discard bio is aligned with logical block size") and
+# 4800bf7bc8c72 ("block: fix 32 bit overflow in __blkdev_issue_discard()").
+
+. tests/block/rc
+. common/scsi_debug
+
+DESCRIPTION="do a huge discard with 4k sector size"
+
+requires() {
+	_have_scsi_debug
+}
+
+test() {
+	echo "Running ${TEST_NAME}"
+
+	rm -f "$FULL"
+
+	# Create a virtual device with unmap_zeroes_data support.
+	if ! _init_scsi_debug virtual_gb=2049 sector_size=4096 lbpws10=1 dev_size_mb=512; then
+		return 1
+	fi
+
+	local dev="/dev/${SCSI_DEBUG_DEVICES[0]}"
+	blkdiscard "$dev"
+
+	_exit_scsi_debug
+
+	echo "Test complete"
+}
