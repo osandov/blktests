@@ -411,7 +411,7 @@ stop_rdma_rxe() {
 				fi
 			done
 	)
-	if ! unload_module rdma_rxe; then
+	if ! unload_module rdma_rxe 10; then
 		echo "Unloading rdma_rxe failed"
 		return 1
 	fi
