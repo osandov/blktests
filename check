@@ -294,6 +294,8 @@ _cleanup() {
 		done
 		unset RESTORE_CPUS_ONLINE
 	fi
+
+	_exit_cgroup2
 }
 
 _call_test() {

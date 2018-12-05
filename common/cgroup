@@ -1,0 +1,63 @@
+#!/bin/bash
+# SPDX-License-Identifier: GPL-3.0+
+#
+# cgroup helper functions.
+
+. common/shellcheck
+
+_cgroup2_base_dir()
+{
+	findmnt -ft cgroup2 -no TARGET
+}
+
+_init_cgroup2()
+{
+	CGROUP2_DIR="$(_cgroup2_base_dir)/blktests"
+	if ! mkdir "$CGROUP2_DIR"; then
+		unset CGROUP2_DIR
+		return 1
+	fi
+	return 0
+}
+
+_exit_cgroup2()
+{
+	if [[ -n $CGROUP2_DIR ]]; then
+		find "$CGROUP2_DIR" -type d -delete
+		unset CGROUP2_DIR
+	fi
+}
+
+_have_cgroup2()
+{
+	if [[ -z $(_cgroup2_base_dir) ]]; then
+		SKIP_REASON="cgroup2 is not mounted"
+		return 1
+	fi
+	return 0
+}
+
+_have_cgroup2_controller_file()
+{
+	_have_cgroup2 || return 1
+
+	local controller="$1"
+	local file="$2"
+	local dir
+
+	dir="$(_cgroup2_base_dir)"
+	if ! grep -q "$controller" "$dir/cgroup.controllers"; then
+		SKIP_REASON="no support for $controller cgroup controller; if it is enabled, you may need to boot with cgroup_no_v1=$controller"
+		return 1
+	fi
+
+	mkdir "$dir/blktests"
+	echo "+$controller" > "$dir/cgroup.subtree_control"
+	if [[ ! -f $dir/blktests/$file ]]; then
+		rmdir "$dir/blktests"
+		SKIP_REASON="cgroup file $file doesn't exist"
+		return 1
+	fi
+	rmdir "$dir/blktests"
+	return 0
+}
