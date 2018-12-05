@@ -1,0 +1,138 @@
+#!/bin/bash
+# SPDX-License-Identifier: GPL-3.0+
+#
+# Test io.latency to make sure it's protecting the higher priority group
+# properly.
+
+. tests/block/rc
+. common/cgroup
+
+DESCRIPTION="run a \"protected\" and \"background\" workload together with io.latency"
+
+requires() {
+	_have_cgroup2_controller_file io io.latency && _have_fio && \
+		_have_program jq
+}
+
+fio_results_key() {
+	local job=$1
+	local key=$2
+	local resultfile=$3
+
+	jq '.jobs[] | select(.jobname == "'"$job"'") | .'"$key" "$resultfile"
+}
+
+test_device() {
+	echo "Running ${TEST_NAME}"
+
+	local fio_config_single fio_config_double fio_results fio_args qd
+
+	_init_cgroup2
+
+	fio_config_single="$TMPDIR/single.fio"
+	fio_config_double="$TMPDIR/double.fio"
+	fio_results="$TMPDIR/results.json"
+	fio_args=("--output-format=json" "--output=$fio_results")
+	qd=$(cat "$TEST_DEV_SYSFS/queue/nr_requests")
+
+	cat << EOF > "$fio_config_single"
+	[fast]
+	filename=$TEST_DEV
+	direct=1
+	allrandrepeat=1
+	readwrite=randrw
+	size=4G
+	ioengine=libaio
+	iodepth=$qd
+	fallocate=none
+	randseed=12345
+EOF
+
+	cat << EOF > "$fio_config_double"
+	[global]
+	filename=$TEST_DEV
+	direct=1
+	allrandrepeat=1
+	readwrite=randrw
+	size=4G
+	ioengine=libaio
+	iodepth=$qd
+	fallocate=none
+	randseed=12345
+
+	[fast]
+	cgroup=blktests/fast
+
+	[slow]
+	cgroup=blktests/slow
+EOF
+	# We run the test once so we have an idea of how fast this workload will
+	# go with nobody else doing IO on the device.
+	if ! fio "${fio_args[@]}" "$fio_config_single"; then
+		echo "fio exited with status $?"
+		return 1
+	fi
+
+	local time_taken
+	time_taken=$(fio_results_key fast job_runtime "$fio_results")
+	if [ "$time_taken" = "" ]; then
+		echo "fio doesn't report job_runtime"
+		return 1
+	fi
+
+	echo "normal time taken $time_taken" >> "$FULL"
+
+	# There's no way to predict how the two workloads are going to affect
+	# each other, so we weant to set thresholds to something reasonable so
+	# we can verify io.latency is doing something.  This means we set 15%
+	# for the fast cgroup, just to give us enough wiggle room as throttling
+	# doesn't happen immediately.  But if we have a super fast disk we could
+	# run both groups really fast and make it under our fast threshold, so
+	# we need to set a threshold for the slow group at 50%.  We assume that
+	# if it was faster than 50% of the fast threshold then we probably
+	# didn't throttle and we can assume io.latency is broken.
+	local fast_thresh=$((time_taken + time_taken * 15 / 100))
+	local slow_thresh=$((time_taken + time_taken * 50 / 100))
+	echo "fast threshold time is $fast_thresh" >> "$FULL"
+	echo "slow threshold time is $slow_thresh" >> "$FULL"
+
+	# Create the cgroup files
+	echo "+io" > "$CGROUP2_DIR/cgroup.subtree_control"
+	mkdir "$CGROUP2_DIR/fast"
+	mkdir "$CGROUP2_DIR/slow"
+
+	# We set the target to 1usec because we could have a fast device that is
+	# capable of remarkable IO latencies that would skew the test.  It needs
+	# to be low enough that we do actually throttle the slow group,
+	# otherwise the test will fail when there's nothing wrong.
+	local major=$((0x$(stat -c "%t" "$TEST_DEV")))
+	local minor=$((0x$(stat -c "%T" "$TEST_DEV")))
+	echo "${major}:${minor} is our device" >> "$FULL"
+	if ! echo "${major}:${minor} target=1" > "$CGROUP2_DIR/fast/io.latency"; then
+		echo "Failed to set our latency target"
+		return 1
+	fi
+
+	if ! fio "${fio_args[@]}" "$fio_config_double"; then
+		echo "fio exited with status $?"
+		return 1
+	fi
+
+	local fast_time slow_time
+	fast_time=$(fio_results_key fast job_runtime "$fio_results")
+	echo "Fast time $fast_time" >> "$FULL"
+	slow_time=$(fio_results_key slow job_runtime "$fio_results")
+	echo "Slow time $slow_time" >> "$FULL"
+
+	if [[ $fast_thresh < $fast_time ]]; then
+		echo "Too much of a performance drop for the protected workload"
+		return 1
+	fi
+
+	if [[ $slow_thresh > $slow_time ]]; then
+		echo "The slow group does not appear to have been throttled"
+		return 1
+	fi
+
+	echo "Test complete"
+}
