@@ -9,6 +9,7 @@ shopt -s extglob
 . common/shellcheck
 # Include fio helpers by default.
 . common/fio
+. common/cgroup
 
 # If a test runs multiple "subtests", then each subtest should typically run
 # for TIMEOUT / number of subtests.
