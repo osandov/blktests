@@ -38,22 +38,23 @@ group_requires() {
 		dm_multipath
 		dm_queue_length
 		dm_service_time
+		ib_ipoib
 		ib_srp
 		ib_srpt
-		sd_mod
-		null_blk
-		sd_mod
-		sg
-		rdma_cm
-		ib_ipoib
 		ib_umad
+		ib_uverbs
+		null_blk
+		rdma_cm
 		rdma_rxe
 		scsi_debug
 		scsi_dh_alua
 		scsi_dh_emc
 		scsi_dh_rdac
-		target_core_mod
+		sd_mod
+		sd_mod
+		sg
 		target_core_iblock
+		target_core_mod
 	)
 	for m in "${required_modules[@]}"; do
 		_have_module "$m" || return $?
