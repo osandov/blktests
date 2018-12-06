@@ -15,7 +15,7 @@ group_device_requires() {
 }
 
 _have_scsi_generic() {
-	_have_module sg
+	_have_modules sg
 }
 
 _test_dev_is_scsi() {

@@ -5,7 +5,7 @@
 # null_blk helper functions.
 
 _have_null_blk() {
-	_have_module null_blk
+	_have_modules null_blk
 }
 
 _init_null_blk() {

@@ -27,12 +27,23 @@ _have_root() {
 	return 0
 }
 
-_have_module() {
-	if modprobe -n -q "$1"; then
-		return 0
+_have_modules() {
+	local missing=()
+	local module
+
+	for module in "$@"; do
+		if ! modprobe -n -q "$1"; then
+			missing+=("$module")
+		fi
+	done
+	if [[ ${#missing} -gt 1 ]]; then
+		SKIP_REASON="the following modules are not available: ${missing[*]}"
+		return 1
+	elif [[ ${#missing} -eq 1 ]]; then
+		SKIP_REASON="${missing[0]} module is not available"
+		return 1
 	fi
-	SKIP_REASON="$1 module is not available"
-	return 1
+	return 0
 }
 
 _have_module_param() {
@@ -60,7 +71,7 @@ _have_src_program() {
 }
 
 _have_loop() {
-	_have_module loop && _have_program losetup
+	_have_modules loop && _have_program losetup
 }
 
 _have_blktrace() {

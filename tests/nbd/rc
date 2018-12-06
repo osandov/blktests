@@ -11,7 +11,7 @@ group_requires() {
 }
 
 _have_nbd() {
-	if ! _have_module nbd; then
+	if ! _have_modules nbd; then
 		return 1
 	fi
 	if ! _have_program nbd-server; then

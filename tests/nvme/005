@@ -11,9 +11,8 @@ DESCRIPTION="reset local loopback target"
 QUICK=1
 
 requires() {
-	_have_module nvme-loop && _have_module nvmet && _have_module loop && \
-		_have_configfs && _have_module nvme-core && \
-		_have_module_param nvme-core multipath
+	_have_modules loop nvme-core nvme-loop nvmet && \
+		_have_module_param nvme-core multipath && _have_configfs
 }
 
 test() {

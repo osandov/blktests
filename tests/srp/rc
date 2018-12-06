@@ -56,9 +56,7 @@ group_requires() {
 		target_core_iblock
 		target_core_mod
 	)
-	for m in "${required_modules[@]}"; do
-		_have_module "$m" || return $?
-	done
+	_have_modules "${required_modules[@]}" || return 1
 
 	for p in mkfs.ext4 mkfs.xfs multipath multipathd pidof sg_reset; do
 		_have_program "$p" || return $?

@@ -11,8 +11,7 @@ TIMED=1
 
 requires() {
 	_have_program nvme && _have_program mkfs.xfs && _have_program fio && \
-		_have_module loop && _have_module nvmet && \
-		_have_module nvme-loop && _have_configfs
+		_have_modules loop nvme-loop nvmet && _have_configfs
 }
 
 test() {

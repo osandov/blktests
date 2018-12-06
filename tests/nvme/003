@@ -11,8 +11,7 @@ DESCRIPTION="test if we're sending keep-alives to a discovery controller"
 QUICK=1
 
 requires() {
-	_have_program nvme && _have_module nvme-loop && _have_module loop \
-		&& _have_configfs
+	_have_program nvme && _have_modules loop nvme-loop && _have_configfs
 }
 
 test() {
