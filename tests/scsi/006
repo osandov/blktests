@@ -27,13 +27,31 @@ test_device() {
 	)
 	local cache_type
 	local original_cache_type
+	local not_supported
+	local new_cache_type
 
 	original_cache_type="$(cat "${TEST_DEV_SYSFS}"/device/scsi_disk/*/cache_type)"
 	for cache_type in "${cache_types[@]}"; do
-		echo "$cache_type" > "${TEST_DEV_SYSFS}"/device/scsi_disk/*/cache_type
-		cat "${TEST_DEV_SYSFS}"/device/scsi_disk/*/cache_type
+		(
+			echo "$cache_type" > "${TEST_DEV_SYSFS}"/device/scsi_disk/*/cache_type
+		) |& awk 'inval=/Invalid argument$/ { ret=1 } !inval { print $0 } END { exit ret }'
+		not_supported=$?
+
+		if [ $not_supported -eq 0 ]; then
+			new_cache_type="$(cat "${TEST_DEV_SYSFS}"/device/scsi_disk/*/cache_type)"
+			if [ "${new_cache_type}" = "${cache_type}" ]; then
+				echo "${cache_type}: success or not supported"
+			else
+				echo "${cache_type}: change failed"
+			fi
+		else
+			echo "${cache_type}: success or not supported"
+		fi
 	done
-	echo "$original_cache_type" > "${TEST_DEV_SYSFS}"/device/scsi_disk/*/cache_type
+
+	(
+		echo "$original_cache_type" > "${TEST_DEV_SYSFS}"/device/scsi_disk/*/cache_type
+	) |& grep -v "Invalid argument$"
 
 	echo "Test complete"
 }
