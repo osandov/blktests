@@ -4,6 +4,8 @@
 #
 # Functions and global variables used by both the srp and nvmeof-mp tests.
 
+. common/shellcheck
+
 debug=
 filesystem_type=ext4
 fio_aux_path=/tmp/fio-state-files
@@ -13,6 +15,13 @@ ramdisk_size=$((memtotal*(1024/16)))  # in bytes
 if [ $ramdisk_size -gt $max_ramdisk_size ]; then
 	ramdisk_size=$max_ramdisk_size
 fi
+
+_have_legacy_dm() {
+	if ! _have_kernel_option DM_MQ_DEFAULT; then
+		SKIP_REASON="legacy device mapper support is missing"
+		return 1
+	fi
+}
 
 get_ipv4_addr() {
 	ip -4 -o addr show dev "$1" |
@@ -402,7 +411,7 @@ stop_rdma_rxe() {
 				fi
 			done
 	)
-	if ! unload_module rdma_rxe; then
+	if ! unload_module rdma_rxe 10; then
 		echo "Unloading rdma_rxe failed"
 		return 1
 	fi
