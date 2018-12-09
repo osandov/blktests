@@ -41,6 +41,13 @@ test_device() {
 		fi
 	done
 
+	# Ensure that fio has started doing actual IO.
+	while kill -0 $! 2> /dev/null; do
+		_is_fio_running "$TEST_DEV" && break
+		sleep .2
+	done
+	kill -0 $! 2> /dev/null || echo "failure: fio terminated unexpectedly"
+
 	# while job is running, hotplug CPUs
 	while sleep .2; kill -0 $! 2> /dev/null; do
 		if (( offlining && ${#offline_cpus[@]} == max_offline )); then

@@ -213,3 +213,11 @@ _test_dev_in_hotplug_slot() {
 _filter_xfs_io_error() {
 	sed -e 's/^\(.*\)64\(: .*$\)/\1\2/'
 }
+
+# Find process IDs of all processes that have opened block device $1.
+_get_bdev_users() {
+	lsof -F p "$1" 2>/dev/null | while read -r line; do
+		p="${line#p}"
+		[ "$p" != "$line" ] && echo "$p"
+	done
+}
