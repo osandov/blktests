@@ -1,0 +1,94 @@
+#!/bin/bash
+# SPDX-License-Identifier: GPL-3.0+
+# Copyright (C) 2018 Josef Bacik
+#
+# A basic test to exercise wbt and verify it's working.
+
+. tests/block/rc
+
+DESCRIPTION="run a read workload and write workload together with wbt"
+
+requires() {
+	_have_fio && _have_program jq
+}
+
+device_requires() {
+	_test_dev_supports_wbt
+}
+
+test_device() {
+	echo "Running ${TEST_NAME}"
+
+	fio_config="$TMPDIR/test.fio"
+	fio_results="$TMPDIR/results.json"
+	fio_args=("--output-format=json" "--output=$fio_results")
+
+	cat << EOF > "$fio_config"
+	[global]
+	group_reporting
+	numjobs=8
+	filename=$TEST_DEV
+	randseed=12345
+	runtime=30
+	ioengine=psync
+
+	[reads]
+	new_group
+	readwrite=randread
+
+	[writes]
+	new_group
+	readwrite=randwrite
+EOF
+
+	local wbt_setting
+	wbt_setting=$(_test_dev_queue_get wbt_lat_usec)
+
+	_test_dev_queue_set wbt_lat_usec 0
+
+	# Run just the reads to get a baseline read latency for this workload
+	if ! fio "${fio_args[@]}" "$fio_config"; then
+		echo "fio exited with status $?"
+		return 1
+	fi
+
+	local avg_lat
+	avg_lat=$(_fio_results_key reads read.lat_ns.mean "$fio_results")
+	avg_lat=$(echo "$avg_lat" | cut -d . -f 1)
+
+	echo "avg latency $avg_lat" >> "$FULL"
+
+	# WBT isn't immediate, it requires missing latency targets before it
+	# starts to clamp down on writes, so give ourselves a little wiggle room
+	# to make sure our read latencies are still protected.
+	local thresh=$((avg_lat - avg_lat * 15 / 100))
+
+	echo "threshold is $thresh" >> "$FULL"
+
+	# Fast enough disk means we may not throttle writes, so set the
+	# threshold to something stupid low so we can verify wbt is doing
+	# something.  Otherwise the defaults will be fine for spinning rust.
+	if [[ $(_test_dev_queue_get rotational) -eq "0" ]]; then
+		_test_dev_queue_set wbt_lat_usec 1
+	else
+		_test_dev_queue_set wbt_lat_usec "$wbt_setting"
+	fi
+
+	if ! fio "${fio_args[@]}" "$fio_config"; then
+		echo "fio exited with status $?"
+		return 1
+	fi
+	_test_dev_queue_set wbt_lat_usec "$wbt_setting"
+
+	avg_lat=$(_fio_results_key reads read.lat_ns.mean "$fio_results")
+	avg_lat=$(echo "$avg_lat" | cut -d . -f 1)
+	echo "avg latency contended is $avg_lat" >> "$FULL"
+
+	# Verify we are at least somewhat protected now
+	if [[ $avg_lat -gt $thresh ]]; then
+		echo "Read latency too high, wbt not working?"
+		return 1
+	fi
+
+	echo "Test complete"
+}

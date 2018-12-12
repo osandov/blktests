@@ -14,21 +14,13 @@ requires() {
 		_have_program jq
 }
 
-fio_results_key() {
-	local job=$1
-	local key=$2
-	local resultfile=$3
-
-	jq '.jobs[] | select(.jobname == "'"$job"'") | .'"$key" "$resultfile"
-}
-
 sum_read_write_bytes() {
 	local job=$1
 	local resultfile=$2
 	local readbytes writebytes
 
-	readbytes=$(fio_results_key "$job" read.io_bytes "$resultfile")
-	writebytes=$(fio_results_key "$job" write.io_bytes "$resultfile")
+	readbytes=$(_fio_results_key "$job" read.io_bytes "$resultfile")
+	writebytes=$(_fio_results_key "$job" write.io_bytes "$resultfile")
 	echo $((readbytes + writebytes))
 }
 

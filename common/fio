@@ -192,3 +192,11 @@ _fio_perf_report() {
 		TEST_RUN["$FIO_PERF_PREFIX$name"]="$value"
 	done
 }
+
+_fio_results_key() {
+	local job=$1
+	local key=$2
+	local resultfile=$3
+
+	jq '.jobs[] | select(.jobname == "'"$job"'") | .'"$key" "$resultfile"
+}
