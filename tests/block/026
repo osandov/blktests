@@ -22,6 +22,16 @@ fio_results_key() {
 	jq '.jobs[] | select(.jobname == "'"$job"'") | .'"$key" "$resultfile"
 }
 
+sum_read_write_bytes() {
+	local job=$1
+	local resultfile=$2
+	local readbytes writebytes
+
+	readbytes=$(fio_results_key "$job" read.io_bytes "$resultfile")
+	writebytes=$(fio_results_key "$job" write.io_bytes "$resultfile")
+	echo $((readbytes + writebytes))
+}
+
 test_device() {
 	echo "Running ${TEST_NAME}"
 
@@ -41,10 +51,9 @@ test_device() {
 	direct=1
 	allrandrepeat=1
 	readwrite=randrw
-	size=4G
+	runtime=60
 	ioengine=libaio
 	iodepth=$qd
-	fallocate=none
 	randseed=12345
 EOF
 
@@ -54,10 +63,9 @@ EOF
 	direct=1
 	allrandrepeat=1
 	readwrite=randrw
-	size=4G
+	runtime=60
 	ioengine=libaio
 	iodepth=$qd
-	fallocate=none
 	randseed=12345
 
 	[fast]
@@ -73,28 +81,19 @@ EOF
 		return 1
 	fi
 
-	local time_taken
-	time_taken=$(fio_results_key fast job_runtime "$fio_results")
-	if [ "$time_taken" = "" ]; then
-		echo "fio doesn't report job_runtime"
-		return 1
-	fi
+	local total_io
+	total_io=$(sum_read_write_bytes fast "$fio_results")
 
-	echo "normal time taken $time_taken" >> "$FULL"
+	echo "normal io done $total_io" >> "$FULL"
 
 	# There's no way to predict how the two workloads are going to affect
-	# each other, so we weant to set thresholds to something reasonable so
-	# we can verify io.latency is doing something.  This means we set 15%
-	# for the fast cgroup, just to give us enough wiggle room as throttling
-	# doesn't happen immediately.  But if we have a super fast disk we could
-	# run both groups really fast and make it under our fast threshold, so
-	# we need to set a threshold for the slow group at 50%.  We assume that
-	# if it was faster than 50% of the fast threshold then we probably
-	# didn't throttle and we can assume io.latency is broken.
-	local fast_thresh=$((time_taken + time_taken * 15 / 100))
-	local slow_thresh=$((time_taken + time_taken * 50 / 100))
-	echo "fast threshold time is $fast_thresh" >> "$FULL"
-	echo "slow threshold time is $slow_thresh" >> "$FULL"
+	# each other, so we want to set thresholds to something reasonable so we
+	# can verify io.latency is doing something.  Since throttling doesn't
+	# kick in immediately we'll assume that being able to do at least 85% of
+	# our normal IO in the same time that we are properly protected.
+	local thresh=$((total_io - total_io * 15 / 100))
+
+	echo "threshold is $thresh" >> "$FULL"
 
 	# Create the cgroup files
 	echo "+io" > "$CGROUP2_DIR/cgroup.subtree_control"
@@ -118,18 +117,36 @@ EOF
 		return 1
 	fi
 
-	local fast_time slow_time
-	fast_time=$(fio_results_key fast job_runtime "$fio_results")
-	echo "Fast time $fast_time" >> "$FULL"
-	slow_time=$(fio_results_key slow job_runtime "$fio_results")
-	echo "Slow time $slow_time" >> "$FULL"
+	local fast_io slow_io
+	fast_io=$(sum_read_write_bytes fast "$fio_results")
+	echo "Fast io $fast_io" >> "$FULL"
+	slow_io=$(sum_read_write_bytes slow "$fio_results")
+	echo "Slow io $slow_io" >> "$FULL"
 
-	if [[ $fast_thresh < $fast_time ]]; then
+	# First make sure we did at least 85% of our uncontested IO
+	if [[ $thresh -gt $fast_io ]]; then
 		echo "Too much of a performance drop for the protected workload"
 		return 1
 	fi
 
-	if [[ $slow_thresh > $slow_time ]]; then
+	# Now make sure we didn't do more IO in our slow group than we did in
+	# our fast group.
+	if [[ $fast_io -lt $slow_io ]]; then
+		echo "The slow group does not appear to have been throttled"
+		return 1
+	fi
+
+	# Now caculate the percent difference between the slow io and fast io.
+	# If io.latency isn't doing anything then these two groups would compete
+	# essentially fairly, so they would be within a few single percentage
+	# points of each other.  So assume anything less than a 15% difference
+	# means we didn't throttle the slow group properly.
+	local pct_diff
+	pct_diff=$(((fast_io - slow_io) * 100 / ((fast_io + slow_io) / 2)))
+
+	echo "Percent difference is $pct_diff" >> "$FULL"
+
+	if [[ $pct_diff -lt "15" ]]; then
 		echo "The slow group does not appear to have been throttled"
 		return 1
 	fi
