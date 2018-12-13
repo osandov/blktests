@@ -598,13 +598,17 @@ setup_rdma() {
 }
 
 # Undo setup()
-teardown() {
+teardown_uncond() {
 	shutdown_client
 	killall -9 multipathd >&/dev/null
 	rm -f /etc/multipath.conf
 	stop_target
 	stop_rdma_rxe
 	unload_null_blk
+}
+
+teardown() {
+	[ -z "$debug" ] && teardown_uncond
 }
 
 # Set up test configuration with "$1" as multipath configuration file.
@@ -618,7 +622,7 @@ setup_test() {
 		return 1
 	fi
 
-	if ! teardown; then
+	if ! teardown_uncond; then
 		echo "teardown() failed"
 		return 1
 	fi
