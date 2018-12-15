@@ -43,7 +43,7 @@ _have_nbd_netlink() {
 
 _wait_for_nbd_connect() {
 	for ((i = 0; i < 3; i++)); do
-		if [[ -e /sys/kernel/debug/nbd/nbd0/tasks ]]; then
+		if [ -e /sys/kernel/debug/nbd/nbd0/tasks ]; then
 			return 0
 		fi
 		sleep 1
@@ -53,7 +53,7 @@ _wait_for_nbd_connect() {
 
 _wait_for_nbd_disconnect() {
 	for ((i = 0; i < 3; i++)); do
-		if [[ ! -e /sys/kernel/debug/nbd/nbd0/tasks ]]; then
+		if [ ! -e /sys/kernel/debug/nbd/nbd0/tasks ]; then
 			return 0
 		fi
 		sleep 1

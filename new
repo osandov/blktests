@@ -11,26 +11,28 @@ _error() {
 }
 
 prompt_yes_no() {
-	if [[ $2 =~ ^[Yy] ]]; then
-		local default=0
-		local prompt="$1 [Y/n] "
-	else
-		local default=1
-		local prompt="$1 [y/N] "
-	fi
+	local default
+	local prompt
+
+	case "$2" in
+		Y*|y*)
+			default=0
+			prompt="$1 [Y/n] ";;
+		*)
+			default=1
+			prompt="$1 [y/N] ";;
+	esac
 
 	local yn
 	read -r -n 1 -p "${prompt}" yn
-	if [[ -n "${yn}" ]]; then
+	if [ -n "${yn}" ]; then
 		echo
 	fi
-	if [[ "${yn}" =~ ^[Yy] ]]; then
-		return 0
-	elif [[ "${yn}" =~ ^[Nn] ]]; then
-		return 1
-	else
-		return $default
-	fi
+	case "${yn}" in
+		Y|y) return 0;;
+		N|n) return 1;;
+		*) return $default;;
+	esac
 }
 
 echo "Available test groups:"
@@ -38,15 +40,15 @@ find tests -mindepth 1 -maxdepth 1 -type d -not -name meta -printf '    %P\n' | 
 
 read -r -p "Category for new test (pick one of the above or create a new one): " group
 
-if [[ -z $group ]]; then
+if [ -z "$group" ]; then
 	exit 1
 fi
 
-if [[ $group =~ [[:space:]/] ]]; then
+if echo "$group" | grep -q '[[:space:]/]'; then
 	_error 'group name must not contain whitespace or "/"'
 fi
 
-if [[ ! -e tests/${group} ]]; then
+if [ ! -e "tests/${group}" ]; then
 	if ! prompt_yes_no "Category does not exist; create it?"; then
 		exit 1
 	fi
@@ -98,7 +100,7 @@ fi
 for ((i = 1; ; i++)); do
 	seq="$(printf "%03d" $i)"
 	test_name="${group}/${seq}"
-	if [[ ! -e tests/${test_name} ]]; then
+	if [ ! -e "tests/${test_name}" ]; then
 		break
 	fi
 done
@@ -221,9 +223,8 @@ test() {
 # - Functions defined by the testing framework or group scripts, including
 #   helpers, have a leading underscore. E.g., _have_scsi_debug. Functions local
 #   to the test should not have a leading underscore.
-# - Use the bash [[ ]] form of tests instead of [ ].
-# - Always quote variable expansions unless the variable is a number or inside of
-#   a [[ ]] test.
+# - Use the bash [ ] form of tests instead of [[ ]].
+# - Always quote variable expansions unless the variable is a number.
 # - Use the \$() form of command substitution instead of backticks.
 # - Use bash for loops instead of seq. E.g., for ((i = 0; i < 10; i++)), not
 #   for i in \$(seq 0 9).

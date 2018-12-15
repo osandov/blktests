@@ -20,7 +20,7 @@ _init_scsi_debug() {
 	SCSI_DEBUG_TARGETS=()
 	SCSI_DEBUG_DEVICES=()
 	for host_sysfs in /sys/class/scsi_host/*; do
-		if [[ "$(cat "${host_sysfs}/proc_name")" = scsi_debug ]]; then
+		if [ "$(cat "${host_sysfs}/proc_name")" = scsi_debug ]; then
 			host="${host_sysfs#/sys/class/scsi_host/host}"
 			SCSI_DEBUG_HOSTS+=("$host")
 			for target_sysfs in /sys/class/scsi_device/"$host":*; do
@@ -31,13 +31,13 @@ _init_scsi_debug() {
 		fi
 	done
 
-	if [[ ${#SCSI_DEBUG_HOSTS[@]} -eq 0 ]]; then
+	if [ ${#SCSI_DEBUG_HOSTS[@]} -eq 0 ]; then
 		echo "Could not find scsi_debug hosts" >&2
 		_exit_scsi_debug
 		return 1
 	fi
 
-	if [[ ${#SCSI_DEBUG_TARGETS[@]} -eq 0 ]]; then
+	if [ ${#SCSI_DEBUG_TARGETS[@]} -eq 0 ]; then
 		echo "Could not find scsi_debug targets" >&2
 		_exit_scsi_debug
 		return 1

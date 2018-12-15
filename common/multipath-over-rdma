@@ -352,7 +352,7 @@ get_bdev_n() {
 # Full path of mountpoint $1. fio will be run on top of the filesystem mounted
 # at the returned mountpoint.
 function mountpoint() {
-	if [ -z "$TMPDIR" ]; then
+	if [ -z "${TMPDIR:-}" ]; then
 		echo "Error: \$TMPDIR has not been set." 1>&2
 		exit 1
 	fi

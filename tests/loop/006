@@ -63,7 +63,7 @@ test() {
 
 	# Clean up devices
 	top_dev=$(losetup -j "$loop_dev" | sed -e 's/\([^:]*\): .*/\1/')
-	if [[ -n "$top_dev" ]]; then
+	if [ -n "$top_dev" ]; then
 		losetup -d "$top_dev"
 	fi
 	losetup -d "$loop_dev"

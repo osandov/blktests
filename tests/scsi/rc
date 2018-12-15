@@ -19,7 +19,7 @@ _have_scsi_generic() {
 }
 
 _test_dev_is_scsi() {
-	if [[ ! -d ${TEST_DEV_SYSFS}/device/scsi_device ]]; then
+	if [ ! -d "${TEST_DEV_SYSFS}/device/scsi_device" ]; then
 		SKIP_REASON="$TEST_DEV is not a SCSI device"
 		return 1
 	fi
@@ -27,7 +27,7 @@ _test_dev_is_scsi() {
 }
 
 _test_dev_is_scsi_disk() {
-	if [[ ! -d ${TEST_DEV_SYSFS}/device/scsi_disk ]]; then
+	if [ ! -d "${TEST_DEV_SYSFS}/device/scsi_disk" ]; then
 		SKIP_REASON="$TEST_DEV is not a SCSI disk"
 		return 1
 	fi

@@ -30,7 +30,7 @@ test_device() {
 	local offline_cpus=()
 	local offlining=1
 	local max_offline=${#HOTPLUGGABLE_CPUS[@]}
-	if [[ ${#HOTPLUGGABLE_CPUS[@]} -eq ${#ALL_CPUS[@]} ]]; then
+	if [ ${#HOTPLUGGABLE_CPUS[@]} -eq ${#ALL_CPUS[@]} ]; then
 		(( max_offline-- ))
 	fi
 	for cpu in "${HOTPLUGGABLE_CPUS[@]}"; do

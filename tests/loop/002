@@ -29,7 +29,7 @@ test() {
 
 	local sysfs="/sys/block/${loop_dev#/dev/}"
 	for blksize in "" 4096 2048 1234 1024 512; do
-		if [[ -z $blksize ]]; then
+		if [ -z $blksize ]; then
 			echo "Checking default block size"
 		else
 			echo "Setting block size to $blksize"

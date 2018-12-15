@@ -24,7 +24,7 @@ _found_test() {
 		return 1
 	fi
 
-	if [[ -z $DESCRIPTION ]]; then
+	if [ -z "${DESCRIPTION:-}" ]; then
 		_warning "${test_name} does not define DESCRIPTION"
 		return 1
 	fi
@@ -50,13 +50,13 @@ _found_test() {
 	fi
 
 	if (( ! explicit )); then
-		if [[ $DEVICE_ONLY -ne 0 ]] && ! declare -fF test_device >/dev/null; then
+		if [ "$DEVICE_ONLY" -ne 0 ] && ! declare -fF test_device >/dev/null; then
 			return
 		fi
 		if (( QUICK_RUN && !QUICK && !TIMED )); then
 			return
 		fi
-		if [[ -n ${EXCLUDE["$test_name"]} ]]; then
+		if [ -n "${EXCLUDE["$test_name"]}" ]; then
 			return
 		fi
 	fi
@@ -71,7 +71,7 @@ _found_group() {
 	local test_path
 
 	if (( ! explicit )); then
-		if [[ -n ${EXCLUDE["$group"]} ]]; then
+		if [ -n "${EXCLUDE["$group"]}" ]; then
 			return
 		fi
 	fi
@@ -82,11 +82,11 @@ _found_group() {
 }
 
 _find_tests() {
-	if [[ $# -eq 0 ]]; then
+	if [ $# -eq 0 ]; then
 		# No filters given, run all tests except for the meta group.
 		local group_path
 		while IFS= read -r -d '' group_path; do
-			if [[ $group_path != tests/meta ]]; then
+			if [ "$group_path" != tests/meta ]; then
 				_found_group "${group_path#tests/}" 0
 			fi
 		done < <(find tests -mindepth 2 -type f -name rc -printf '%h\0')
@@ -96,10 +96,14 @@ _find_tests() {
 			# A filter is bad if it:
 			#     - Is an absolute path
 			#     - Is a relative path containing ".."
-			if [[ $filter =~ ^/|(^|/)\.\.(/|$) ]]; then
-				_warning "bad filter ${filter}"
-				continue
-			fi
+			case $filter in
+				/*|../*|*/../*|*/..)
+					_warning "bad filter ${filter}"
+					continue;;
+				"")
+					_warning "bad filter ${filter}"
+					continue;;
+			esac
 			# Remove leading and internal "." components.
 			filter="${filter##+(./)}"
 			filter="${filter//\/+(.\/)/\/}"
@@ -108,9 +112,9 @@ _find_tests() {
 			# Remove leading "tests/"
 			filter="${filter#tests/}"
 
-			if [[ -d tests/$filter ]]; then
+			if [ -d "tests/$filter" ]; then
 				_found_group "$filter" 1
-			elif [[ -f tests/$filter ]]; then
+			elif [ -f "tests/$filter" ]; then
 				_found_test "$filter" 1
 			else
 				_warning "no group or test named ${filter}"
@@ -123,7 +127,7 @@ _check_dmesg() {
 	local dmesg_marker="$1"
 	local seqres="${RESULTS_DIR}/${TEST_NAME}"
 
-	if [[ $CHECK_DMESG -eq 0 ]]; then
+	if [ "$CHECK_DMESG" -eq 0 ]; then
 		return 0
 	fi
 
@@ -139,7 +143,7 @@ _check_dmesg() {
 	     -e "general protection fault:" \
 	     "${seqres}.dmesg"
 	# shellcheck disable=SC2181
-	if [[ $? -eq 0 ]]; then
+	if [ $? -eq 0 ]; then
 		return 1
 	else
 		rm -f "${seqres}.dmesg"
@@ -161,7 +165,7 @@ _read_last_test_run() {
 	LAST_TEST_RUN["exit_status"]=""
 	LAST_TEST_RUN["runtime"]=""
 
-	if [[ ! -e $seqres ]]; then
+	if [ ! -e "$seqres" ]; then
 		return
 	fi
 
@@ -183,18 +187,18 @@ _output_status() {
 	local test="$1"
 	local status="$2"
 
-	if [[ -v DESCRIPTION ]]; then
+	if [ -n "${DESCRIPTION:-}" ]; then
 		printf '%-60s' "$test ($DESCRIPTION)"
 	else
 		printf '%-60s' "$test"
 	fi
-	if [[ -z $status ]]; then
+	if [ -z "$status" ]; then
 		echo
 		return
 	fi
 
 	echo -n " ["
-	if [[ -t 1 ]]; then
+	if [ -t 1 ]; then
 		case "$status" in
 		passed)
 			tput setaf 2
@@ -208,7 +212,7 @@ _output_status() {
 		esac
 	fi
 	echo -n "$status"
-	if [[ -t 1 ]]; then
+	if [ -t 1 ]; then
 		tput sgr0
 	fi
 	echo "]"
@@ -220,7 +224,7 @@ _output_notrun() {
 }
 
 _output_last_test_run() {
-	if [[ -v TEST_DEV ]]; then
+	if [ -n "${TEST_DEV:-}" ]; then
 		_output_status "$TEST_NAME => $(basename "$TEST_DEV")" ""
 	else
 		_output_status "$TEST_NAME" ""
@@ -229,9 +233,10 @@ _output_last_test_run() {
 	(
 	local key value
 	while IFS= read -r key; do
-		if [[ $key =~ ^date|status|reason|exit_status$ ]]; then
-			continue
-		fi
+		case "$key" in
+			date|status|reason|exit_status)
+				continue;;
+		esac
 		value="${LAST_TEST_RUN["$key"]}"
 		printf '    %s\t%s\t...\n' "${key}" "${value}"
 	done < <(printf '%s\n' "${!LAST_TEST_RUN[@]}" | sort)
@@ -239,13 +244,13 @@ _output_last_test_run() {
 }
 
 _output_test_run() {
-	if [[ -t 1 ]]; then
+	if [ -t 1 ]; then
 		# -4 for date, status, reason, and exit_status, which we don't
 		# output, +1 for the test name.
 		tput cuu $((${#LAST_TEST_RUN[@]} - 3))
 	fi
 
-	if [[ -v TEST_DEV ]]; then
+	if [ -n "${TEST_DEV:-}" ]; then
 		_output_status "$TEST_NAME => $(basename "$TEST_DEV")" "${TEST_RUN["status"]}ed"
 	else
 		_output_status "$TEST_NAME" "${TEST_RUN["status"]}ed"
@@ -254,9 +259,10 @@ _output_test_run() {
 	(
 	local key last_value value
 	while IFS= read -r key; do
-		if [[ $key =~ ^date|status|reason|exit_status$ ]]; then
-			continue
-		fi
+		case "$key" in
+			date|status|reason|exit_status)
+				continue;;
+		esac
 		last_value="${LAST_TEST_RUN["$key"]}"
 		value="${TEST_RUN["$key"]}"
 		printf '    %s\t%s\t...\t%s\n' "$key" "$last_value" "$value"
@@ -265,7 +271,8 @@ _output_test_run() {
 	while IFS= read -r key; do
 		# [[ -v array[key] ]] was added in Bash 4.3. Do it this ugly
 		# way to support older versions.
-		if [[ -n ${LAST_TEST_RUN["$key"]} || ${LAST_TEST_RUN["$key"]-unset} != unset ]]; then
+		if [ -n "${LAST_TEST_RUN["$key"]}" ] ||
+			   [ "${LAST_TEST_RUN["$key"]-unset}" != unset ]; then
 			continue
 		fi
 		value="${TEST_RUN["$key"]}"
@@ -275,7 +282,7 @@ _output_test_run() {
 }
 
 _cleanup() {
-	if [[ -v TMPDIR ]]; then
+	if [ -n "${TMPDIR:-}" ]; then
 		rm -rf "$TMPDIR"
 		unset TMPDIR
 	fi
@@ -287,7 +294,7 @@ _cleanup() {
 		unset TEST_DEV_QUEUE_SAVED["$key"]
 	done
 
-	if [[ -v RESTORE_CPUS_ONLINE ]]; then
+	if [ -n "${RESTORE_CPUS_ONLINE:-}" ]; then
 		local cpu
 		for cpu in "${!CPUS_ONLINE_SAVED[@]}"; do
 			echo "${CPUS_ONLINE_SAVED["$cpu"]}" >"/sys/devices/system/cpu/cpu$cpu/online"
@@ -312,7 +319,7 @@ _call_test() {
 	# Remove leftovers from last time.
 	rm -f "${seqres}" "${seqres}."*
 
-	if [[ -w /dev/kmsg ]]; then
+	if [ -w /dev/kmsg ]; then
 		local dmesg_marker="run blktests $TEST_NAME at ${TEST_RUN["date"]}"
 		echo "$dmesg_marker" >> /dev/kmsg
 	else
@@ -340,7 +347,7 @@ _call_test() {
 		mv "${seqres}.out" "${seqres}.out.bad"
 		TEST_RUN["status"]=fail
 		TEST_RUN["reason"]=output
-	elif [[ ${TEST_RUN["exit_status"]} -ne 0 ]]; then
+	elif [ ${TEST_RUN["exit_status"]} -ne 0 ]; then
 		TEST_RUN["status"]=fail
 		TEST_RUN["reason"]="exit"
 	elif ! _check_dmesg "$dmesg_marker"; then
@@ -354,7 +361,7 @@ _call_test() {
 	_write_test_run
 	_output_test_run
 
-	if [[ ${TEST_RUN["status"]} = pass ]]; then
+	if [ ${TEST_RUN["status"]} = pass ]; then
 		return 0
 	else
 		case "${TEST_RUN["reason"]}" in
@@ -406,7 +413,7 @@ _run_test() {
 		RESULTS_DIR="$OUTPUT/nodev"
 		_call_test test
 	else
-		if [[ ${#TEST_DEVS[@]} -eq 0 ]]; then
+		if [ ${#TEST_DEVS[@]} -eq 0 ]; then
 			return 0
 		fi
 
@@ -476,12 +483,13 @@ _find_sysfs_dir() {
 
 	local block_dir part_dir
 	for block_dir in /sys/block/*; do
-		if [[ $(cat "${block_dir}/dev") = "$dev" ]]; then
+		if [ "$(cat "${block_dir}/dev")" = "$dev" ]; then
 			echo "$block_dir"
 			return
 		fi
 		for part_dir in "$block_dir"/*; do
-			if [[ -r ${part_dir}/dev && $(cat "${part_dir}/dev") = "$dev" ]]; then
+			if [ -r "${part_dir}/dev" ] &&
+				   [ "$(cat "${part_dir}/dev")" = "$dev" ]; then
 				echo "$block_dir"
 				return
 			fi
@@ -498,9 +506,9 @@ _check() {
 
 	local test_dev
 	for test_dev in "${TEST_DEVS[@]}"; do
-		if [[ ! -e $test_dev ]]; then
+		if [ ! -e "$test_dev" ]; then
 			_error "${test_dev} does not exist"
-		elif [[ ! -b $test_dev ]]; then
+		elif [ ! -b "$test_dev" ]; then
 			_error "${test_dev} is not a block device"
 		fi
 
@@ -516,9 +524,9 @@ _check() {
 	local ret=0
 	while IFS= read -r -d '' test_name; do
 		group="${test_name%/*}"
-		if [[ $group != "$prev_group" ]]; then
+		if [ "$group" != "$prev_group" ]; then
 			prev_group="$group"
-			if [[ ${#tests[@]} -gt 0 ]]; then
+			if [ ${#tests[@]} -gt 0 ]; then
 				if ! ( _run_group "${tests[@]}" ); then
 					ret=1
 				fi
@@ -528,7 +536,7 @@ _check() {
 		tests+=("$test_name")
 	done < <(_find_tests "$@" | sort -zu)
 
-	if [[ ${#tests[@]} -gt 0 ]]; then
+	if [ ${#tests[@]} -gt 0 ]; then
 		if ! ( _run_group "${tests[@]}" ); then
 			ret=1
 		fi
@@ -581,7 +589,7 @@ unset TEMP
 
 LOGGER_PROG="$(type -P logger)" || LOGGER_PROG=true
 
-if [[ -r config ]]; then
+if [ -r config ]; then
 	# shellcheck disable=SC1091
 	. config
 fi
@@ -590,18 +598,19 @@ fi
 : "${DEVICE_ONLY:=0}"
 : "${QUICK_RUN:=0}"
 : "${OUTPUT:=results}"
-if [[ -v EXCLUDE ]] && ! declare -p EXCLUDE | grep -q '^declare -a'; then
+if [ -n "${EXCLUDE:-}" ] && ! declare -p EXCLUDE | grep -q '^declare -a'; then
 	# If EXCLUDE was not defined as an array, convert it to one.
 	# shellcheck disable=SC2190,SC2206
 	EXCLUDE=($EXCLUDE)
-elif [[ ! -v EXCLUDE ]]; then
+elif [ -z "${EXCLUDE:-}" ]; then
 	EXCLUDE=()
 fi
-if [[ -v TEST_DEVS ]] && ! declare -p TEST_DEVS | grep -q '^declare -a'; then
+if [ -n "${TEST_DEVS:-}" ] &&
+	   ! declare -p TEST_DEVS | grep -q '^declare -a'; then
 	# If TEST_DEVS was not defined as an array, convert it to one.
 	# shellcheck disable=SC2206
 	TEST_DEVS=($TEST_DEVS)
-elif [[ ! -v TEST_DEVS ]]; then
+elif [ -z "$TEST_DEVS" ]; then
 	TEST_DEVS=()
 fi
 
@@ -640,11 +649,11 @@ while true; do
 	esac
 done
 
-if [[ $QUICK_RUN -ne 0 && ! -v TIMEOUT ]]; then
+if [ $QUICK_RUN -ne 0 ] && [ -z "$TIMEOUT" ]; then
 	_error "QUICK_RUN specified without TIMEOUT"
 fi
 
-if [[ $DEVICE_ONLY -ne 0 && ${#TEST_DEVS[@]} -eq 0 ]]; then
+if [ $DEVICE_ONLY -ne 0 ] && [ ${#TEST_DEVS[@]} -eq 0 ]; then
 	_error "DEVICE_ONLY specified without TEST_DEVS"
 fi
 

@@ -29,7 +29,7 @@ _create_nvmet_port() {
 
 	local port
 	for ((port = 0; ; port++)); do
-		if [[ ! -e "${NVMET_CFS}/ports/${port}" ]]; then
+		if [ ! -e "${NVMET_CFS}/ports/${port}" ]; then
 			break
 		fi
 	done
@@ -53,7 +53,7 @@ _create_nvmet_ns() {
 	local subsys_path="${NVMET_CFS}/subsystems/${nvmet_subsystem}"
 	local ns_path="${subsys_path}/namespaces/${nsid}"
 
-	if [[ $# -eq 4 ]]; then
+	if [ $# -eq 4 ]; then
 		uuid="$4"
 	fi
 
@@ -113,7 +113,7 @@ _find_nvme_loop_dev() {
 	for dev in /sys/class/nvme/nvme*; do
 		dev="$(basename "$dev")"
 		transport="$(cat "/sys/class/nvme/${dev}/transport")"
-		if [[ "$transport" == "loop" ]]; then
+		if [ "$transport" == "loop" ]; then
 			echo "$dev"
 		fi
 	done

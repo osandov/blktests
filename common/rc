@@ -14,13 +14,13 @@ shopt -s extglob
 # for TIMEOUT / number of subtests.
 _divide_timeout() {
 	local num_tests="$1"
-	if [[ -v TIMEOUT ]]; then
+	if [ -n "$TIMEOUT" ]; then
 		((TIMEOUT = (TIMEOUT + num_tests - 1) / num_tests))
 	fi
 }
 
 _have_root() {
-	if [[ $EUID -ne 0 ]]; then
+	if [ $EUID -ne 0 ]; then
 		SKIP_REASON="not running as root"
 		return 1
 	fi
@@ -36,10 +36,10 @@ _have_modules() {
 			missing+=("$module")
 		fi
 	done
-	if [[ ${#missing} -gt 1 ]]; then
+	if [ ${#missing} -gt 1 ]; then
 		SKIP_REASON="the following modules are not available: ${missing[*]}"
 		return 1
-	elif [[ ${#missing} -eq 1 ]]; then
+	elif [ ${#missing} -eq 1 ]; then
 		SKIP_REASON="${missing[0]} module is not available"
 		return 1
 	fi
@@ -63,7 +63,7 @@ _have_program() {
 }
 
 _have_src_program() {
-	if [[ ! -x "$SRCDIR/$1" ]]; then
+	if [ ! -x "$SRCDIR/$1" ]; then
 		SKIP_REASON="$1 was not built; run \`make\`"
 		return 1
 	fi
@@ -77,7 +77,7 @@ _have_loop() {
 _have_blktrace() {
 	# CONFIG_BLK_DEV_IO_TRACE might still be disabled, but this is easier
 	# to check. We can fix it if someone complains.
-	if [[ ! -d /sys/kernel/debug/block ]]; then
+	if [ ! -d /sys/kernel/debug/block ]; then
 		SKIP_REASON="CONFIG_DEBUG_FS is not enabled"
 		return 1
 	fi
@@ -121,7 +121,7 @@ _have_tracefs() {
 _have_tracepoint() {
 	local event=$1
 
-	if [[ ! -d /sys/kernel/debug/tracing/events/${event} ]]; then
+	if [ ! -d "/sys/kernel/debug/tracing/events/${event}" ]; then
 		SKIP_REASON="tracepoint ${event} does not exist"
 		return 1
 	fi
@@ -129,7 +129,7 @@ _have_tracepoint() {
 }
 
 _test_dev_can_discard() {
-	if [[ $(cat "${TEST_DEV_SYSFS}/queue/discard_max_bytes") -eq 0 ]]; then
+	if [ "$(cat "${TEST_DEV_SYSFS}/queue/discard_max_bytes")" -eq 0 ]; then
 		SKIP_REASON="$TEST_DEV does not support discard"
 		return 1
 	fi
@@ -137,7 +137,7 @@ _test_dev_can_discard() {
 }
 
 _test_dev_is_rotational() {
-	if [[ $(cat "${TEST_DEV_SYSFS}/queue/rotational") -eq 0 ]]; then
+	if [ "$(cat "${TEST_DEV_SYSFS}/queue/rotational")" -eq 0 ]; then
 		SKIP_REASON="$TEST_DEV is not rotational"
 		return 1
 	fi
@@ -145,7 +145,7 @@ _test_dev_is_rotational() {
 }
 
 _test_dev_queue_get() {
-	if [[ $1 = scheduler ]]; then
+	if [ "$1" = scheduler ]; then
 		sed -e 's/.*\[//' -e 's/\].*//' "${TEST_DEV_SYSFS}/queue/scheduler"
 	else
 		cat "${TEST_DEV_SYSFS}/queue/$1"
@@ -153,9 +153,9 @@ _test_dev_queue_get() {
 }
 
 _test_dev_queue_set() {
-	# For bash >=4.3 we'd write if [[ ! -v TEST_DEV_QUEUE_SAVED["$1"] ]].
-	if [[ -z ${TEST_DEV_QUEUE_SAVED["$1"]} &&
-	      ${TEST_DEV_QUEUE_SAVED["$1"]-unset} == unset ]]; then
+	# For bash >=4.3 we'd write if [ ! -v TEST_DEV_QUEUE_SAVED["$1"] ].
+	if [ -z "${TEST_DEV_QUEUE_SAVED["$1"]}" ] &&
+	      [ "${TEST_DEV_QUEUE_SAVED["$1"]-unset}" == unset ]; then
 		TEST_DEV_QUEUE_SAVED["$1"]="$(_test_dev_queue_get "$1")"
 	fi
 	echo "$2" >"${TEST_DEV_SYSFS}/queue/$1"
@@ -200,7 +200,7 @@ _test_dev_in_hotplug_slot() {
 
 	local slt_cap
 	slt_cap="$(setpci -s "${parent}" CAP_EXP+14.w)"
-	if [[ $((0x${slt_cap} & 0x20)) -eq 0 ]]; then
+	if [ $((0x${slt_cap} & 0x20)) -eq 0 ]; then
 		SKIP_REASON="$TEST_DEV is not in a hot pluggable slot"
 		return 1
 	fi
