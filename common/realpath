@@ -1,0 +1,20 @@
+#!/bin/bash
+# SPDX-License-Identifier: GPL-3.0+
+# Copyright 2018 Google, Inc.
+
+# Execute the realpath binary if it is available. If it is not available,
+# use readlink.
+realpath() {
+	local p q
+
+	p=$(type -p realpath 2>/dev/null)
+	if [ -n "$p" ]; then
+		$p "$@"
+	else
+		q="$1"
+		if [ "${p:0:1}" != / ]; then
+			q=$PWD/$q
+		fi
+		readlink -f "$q"
+	fi
+}

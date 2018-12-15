@@ -5,6 +5,7 @@
 # Functions and global variables used by both the srp and nvmeof-mp tests.
 
 . common/shellcheck
+. common/realpath
 
 debug=
 filesystem_type=ext4

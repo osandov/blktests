@@ -4,6 +4,8 @@
 
 shopt -s extglob
 
+. common/realpath
+
 _warning() {
 	echo "$0: $*" >&2
 }
