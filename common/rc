@@ -84,8 +84,20 @@ _have_blktrace() {
 	_have_program blktrace
 }
 
+# $1: filesystem type; $2: mountpoint
+_findmnt() {
+	while read -r fs_spec mountpoint fstype rest; do
+		if [ "$1" = "$fstype" ] &&
+			   [ "$2" = "$mountpoint" ]; then
+			return 0
+		fi
+		echo "$fs_spec" >/dev/null # to suppress a shellcheck warning
+	done < /proc/self/mounts
+	return 1
+}
+
 _have_configfs() {
-	if ! findmnt -t configfs /sys/kernel/config >/dev/null; then
+	if ! _findmnt configfs /sys/kernel/config; then
 		SKIP_REASON="configfs is not mounted at /sys/kernel/config"
 		return 1
 	fi
@@ -111,7 +123,7 @@ _have_kernel_option() {
 
 _have_tracefs() {
 	stat /sys/kernel/debug/tracing/trace > /dev/null 2>&1
-	if ! findmnt -t tracefs /sys/kernel/debug/tracing >/dev/null; then
+	if ! _findmnt tracefs /sys/kernel/debug/tracing; then
 		SKIP_REASON="tracefs is not mounted at /sys/kernel/debug/tracing"
 		return 1
 	fi
