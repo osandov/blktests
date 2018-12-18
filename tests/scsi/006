@@ -9,7 +9,6 @@
 . tests/scsi/rc
 
 DESCRIPTION="toggle SCSI cache type"
-
 QUICK=1
 
 device_requires() {
@@ -25,15 +24,24 @@ test_device() {
 		"write back"
 		"write back, no read (daft)"
 	)
-	local cache_type
+	local cache_type_paths
+	local cache_type_path
 	local original_cache_type
+	local cache_type
 
-	original_cache_type="$(cat "${TEST_DEV_SYSFS}"/device/scsi_disk/*/cache_type)"
+	cache_type_paths=("${TEST_DEV_SYSFS}"/device/scsi_disk/*/cache_type)
+	cache_type_path="${cache_type_paths[0]}"
+	original_cache_type="$(cat "$cache_type_path")"
 	for cache_type in "${cache_types[@]}"; do
-		echo "$cache_type" > "${TEST_DEV_SYSFS}"/device/scsi_disk/*/cache_type
-		cat "${TEST_DEV_SYSFS}"/device/scsi_disk/*/cache_type
+		echo "$cache_type"
+		( echo "$cache_type" > "$cache_type_path" ) |& grep -v "Invalid argument"
+		if [[ ${PIPESTATUS[0]} -eq 0 ]]; then
+			# If setting the cache type succeeded, it should now
+			# contain the new cache type.
+			grep -Fxv "$cache_type" "$cache_type_path"
+		fi
 	done
-	echo "$original_cache_type" > "${TEST_DEV_SYSFS}"/device/scsi_disk/*/cache_type
+	( echo "$original_cache_type" > "$cache_type_path" ) |& grep -v "Invalid argument"
 
 	echo "Test complete"
 }
