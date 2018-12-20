@@ -1,0 +1,95 @@
+#!/bin/bash
+# SPDX-License-Identifier: GPL-3.0+
+# Copyright (C) 2018 Omar Sandoval
+#
+# Run fio in verify mode with a mixed read/write/fsync buffered workload on
+# ext4. This is based on the reproducer for commit ffe81d45322c ("blk-mq: fix
+# corruption with direct issue"), but it is very timing-sensitive. Running it
+# in QEMU with the following options tends to reproduce the original bug:
+# -machine q35,accel=kvm -cpu 1 -m 400M -drive file=$IMG,media=disk,if=ide
+# Thanks to Lukáš Krejčí for providing this QEMU setup.
+
+. tests/block/rc
+
+DESCRIPTION="verify reads, writes, and flushes through a filesystem"
+TIMED=1
+
+requires() {
+	_have_fio && _have_program mkfs.ext4 && _have_modules ext4
+}
+
+test_device() {
+	echo "Running ${TEST_NAME}"
+
+	: "${TIMEOUT:=30}"
+
+	if grep -qw none "${TEST_DEV_SYSFS}/queue/scheduler"; then
+		_test_dev_queue_set scheduler none
+	fi
+
+	mkfs.ext4 -Fq "$TEST_DEV" || return 1
+	mkdir -p "$TMPDIR/mnt" || return 1
+	mount "$TEST_DEV" "$TMPDIR/mnt" || return 1
+
+	cat << EOF > "$TMPDIR/test.fio"
+[global]
+bs=4k
+buffered=1
+filesize=1m
+file_service_type=random
+verify=crc32c
+refill_buffers=1
+randseed=89
+openfiles=1000
+exitall_on_error=1
+cpus_allowed=0
+
+[write1]
+filename_format=test1.\$filenum
+nr_files=256
+rw=write
+do_verify=0
+
+[read1]
+wait_for=write1
+filename_format=test1.\$filenum
+nr_files=256
+invalidate=1
+rw=read
+do_verify=1
+loops=16
+
+[read1-again]
+wait_for=write1
+filename_format=test1.\$filenum
+nr_files=256
+invalidate=1
+rw=read
+do_verify=1
+loops=16
+
+[write2]
+wait_for=write1
+filename_format=test2.\$filenum
+nr_files=768
+rw=write
+do_verify=0
+fsync=8
+
+[read2]
+wait_for=write2
+filename_format=test2.\$filenum
+nr_files=768
+invalidate=1
+rw=read
+do_verify=1
+EOF
+
+	pushd "$TMPDIR/mnt" > /dev/null || return 1
+	_run_fio "$TMPDIR/test.fio"
+	popd > /dev/null || return 1
+
+	umount "$TMPDIR/mnt"
+
+	echo "Test complete"
+}
