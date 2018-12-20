@@ -1,0 +1,74 @@
+#!/bin/bash
+# SPDX-License-Identifier: GPL-3.0+
+# Copyright (C) 2018 Ming Lei
+#
+# Regression test for commit 0273ac349f08 ("blkcg: handle dying request_queue
+# when associating a blkg").
+#
+# This tries to expose the race condition between blkg association and
+# request_queue shutdown. When a request_queue is shutdown, the corresponding
+# blkgs are destroyed. Any further associations should fail gracefully and not
+# cause a kernel panic.
+
+. tests/block/rc
+. common/scsi_debug
+. common/cgroup
+
+DESCRIPTION="stress device hotplugging with running fio jobs and different schedulers"
+QUICK=1
+
+requires() {
+	_have_cgroup2_controller io && _have_scsi_debug && _have_fio
+}
+
+scsi_debug_stress_remove() {
+	if ! _init_scsi_debug "$@"; then
+		return
+	fi
+
+	# set higher aio limit
+	echo 524288 > /proc/sys/fs/aio-max-nr
+
+	local dev fio_jobs scheds queue_path
+	local cnt=1
+	for dev in "${SCSI_DEBUG_DEVICES[@]}"; do
+		# create fio job
+		fio_jobs=$fio_jobs" --name=job1 --filename=/dev/$dev "
+
+		# set queue scheduler and queue_depth
+		queue_path="/sys/block/$dev/queue"
+		# shellcheck disable=SC2207
+		scheds=($(sed 's/[][]//g' "$queue_path/scheduler"))
+		sched_idx=$((cnt % ${#scheds[@]}))
+		echo "${scheds[$sched_idx]}" > "$queue_path/scheduler"
+		echo "$cnt" > "$queue_path/../device/queue_depth"
+		((cnt++))
+	done
+
+	local num_jobs=4 runtime=21
+	fio --rw=randread --size=128G --direct=1 --ioengine=libaio \
+		--iodepth=2048 --numjobs=$num_jobs --bs=4k \
+		--group_reporting=1 --group_reporting=1 --runtime=$runtime \
+		--loops=10000 "$fio_jobs" > "$FULL" 2>&1 &
+
+	sleep 7
+	local device_path
+	for dev in "${SCSI_DEBUG_DEVICES[@]}"; do
+		# shutdown devices in progress
+		device_path=/sys/block/$dev/device
+		[ -f "$device_path/delete" ] && echo 1 > "$device_path/delete"
+	done
+
+	wait
+
+	_exit_scsi_debug
+}
+
+test() {
+	echo "Running ${TEST_NAME}"
+
+	scsi_debug_stress_remove virtual_gb=128 max_luns=21 ndelay=10000 \
+		max_queue=110
+
+	echo "Test complete"
+}
