@@ -37,19 +37,27 @@ _have_cgroup2()
 	return 0
 }
 
-_have_cgroup2_controller_file()
+_have_cgroup2_controller()
 {
+	local controller="$1"
+
 	_have_cgroup2 || return 1
 
-	local controller="$1"
-	local file="$2"
-	local dir
-
 	dir="$(_cgroup2_base_dir)"
+
 	if ! grep -q "$controller" "$dir/cgroup.controllers"; then
 		SKIP_REASON="no support for $controller cgroup controller; if it is enabled, you may need to boot with cgroup_no_v1=$controller"
 		return 1
 	fi
+}
+
+_have_cgroup2_controller_file()
+{
+	local controller="$1"
+	local file="$2"
+	local dir
+
+	_have_cgroup2_controller "$controller" || return 1
 
 	mkdir "$dir/blktests"
 	echo "+$controller" > "$dir/cgroup.subtree_control"
