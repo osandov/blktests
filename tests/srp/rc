@@ -483,7 +483,7 @@ start_lio_srpt() {
 	mount_configfs || return $?
 	modprobe target_core_mod || return $?
 	modprobe target_core_iblock || return $?
-	opts=("srp_max_req_size=4200" "dyndbg=+pmf")
+	opts=("srp_max_req_size=8260" "dyndbg=+pmf")
 	if modinfo ib_srpt | grep -q '^parm:[[:blank:]]*rdma_cm_port:'; then
 		opts+=("rdma_cm_port=${srp_rdma_cm_port}")
 	fi
