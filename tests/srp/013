@@ -12,18 +12,23 @@ discontiguous_io() {
 
 	use_blk_mq y y || return $?
 	dev=$(get_bdev 0) || return $?
+	echo "Reading first 512 bytes with dd"
 	dd if="${dev}" bs=512 count=1 iflag=direct status=none |
 		od -An -v -tu1 -w1 |
 		while read -r byte; do
 			# shellcheck disable=SC2059
 			printf "\\x$(printf "%x" $((byte ^ 0xa5)))"
 		done >"${TMPDIR}/data_block"
+	echo -n "Number of bytes read: "
 	wc -c < "${TMPDIR}/data_block"
+	echo "Writing data ^ 0xa5 ..."
 	src/discontiguous-io -s -w "${dev}" <"${TMPDIR}/data_block" >>"$FULL" ||
 		return $?
+	echo "Rereading data with dd ..."
 	dd if="${dev}" bs=512 count=1 iflag=direct status=none |
 		cmp - "${TMPDIR}/data_block" ||
 		return $?
+	echo "Rereading data with discontiguous-io ..."
 	src/discontiguous-io -s "${dev}" 2>>"$FULL" |
 		cmp - "${TMPDIR}/data_block" ||
 		return $?
