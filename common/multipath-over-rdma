@@ -88,7 +88,7 @@ held_by() {
 	while [ -L "$dev" ]; do
 		dev=$(realpath "$dev")
 	done
-	dev=${dev%/dev/}
+	dev=${dev#/dev/}
 	for d in /sys/class/block/*/holders/*; do
 		[ -e "$d" ] || continue
 		e=$(basename "$d")
