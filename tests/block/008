@@ -23,8 +23,11 @@ test_device() {
 		size="1g"
 	fi
 
-	# start fio job
-	_run_fio_rand_io --filename="$TEST_DEV" --size="$size" &
+	# Start fio job. When using the default cpu clocksource, fio does some
+	# sched_setaffinity() calls, which may race with our hotplugging. Use
+	# the clock_gettime clocksource to avoid that.
+	_run_fio_rand_io --filename="$TEST_DEV" --size="$size" --clocksource=clock_gettime &
+
 
 	local online_cpus=()
 	local offline_cpus=()
