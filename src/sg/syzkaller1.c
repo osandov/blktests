@@ -401,8 +401,10 @@ long r[15];
 void test()
 {
   memset(r, -1, sizeof(r));
-  r[0] = execute_syscall(__NR_mmap, 0x20000000ul, 0x5000ul, 0x3ul,
-                         0x32ul, (uintptr_t)(-1ul), 0x0ul, 0, 0, 0);
+//r[0] = execute_syscall(__NR_mmap, 0x20000000ul, 0x5000ul, 0x3ul,
+//                       0x32ul, (uintptr_t)(-1ul), 0x0ul, 0, 0, 0);
+  r[0] = (long) mmap((void *) 0x20000000, (size_t) 0x5000,
+                     PROT_READ | PROT_WRITE, MAP_FIXED | MAP_ANONYMOUS, -1, 0);
   NONFAILING(memcpy((void*)0x20000000,
                     dev_sg, strlen(dev_sg)));
   r[2] = execute_syscall(__NR_syz_open_dev, 0x20000000ul, 0x0ul, 0x2ul,
