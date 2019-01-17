@@ -1,0 +1,44 @@
+#!/bin/bash
+# SPDX-License-Identifier: GPL-3.0+
+# Copyright (C) 2019 Ming Lei <ming.lei@redhat.com>
+#
+# Basic DIF/DIX smoke test. Regression test for commit 7809167da5c86fd6
+# ("block: don't lose track of REQ_INTEGRITY flag").
+
+. tests/block/rc
+. common/scsi_debug
+
+DESCRIPTION="do I/O on scsi_debug with DIF/DIX enabled"
+
+requires() {
+	_have_scsi_debug
+}
+
+test_pi() {
+	if ! _init_scsi_debug dev_size_mb=128 dix="$1" dif="$2" delay=0; then
+		return 1
+	fi
+
+	local dev="/dev/${SCSI_DEBUG_DEVICES[0]}"
+	local nr_sects
+	
+	nr_sects="$(blockdev --getsz "$dev")"
+	dd if=/dev/urandom of="$dev" bs=512 count="$nr_sects" status=none
+	dd if="$dev" of=/dev/null bs=512 status=none
+
+	_exit_scsi_debug
+}
+
+test() {
+	echo "Running ${TEST_NAME}"
+
+	local dix dif
+	for ((dix = 0; dix <= 1; dix++)); do
+		for ((dif = 0; dif <= 3; dif++)); do
+			test_pi "$dix" "$dif"
+			echo "Test(dix:$dix dif:$dif) complete"
+		done
+	done
+
+	rm -f "$FULL"
+}
