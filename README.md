@@ -8,7 +8,7 @@ filesystem testing framework.
 
 The dependencies are minimal, but make sure you have them installed:
 
-- bash 4
+- bash (>= 4.2)
 - GNU coreutils
 - GNU awk
 - util-linux
