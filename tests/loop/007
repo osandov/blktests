@@ -1,0 +1,39 @@
+#!/bin/bash
+# SPDX-License-Identifier: GPL-3.0+
+# Copyright (C) 2019 Jan Kara
+#
+# Test loop device capacity change handling with filesystem mounted on top.
+#
+# Regression test for commit 04906b2f542c "blockdev: Fix livelocks on loop
+# device".
+#
+
+. tests/loop/rc
+
+DESCRIPTION="update loop device capacity with filesystem"
+QUICK=1
+
+requires() {
+	_have_program mkfs.ext4
+}
+
+test() {
+	echo "Running ${TEST_NAME}"
+
+	local mount_dir="$TMPDIR/mnt"
+
+	truncate -s 1G "$TMPDIR/img"
+	mkdir -p "$mount_dir"
+	local loop_device
+	loop_device="$(losetup -P -f --show "$TMPDIR/img")"
+	mkfs.ext4 -b 1024 "$loop_device" &>/dev/null
+	mount -t ext4 "$loop_device" "$mount_dir"
+	losetup -c "$loop_device"
+	# This hangs if rereading capacity changed block size
+	ls -l "$mount_dir" >/dev/null
+	umount "$mount_dir"
+	losetup -d "$loop_device"
+	rm -fr "$mount_dir" "$TMPDIR/img"
+
+	echo "Test complete"
+}
