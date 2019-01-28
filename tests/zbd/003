@@ -1,0 +1,82 @@
+#!/bin/bash
+# SPDX-License-Identifier: GPL-3.0+
+# Copyright (C) 2018 Western Digital Corporation or its affiliates.
+#
+# Confirm that reset zone command for 2 contiguous sequential write
+# requried zones works as expected.
+
+. tests/zbd/rc
+
+DESCRIPTION="reset sequential required zones"
+QUICK=1
+CAN_BE_ZONED=1
+
+requires() {
+	_have_program blkzone
+}
+
+fallback_device() {
+	_fallback_null_blk_zoned
+}
+
+cleanup_fallback_device() {
+	_exit_null_blk
+}
+
+test_device() {
+	local -i zone_idx
+	local -a target_zones
+	local -i bs
+
+	echo "Running ${TEST_NAME}"
+
+	# Get physical block size as dd block size to meet zoned block device
+	# requirement
+	_get_sysfs_variable "${TEST_DEV}" || return $?
+	bs=${SYSFS_VARS[$SV_PHYS_BLK_SIZE]}
+	_put_sysfs_variable
+
+	# Select 2 target zones so that reset zone range also get tested
+	_get_blkzone_report "${TEST_DEV}" || return $?
+	zone_idx=$(_find_two_contiguous_seq_zones) || return $?
+	target_zones=( "${zone_idx}" "$((zone_idx + 1))" )
+
+	# Reset the 2 target zones and write 4KB in each zone to increment
+	# their write pointer positions
+	_reset_zones "${TEST_DEV}" "${zone_idx}" "2"
+	for i in "${target_zones[@]}"; do
+		if ! dd bs=${bs} count=$(( 4096 / bs )) \
+		     if=/dev/zero of="${TEST_DEV}" oflag=direct \
+		     seek=$((ZONE_STARTS[i] * 512 / bs)) >> "$FULL" 2>&1 ; then
+			echo "dd failed"
+		fi
+	done
+	_put_blkzone_report
+
+	# Check that the write pointers have moved by 8x512 B sectors
+	_get_blkzone_report "${TEST_DEV}" || return $?
+	for i in "${target_zones[@]}"; do
+		if [[ ${ZONE_WPTRS[$i]} -ne 8 ]]; then
+			echo -n "Unexpected write poiter position in zone ${i} "
+			echo "wp: ${ZONE_WPTRS[i]}"
+			return 1
+		fi
+	done
+
+	# Reset the 2 target zones
+	_reset_zones "${TEST_DEV}" "${zone_idx}" "2"
+	_put_blkzone_report
+
+	# Check that the write pointers have moved back to position 0
+	_get_blkzone_report "${TEST_DEV}" || return $?
+	for i in "${target_zones[@]}"; do
+		if [[ ${ZONE_WPTRS[i]} -ne 0 ]]; then
+			echo -n "Unexpected non-zero write poiter in zone ${i} "
+			echo "wp: ${ZONE_WPTRS[i]}"
+			return 1
+		fi
+	done
+	_put_blkzone_report
+
+	echo "Test complete"
+}
