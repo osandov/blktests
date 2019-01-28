@@ -1,0 +1,67 @@
+#!/bin/bash
+# SPDX-License-Identifier: GPL-3.0+
+# Copyright (C) 2018 Western Digital Corporation or its affiliates.
+#
+# Run a high queue depth direct sequential write fio job to check that
+# write requests are not being reordered when the deadline scheduler is
+# used. This test allowed to catch a bug fixed with commit 80e02039721
+# "block: mq-deadline: Fix write completion handling".
+
+. tests/zbd/rc
+
+DESCRIPTION="write command ordering"
+TIMED=1
+CAN_BE_ZONED=1
+
+requires() {
+	_have_fio_zbd_zonemode
+}
+
+fallback_device() {
+	_fallback_null_blk_zoned
+}
+
+cleanup_fallback_device() {
+	_exit_null_blk
+}
+
+_find_first_sequential_zone() {
+	for ((idx =  NR_CONV_ZONES; idx < REPORTED_COUNT; idx++)); do
+		if [[ ${ZONE_TYPES[idx]} -eq ${ZONE_TYPE_SEQ_WRITE_REQUIRED} ]];
+		then
+			echo "${idx}"
+			return 0
+		fi
+	done
+	echo "Sequential write required zone not found"
+
+	return 1
+}
+
+test_device() {
+	local -i zone_idx
+	local -i offset
+
+	echo "Running ${TEST_NAME}"
+
+	_get_sysfs_variable "${TEST_DEV}" || return $?
+	_get_blkzone_report "${TEST_DEV}" || return $?
+
+	zone_idx=$(_find_first_sequential_zone) || return $?
+	offset=$((ZONE_STARTS[zone_idx] * 512))
+
+	blkzone reset -o "${ZONE_STARTS[zone_idx]}" "${TEST_DEV}"
+
+	_test_dev_queue_set scheduler deadline
+
+	: "${TIMEOUT:=30}"
+	FIO_PERF_FIELDS=("write io" "write iops")
+	_fio_perf --filename="${TEST_DEV}" --name zbdwo --rw=write --direct=1 \
+		  --ioengine=libaio --iodepth=128 --bs=256k \
+		  --offset="${offset}"
+
+	_put_blkzone_report
+	_put_sysfs_variable
+
+	echo "Test complete"
+}
