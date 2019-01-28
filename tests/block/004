@@ -8,18 +8,32 @@
 
 DESCRIPTION="run lots of flushes"
 TIMED=1
+CAN_BE_ZONED=1
 
 requires() {
 	_have_fio
 }
 
+device_requires() {
+	! _test_dev_is_zoned || _have_fio_zbd_zonemode
+}
+
 test_device() {
 	echo "Running ${TEST_NAME}"
+
+	local directio=""
+	local zbdmode=""
+
+	if _test_dev_is_zoned; then
+		_test_dev_queue_set scheduler deadline
+		directio="--direct=1"
+		zbdmode="--zonemode=zbd"
+	fi
 
 	FIO_PERF_FIELDS=("write iops")
 	_fio_perf --bs=4k --rw=randwrite --norandommap --fsync=1 \
 		--number_ios=256 --numjobs=64 --name=flushes \
-		--filename="$TEST_DEV"
+		${directio} ${zbdmode} --filename="$TEST_DEV"
 
 	echo "Test complete"
 }
