@@ -1,0 +1,98 @@
+#!/bin/bash
+# SPDX-License-Identifier: GPL-3.0+
+# Copyright (C) 2018 Western Digital Corporation or its affiliates.
+#
+# Check kernel splits write operations across a zone border. Select two
+# contiguous sequential write required zones and confirm write oprations
+# across the two zones succeed.
+
+. tests/zbd/rc
+
+DESCRIPTION="write split across sequential zones"
+QUICK=1
+CAN_BE_ZONED=1
+
+fallback_device() {
+	_fallback_null_blk_zoned
+}
+
+cleanup_fallback_device() {
+	_exit_null_blk
+}
+
+_check_zone_cond() {
+	local -i idx=${1}
+	local -i cond=${2}
+
+	if [[ ${ZONE_CONDS[idx]} -ne ${cond} ]]; then
+		echo -n "Zone ${idx} condition is not ${ZONE_COND_ARRAY[cond]} "
+		echo "cond: ${ZONE_COND_ARRAY[ZONE_CONDS[idx]]}"
+		return 1
+	fi
+}
+
+test_device() {
+	local -i idx
+	local -i phys_blk_size
+	local -i phys_blk_sectors
+
+	echo "Running ${TEST_NAME}"
+
+	# Get physical block size and sectors for dd.
+	_get_sysfs_variable "${TEST_DEV}" || return $?
+	phys_blk_size=${SYSFS_VARS[SV_PHYS_BLK_SIZE]}
+	phys_blk_sectors=${SYSFS_VARS[SV_PHYS_BLK_SECTORS]}
+	_put_sysfs_variable
+
+	# Find target sequential required zones and reset write pointers
+	_get_blkzone_report "${TEST_DEV}" || return $?
+	idx=$(_find_two_contiguous_seq_zones) || return $?
+	_reset_zones "${TEST_DEV}" "${idx}" "2"
+
+	# Confirm the zones are initialized
+	_put_blkzone_report
+	_get_blkzone_report "${TEST_DEV}" || return $?
+	_check_zone_cond "${idx}" "${ZONE_COND_EMPTY}" || return $?
+	_check_zone_cond "$((idx+1))" "${ZONE_COND_EMPTY}" || return $?
+
+	# Fill first target zone, remaining a physical block to write.
+	# Set physical block size as dd block size to meet zoned block
+	# device requirement.
+	if ! dd bs=${phys_blk_size} \
+	     count=$(((ZONE_LENGTHS[idx] - phys_blk_sectors) \
+			      * 512 / phys_blk_size)) \
+	     if=/dev/zero of="${TEST_DEV}" oflag=direct \
+	     seek=$((ZONE_STARTS[idx] * 512 / phys_blk_size)) \
+	     >> "$FULL" 2>&1 ; then
+		echo "Fill zone failed"
+		return 1
+	fi
+
+	# Write across the zone border as a single block write.
+	# Specify count=1 to request one shot write, expecting kernel to split
+	# the request. Set dd block size as phys_blk_size * 2 to make count=1.
+	local -i start_sector=$((ZONE_STARTS[idx+1] - phys_blk_sectors))
+	if ! dd bs=$((phys_blk_size * 2)) count=1 \
+	     if=/dev/zero of="${TEST_DEV}" oflag=seek_bytes,direct \
+	     seek=$((start_sector * 512)) >> "$FULL" 2>&1 ; then
+		echo "Fill zone failed"
+		return 1
+	fi
+
+	# Confirm the zone conditions are as expected
+	_put_blkzone_report
+	_get_blkzone_report "${TEST_DEV}" || return $?
+	_check_zone_cond "${idx}" "${ZONE_COND_FULL}" || return $?
+	_check_zone_cond "$((idx+1))" "${ZONE_COND_IMPLICIT_OPEN}" || return $?
+	if [[ ${ZONE_WPTRS[idx+1]} -ne ${phys_blk_sectors} ]]; then
+		echo -n "Unexpected write pointer for zone $((idx+1)) "
+		echo "wp: ${ZONE_WPTRS[idx+1]}"
+		return 1
+	fi
+
+	# Clean up
+	_reset_zones "${TEST_DEV}" "${idx}" "2"
+	_put_blkzone_report
+
+	echo "Test complete"
+}
