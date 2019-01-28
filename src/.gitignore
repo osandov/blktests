@@ -6,3 +6,4 @@
 /nbdsetsize
 /sg/dxfer-from-dev
 /sg/syzkaller1
+/zbdioctl
