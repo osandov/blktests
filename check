@@ -17,7 +17,7 @@ _found_test() {
 	local test_name="$1"
 	local explicit="$2"
 
-	unset DESCRIPTION QUICK TIMED requires device_requires test test_device
+	unset CAN_BE_ZONED DESCRIPTION QUICK TIMED requires device_requires test test_device
 
 	# shellcheck disable=SC1090
 	if ! . "tests/${test_name}"; then
@@ -182,11 +182,14 @@ _write_test_run() {
 _output_status() {
 	local test="$1"
 	local status="$2"
+	local zoned=" "
+
+	if (( RUN_FOR_ZONED )); then zoned=" (zoned) "; fi
 
 	if [[ -v DESCRIPTION ]]; then
-		printf '%-60s' "$test ($DESCRIPTION)"
+		printf '%-60s' "${test}${zoned}($DESCRIPTION)"
 	else
-		printf '%-60s' "$test"
+		printf '%-60s' "${test}${zoned}"
 	fi
 	if [[ -z $status ]]; then
 		echo
@@ -391,10 +394,19 @@ _call_test() {
 	fi
 }
 
+_test_dev_is_zoned() {
+	if grep -qe "none" "${TEST_DEV_SYSFS}/queue/zoned" ; then
+		SKIP_REASON="${TEST_DEV} is not a zoned block device"
+		return 1
+	fi
+	return 0
+}
+
 _run_test() {
 	TEST_NAME="$1"
 	CHECK_DMESG=1
 	DMESG_FILTER="cat"
+	RUN_FOR_ZONED=0
 
 	# shellcheck disable=SC1090
 	. "tests/${TEST_NAME}"
@@ -407,6 +419,11 @@ _run_test() {
 
 		RESULTS_DIR="$OUTPUT/nodev"
 		_call_test test
+		if (( RUN_ZONED_TESTS && CAN_BE_ZONED )); then
+			RESULTS_DIR="$OUTPUT/nodev_zoned"
+			RUN_FOR_ZONED=1
+			_call_test test
+		fi
 	else
 		if [[ ${#TEST_DEVS[@]} -eq 0 ]]; then
 			return 0
@@ -420,6 +437,12 @@ _run_test() {
 		local ret=0
 		for TEST_DEV in "${TEST_DEVS[@]}"; do
 			TEST_DEV_SYSFS="${TEST_DEV_SYSFS_DIRS["$TEST_DEV"]}"
+			if (( !CAN_BE_ZONED )) && _test_dev_is_zoned; then
+				SKIP_REASON="${TEST_DEV} is a zoned block device"
+				_output_notrun "$TEST_NAME => $(basename "$TEST_DEV")"
+				continue
+			fi
+			unset SKIP_REASON
 			if declare -fF device_requires >/dev/null && ! device_requires; then
 				_output_notrun "$TEST_NAME => $(basename "$TEST_DEV")"
 				continue
@@ -591,6 +614,7 @@ fi
 # Default configuration.
 : "${DEVICE_ONLY:=0}"
 : "${QUICK_RUN:=0}"
+: "${RUN_ZONED_TESTS:=0}"
 : "${OUTPUT:=results}"
 if [[ -v EXCLUDE ]] && ! declare -p EXCLUDE | grep -q '^declare -a'; then
 	# If EXCLUDE was not defined as an array, convert it to one.

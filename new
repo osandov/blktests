@@ -145,6 +145,10 @@ DESCRIPTION=""
 # Alternatively, you can filter out any unimportant messages in dmesg like so:
 # DMESG_FILTER="grep -v sysfs"
 
+# TODO: if this test can be run for both regular block devices and zoned block
+# devices, uncomment the line below.
+# CAN_BE_ZONED=1
+
 # TODO: if this test has any extra requirements, it should define a requires()
 # function. If the test can be run, requires() should return 0. Otherwise, it
 # should return non-zero and set the \$SKIP_REASON variable. Usually,

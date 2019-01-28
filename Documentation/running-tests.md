@@ -82,6 +82,17 @@ passing the `-d` command line option or setting the `DEVICE_ONLY` variable.
 DEVICE_ONLY=1
 ```
 
+### Zoned Block Device
+
+To run test cases for zoned block devices, set the `RUN_ZONED_TESTS` variable.
+When this variable is set and a test case can prepare a virtual device such as
+`null_blk` with zoned mode, the test case is executed twice: first in non-zoned
+mode and second in zoned mode. The use of the `RUN_ZONED_TESTS` variable
+requires that the kernel be compiled with `CONFIG_BLK_DEV_ZONED` enabled.
+```sh
+RUN_ZONED_TESTS=1
+```
+
 ### Custom Setup
 
 The `config` file is really just a bash file that is sourced at the beginning

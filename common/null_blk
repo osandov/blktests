@@ -9,7 +9,15 @@ _have_null_blk() {
 }
 
 _init_null_blk() {
-	if ! modprobe -r null_blk || ! modprobe null_blk "$@"; then
+	if [[ -d /sys/kernel/config/nullb ]]; then
+		find /sys/kernel/config/nullb -mindepth 1 -maxdepth 1 \
+		     -type d -delete
+	fi
+
+	local zoned=""
+	if (( RUN_FOR_ZONED )); then zoned="zoned=1"; fi
+
+	if ! modprobe -r null_blk || ! modprobe null_blk "$@" "${zoned}" ; then
 		return 1
 	fi
 
