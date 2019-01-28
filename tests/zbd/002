@@ -1,0 +1,108 @@
+#!/bin/bash
+# SPDX-License-Identifier: GPL-3.0+
+# Copyright (C) 2018 Western Digital Corporation or its affiliates.
+#
+# Issue report zone command and confirm consistency of reported values.
+
+. tests/zbd/rc
+
+DESCRIPTION="report zone"
+CAN_BE_ZONED=1
+
+fallback_device() {
+	_fallback_null_blk_zoned
+}
+
+cleanup_fallback_device() {
+	_exit_null_blk
+}
+
+_check_blkzone_report() {
+	# Utilize local variables as much as possible to speed up loop execution
+	local -i max_idx=$((REPORTED_COUNT - 1))
+	local -i chunk_sectors=${SYSFS_VARS[$SV_CHUNK_SECTORS]}
+	local -i cur_start=${ZONE_STARTS[0]}
+	local -i next_start=0
+	local -i len=0
+	local -i wptr=0
+	local -i cond=0
+	local -i zone_type=0
+
+	# Confirm number of reported zones
+	if [[ ${REPORTED_COUNT} -ne ${SYSFS_VARS[$SV_NR_ZONES]} ]]; then
+		echo "The number of zones reported differ from sysfs nr_zones"
+		echo -n "Reported zones count: ${REPORTED_COUNT}  "
+		echo "sysfs nr_zones: ${SYSFS_VARS[$SV_NR_ZONES]}"
+		return 1
+	fi
+
+	# Check consistency between last zone size and capacity
+	local -i last_zone_end=$((ZONE_STARTS[max_idx] + ZONE_LENGTHS[max_idx]))
+	if [[ ${last_zone_end} -gt ${SYSFS_VARS[$SV_CAPACITY]} ]]; then
+		echo "Last zone start sector + length exceeds capacity"
+		echo -n "Capacity: ${SYSFS_VARS[$SV_CAPACITY]}, "
+		echo "last zone start sector + length: ${last_zone_end}"
+		return 1
+	fi
+
+	# Check each zone parameter validity and that all zones are contiguous
+	for ((idx = 0; idx <= max_idx; idx++)); do
+
+		next_start=${ZONE_STARTS[$((idx+1))]}
+		len=${ZONE_LENGTHS[$idx]}
+		wptr=${ZONE_WPTRS[$idx]}
+		cond=${ZONE_CONDS[$idx]}
+		zone_type=${ZONE_TYPES[$idx]}
+
+		# Check two zones are contiguous
+		if [[ $((cur_start+len)) -ne ${next_start} ]]; then
+			echo -n "Zones are not contiguous at zone ${idx}. "
+			echo "cur:${cur_start}+${len}, next:${next_start}"
+			return 1
+		fi
+
+		# Check zone size
+		if [[ ${len} -ne ${chunk_sectors} &&
+		      ${idx} -ne ${max_idx} ]]; then
+			echo -n "Zone size is not same as chunk_sectors "
+			echo -n "at zone ${idx}. "
+			echo "size: ${len}, chunk_sectors: ${chunk_sectors}"
+			return 1
+		fi
+
+		# Check write pointer
+		if [[ ${wptr} -lt 0 || ${wptr} -gt ${len} ]]; then
+			echo -n "Write pointer is invalid at zone ${idx}. "
+			echo "wp:${wptr}"
+			return 1
+		fi
+
+		# Check zone condition
+		if [[ ! ${ZONE_COND_ARRAY[cond]} ]]; then
+			echo -n "Zone condition is incorrect at zone ${idx}. "
+			echo "condition: ${cond}"
+			return 1
+		fi
+
+		# Check zone type
+		if [[ ! ${ZONE_TYPE_ARRAY[zone_type]} ]]; then
+			echo -n "Zone type is incorrect at zone ${idx}. "
+			echo "type: ${zone_type}"
+			return 1
+		fi
+		cur_start=${next_start}
+	done
+	return 0
+}
+
+test_device() {
+	echo "Running ${TEST_NAME}"
+
+	_get_sysfs_variable "${TEST_DEV}" || return $?
+	_get_blkzone_report "${TEST_DEV}" || return $?
+	_check_blkzone_report || return $?
+	_put_blkzone_report
+	_put_sysfs_variable
+
+	echo "Test complete"
+}
