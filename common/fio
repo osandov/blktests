@@ -17,6 +17,15 @@ _have_fio() {
 	return 0
 }
 
+_have_fio_zbd_zonemode() {
+	_have_fio || return $?
+	if ! fio --cmdhelp=zonemode 2>&1 | grep -q zbd; then
+		SKIP_REASON="Fio version too old (does not support --zonemode=zbd)"
+		return 1
+	fi
+	return 0
+}
+
 declare -A FIO_TERSE_FIELDS
 FIO_TERSE_FIELDS=(
 	# Read status
