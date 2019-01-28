@@ -17,7 +17,7 @@ _found_test() {
 	local test_name="$1"
 	local explicit="$2"
 
-	unset CAN_BE_ZONED DESCRIPTION QUICK TIMED requires device_requires test test_device
+	unset CAN_BE_ZONED DESCRIPTION QUICK TIMED requires device_requires test test_device fallback_device cleanup_fallback_device
 
 	# shellcheck disable=SC1090
 	if ! . "tests/${test_name}"; then
@@ -41,6 +41,16 @@ _found_test() {
 
 	if declare -fF device_requires >/dev/null && ! declare -fF test_device >/dev/null; then
 		_warning "${test_name} defines device_requires() but not test_device()"
+		return 1
+	fi
+
+	if declare -fF fallback_device >/dev/null && ! declare -fF cleanup_fallback_device >/dev/null; then
+		_warning "${test_name} defines fallback_device() but not cleanup_fallback_device()"
+		return 1
+	fi
+
+	if declare -fF cleanup_fallback_device >/dev/null && ! declare -fF fallback_device >/dev/null; then
+		_warning "${test_name} defines cleanup_fallback_device() but not fallback_device()"
 		return 1
 	fi
 
@@ -407,6 +417,7 @@ _run_test() {
 	CHECK_DMESG=1
 	DMESG_FILTER="cat"
 	RUN_FOR_ZONED=0
+	FALLBACK_DEVICE=0
 
 	# shellcheck disable=SC1090
 	. "tests/${TEST_NAME}"
@@ -425,6 +436,22 @@ _run_test() {
 			_call_test test
 		fi
 	else
+		if [[ ${#TEST_DEVS[@]} -eq 0 ]] && \
+			declare -fF fallback_device >/dev/null; then
+			if ! test_dev=$(fallback_device); then
+				_warning "$TEST_NAME: fallback_device call failure"
+				return 0
+			fi
+			if ! sysfs_dir="$(_find_sysfs_dir "$test_dev")"; then
+				_warning "$TEST_NAME: could not find sysfs directory for ${test_dev}"
+				cleanup_fallback_device
+				return 0
+			fi
+			TEST_DEVS=( "${test_dev}" )
+			TEST_DEV_SYSFS_DIRS["$test_dev"]="$sysfs_dir"
+			FALLBACK_DEVICE=1
+		fi
+
 		if [[ ${#TEST_DEVS[@]} -eq 0 ]]; then
 			return 0
 		fi
@@ -452,6 +479,13 @@ _run_test() {
 				ret=1
 			fi
 		done
+
+		if (( FALLBACK_DEVICE )); then
+			cleanup_fallback_device
+			unset TEST_DEV_SYSFS_DIRS["${TEST_DEVS[0]}"]
+			TEST_DEVS=()
+		fi
+
 		return $ret
 	fi
 }
