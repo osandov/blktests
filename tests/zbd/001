@@ -1,0 +1,74 @@
+#!/bin/bash
+# SPDX-License-Identifier: GPL-3.0+
+# Copyright (C) 2018 Western Digital Corporation or its affiliates.
+#
+# Check zoned block device sysfs and ioctl parameter availability and
+# confirm consistency among them.
+
+. tests/zbd/rc
+
+DESCRIPTION="sysfs and ioctl"
+QUICK=1
+CAN_BE_ZONED=1
+
+requires() {
+	_have_src_program zbdioctl
+}
+
+fallback_device() {
+	_fallback_null_blk_zoned
+}
+
+cleanup_fallback_device() {
+	_exit_null_blk
+}
+
+test_device() {
+	echo "Running ${TEST_NAME}"
+
+	# Get and keep sysfs variables
+	_get_sysfs_variable "${TEST_DEV}" || return $?
+	local -i capacity=${SYSFS_VARS[$SV_CAPACITY]}
+	local -i chunk_sectors=${SYSFS_VARS[$SV_CHUNK_SECTORS]}
+
+	# Calculate expected number of zones based on the total capacity and
+	# zone size, taking into account that the last zone can be smaller
+	# than other zones.
+	local -i nr_zones=$(( (capacity - 1) / chunk_sectors + 1 ))
+
+	# Compare sysfs values and ioctl values
+	if [[ -e "${TEST_DEV_SYSFS}"/queue/nr_zones ]]; then
+		local -i sysfs_nr_zones=${SYSFS_VARS[$SV_NR_ZONES]}
+		local -i ioctl_nr_zones
+		local -i ioctl_zonesize
+
+		ioctl_zonesize=$(src/zbdioctl -s "${TEST_DEV}")
+		if [[ ${chunk_sectors} -ne ${ioctl_zonesize} ]]; then
+			echo -n "ioctl zone size:${ioctl_zonesize} != "
+			echo "sysfs chunk_sectors:${chunk_sectors}"
+			return 1
+		fi
+
+		ioctl_nr_zones=$(src/zbdioctl -n "${TEST_DEV}")
+		if [[ ${nr_zones} -ne ${ioctl_nr_zones} ]]; then
+			echo -n "ioctl nr_zones:${ioctl_nr_zones} != "
+			echo "nr_zones:${nr_zones}"
+			return 1
+		fi
+
+		if [[ ${nr_zones} -ne ${sysfs_nr_zones} ]]; then
+			echo -n "sysfs nr_zones:${sysfs_nr_zones} != "
+			echo "nr_zones:${nr_zones}"
+			return 1
+		fi
+	fi
+
+	_put_sysfs_variable
+	{
+		echo "Capacity: ${capacity} sectors"
+		echo "Zone: ${chunk_sectors} sectors"
+		echo "Number of zones: ${nr_zones} zones"
+	} >> "$FULL" 2>&1
+
+	echo "Test complete"
+}
