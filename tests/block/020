@@ -11,6 +11,7 @@
 
 DESCRIPTION="run null-blk on different schedulers with only one hardware tag"
 QUICK=1
+CAN_BE_ZONED=1
 
 requires() {
 	_have_null_blk && _have_fio

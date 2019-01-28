@@ -11,6 +11,7 @@
 
 DESCRIPTION="do I/O and check the inflight counter"
 QUICK=1
+CAN_BE_ZONED=1
 
 requires() {
 	_have_null_blk

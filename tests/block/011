@@ -8,6 +8,7 @@
 
 DESCRIPTION="disable PCI device while doing I/O"
 TIMED=1
+CAN_BE_ZONED=1
 
 requires() {
 	_have_fio && _have_program setpci

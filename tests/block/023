@@ -10,6 +10,7 @@
 
 DESCRIPTION="do I/O on all null_blk queue modes"
 QUICK=1
+CAN_BE_ZONED=1
 
 requires() {
 	_have_null_blk

@@ -11,6 +11,7 @@
 
 DESCRIPTION="send a signal to a process waiting on a frozen queue"
 QUICK=1
+CAN_BE_ZONED=1
 
 requires() {
 	_have_null_blk
