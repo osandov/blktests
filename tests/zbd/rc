@@ -1,0 +1,194 @@
+#!/bin/bash
+# SPDX-License-Identifier: GPL-3.0+
+# Copyright (C) 2018 Western Digital Corporation or its affiliates.
+#
+# Tests for Zone Block Device.
+
+. common/rc
+. common/null_blk
+
+#
+# Test requirement check functions
+#
+
+group_requires() {
+	_have_root || return $?
+	_have_program blkzone || return $?
+	_have_program dd || return $?
+	_have_kernel_option BLK_DEV_ZONED || return $?
+	_have_modules null_blk && _have_module_param null_blk zoned
+}
+
+group_device_requires() {
+	_test_dev_is_zoned
+}
+
+_fallback_null_blk_zoned() {
+	if ! _init_null_blk zone_size=4 gb=1 zoned=1 ; then
+		return 1
+	fi
+	echo /dev/nullb0
+}
+
+#
+# Zone types and conditions
+#
+export ZONE_TYPE_CONVENTIONAL=1
+export ZONE_TYPE_SEQ_WRITE_REQUIRED=2
+export ZONE_TYPE_SEQ_WRITE_PREFERRED=3
+
+export ZONE_COND_EMPTY=1
+export ZONE_COND_IMPLICIT_OPEN=2
+export ZONE_COND_FULL=14
+
+export ZONE_TYPE_ARRAY=(
+	[1]="CONVENTIONAL"
+	[2]="SEQ_WRITE_REQUIRED"
+	[3]="SEQ_WRITE_PREFERRED"
+)
+
+export ZONE_COND_ARRAY=(
+	[0]="NOT_WP"
+	[1]="EMPTY"
+	[2]="IMPLICIT_OPEN"
+	[3]="EXPLICIT_OPEN"
+	[4]="CLOSE"
+	[13]="READ_ONLY"
+	[14]="FULL"
+	[15]="OFFLINE"
+)
+
+# sysfs variable array indices
+export SV_CAPACITY=0
+export SV_CHUNK_SECTORS=1
+export SV_PHYS_BLK_SIZE=2
+export SV_PHYS_BLK_SECTORS=3
+export SV_NR_ZONES=4
+
+#
+# Helper functions
+#
+
+# Obtain zone related sysfs variables and keep in a global array until put
+# function call.
+_get_sysfs_variable() {
+	unset SYSFS_VARS
+	local _dir=${TEST_DEV_SYSFS}
+	SYSFS_VARS[$SV_CAPACITY]=$(<"${_dir}"/size)
+	SYSFS_VARS[$SV_CHUNK_SECTORS]=$(<"${_dir}"/queue/chunk_sectors)
+	SYSFS_VARS[$SV_PHYS_BLK_SIZE]=$(<"${_dir}"/queue/physical_block_size)
+	SYSFS_VARS[$SV_PHYS_BLK_SECTORS]=$((SYSFS_VARS[SV_PHYS_BLK_SIZE] / 512))
+
+	# If the nr_zones sysfs attribute exists, get its value. Otherwise,
+	# calculate its value based on the total capacity and zone size, taking
+	# into account that the last zone can be smaller than other zones.
+	if [[ -e ${TEST_DEV_SYSFS}/queue/nr_zones ]]; then
+		SYSFS_VARS[$SV_NR_ZONES]=$(<"${_dir}"/queue/nr_zones)
+	else
+		SYSFS_VARS[$SV_NR_ZONES]=$(( (SYSFS_VARS[SV_CAPACITY] - 1) \
+				/ SYSFS_VARS[SV_CHUNK_SECTORS] + 1 ))
+	fi
+}
+
+_put_sysfs_variable() {
+	unset SYSFS_VARS
+}
+
+# Issue zone report command and keep reported information in global arrays
+# until put function call.
+_get_blkzone_report() {
+	local target_dev=${1}
+
+	# Initialize arrays to store parsed blkzone reports.
+	# Number of reported zones is set in REPORTED_COUNT.
+	# The arrays have REPORTED_COUNT+1 elements with additional one at tail
+	# to simplify loop operation.
+	ZONE_STARTS=()
+	ZONE_LENGTHS=()
+	ZONE_WPTRS=()
+	ZONE_CONDS=()
+	ZONE_TYPES=()
+	NR_CONV_ZONES=0
+	REPORTED_COUNT=0
+
+	TMP_REPORT_FILE=${TMPDIR}/blkzone_report
+	if ! blkzone report "${target_dev}" > "${TMP_REPORT_FILE}"; then
+		echo "blkzone command failed"
+		return $?
+	fi
+
+	local _IFS=$IFS
+	local -i loop=0
+	IFS=$' ,:'
+	while read -r -a _tokens
+	do
+		ZONE_STARTS+=($((_tokens[1])))
+		ZONE_LENGTHS+=($((_tokens[3])))
+		ZONE_WPTRS+=($((_tokens[5])))
+		ZONE_CONDS+=($((${_tokens[11]%\(*})))
+		ZONE_TYPES+=($((${_tokens[13]%\(*})))
+		if [[ ${ZONE_TYPES[-1]} -eq ${ZONE_TYPE_CONVENTIONAL} ]]; then
+			(( NR_CONV_ZONES++ ))
+		fi
+		(( loop++ ))
+	done < "${TMP_REPORT_FILE}"
+	IFS="$_IFS"
+	REPORTED_COUNT=${loop}
+
+	if [[ ${REPORTED_COUNT} -eq 0 ]] ; then
+		echo "blkzone report returned no zone"
+		return 1
+	fi
+
+	# Set value to allow additioanl element access at array end
+	local -i max_idx=$((REPORTED_COUNT - 1))
+	ZONE_STARTS+=( $((ZONE_STARTS[max_idx] + ZONE_LENGTHS[max_idx])) )
+	ZONE_LENGTHS+=( "${ZONE_LENGTHS[max_idx]}" )
+	ZONE_WPTRS+=( "${ZONE_WPTRS[max_idx]}" )
+	ZONE_CONDS+=( "${ZONE_CONDS[max_idx]}" )
+	ZONE_TYPES+=( "${ZONE_TYPES[max_idx]}" )
+
+	rm -f "${TMP_REPORT_FILE}"
+}
+
+_put_blkzone_report() {
+	unset ZONE_STARTS
+	unset ZONE_LENGTHS
+	unset ZONE_WPTRS
+	unset ZONE_CONDS
+	unset ZONE_TYPES
+	unset REPORTED_COUNT
+	unset NR_CONV_ZONES
+}
+
+# Issue reset zone command with zone count option.
+# Call _get_blkzone_report() beforehand.
+_reset_zones() {
+	local target_dev=${1}
+	local -i idx=${2}
+	local -i count=${3}
+
+	if ! blkzone reset -o "${ZONE_STARTS[idx]}" -c "${count}" \
+	     "${target_dev}" >> "$FULL" 2>&1 ; then
+		echo "blkzone reset command failed"
+		return 1
+	fi
+}
+
+# Search zones and find two contiguous sequential required zones.
+# Return index of the first zone of the found two zones.
+# Call _get_blkzone_report() beforehand.
+_find_two_contiguous_seq_zones() {
+	local -i type_seq=${ZONE_TYPE_SEQ_WRITE_REQUIRED}
+
+	for ((idx = NR_CONV_ZONES; idx < REPORTED_COUNT; idx++)); do
+		if [[ ${ZONE_TYPES[idx]} -eq ${type_seq} &&
+		      ${ZONE_TYPES[idx+1]} -eq ${type_seq} ]]; then
+			echo "${idx}"
+			return 0
+		fi
+	done
+
+	echo "Contiguous sequential write required zones not found"
+	return 1
+}
