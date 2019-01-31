@@ -291,7 +291,7 @@ int main(int argc, char **argv)
 			unsigned char *p = &*buf.begin();
 			for (int i = 0; i < len / 4; i++)
 				iov.append(p + 4 + i * 8,
-					   std::min(4ul, len - i * 4));
+					   std::min((size_t)4, len - i * 4));
 		} else {
 			iov.append(&*buf.begin(), buf.size());
 		}
