@@ -9,14 +9,12 @@
 #include <linux/blkzoned.h>
 #include <linux/types.h>
 
-#if !defined(BLKGETZONESZ) || !defined(BLKGETNRZONES)
-
-int main(int argc, char **argv)
-{
-	return EXIT_FAILURE;
-}
-
-#else
+#ifndef BLKGETZONESZ
+#define BLKGETZONESZ	_IOR(0x12, 132, __u32)
+#endif
+#ifndef BLKGETNRZONES
+#define BLKGETNRZONES	_IOR(0x12, 133, __u32)
+#endif
 
 struct request {
 	const char *name;
@@ -78,6 +76,3 @@ int main(int argc, char **argv)
 
 	return EXIT_SUCCESS;
 }
-
-#endif
-
