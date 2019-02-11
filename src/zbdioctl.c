@@ -6,7 +6,9 @@
 #include <fcntl.h>
 #include <unistd.h>
 #include <sys/ioctl.h>
+#ifdef HAVE_LINUX_BLKZONED_H
 #include <linux/blkzoned.h>
+#endif
 #include <linux/types.h>
 
 #ifndef BLKGETZONESZ

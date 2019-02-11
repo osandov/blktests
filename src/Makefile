@@ -1,3 +1,7 @@
+HAVE_C_HEADER = $(shell if echo "\#include <$(1)>" |			\
+		  $(CC) -x c -c - 2>/dev/null; then echo "$(2)";	\
+		  else echo "$(3)"; fi)
+
 C_TARGETS := \
 	loblksize \
 	loop_get_status_null \
@@ -13,9 +17,11 @@ CXX_TARGETS := \
 
 TARGETS := $(C_TARGETS) $(CXX_TARGETS)
 
-override CFLAGS   := -O2 -Wall -Wshadow $(CFLAGS)
+CONFIG_DEFS := $(call HAVE_C_HEADER,linux/blkzoned.h,-DHAVE_LINUX_BLKZONED_H)
+
+override CFLAGS   := -O2 -Wall -Wshadow $(CFLAGS) $(CONFIG_DEFS)
 override CXXFLAGS := -O2 -std=c++11 -Wall -Wextra -Wshadow -Wno-sign-compare \
-		     -Werror $(CXXFLAGS)
+		     -Werror $(CXXFLAGS) $(CONFIG_DEFS)
 
 all: $(TARGETS)
 
