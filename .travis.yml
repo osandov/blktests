@@ -25,6 +25,8 @@ before_install:
   - if [ "$TRAVIS_OS_NAME" = "linux" ]; then
       sudo apt update;
       sudo apt install -y libc6-dev libc6-dev:i386 'libstdc++-*-dev' 'libstdc++-*-dev:i386' gcc-multilib g++-multilib;
+      curl -L "https://storage.googleapis.com/shellcheck/shellcheck-stable.linux.x86_64.tar.xz" | tar -xJ;
+      sudo cp shellcheck-stable/shellcheck /usr/local/bin/;
     fi
   - CFLAGS="-Werror"
   - CXXFLAGS="-Werror"
@@ -36,3 +38,4 @@ before_install:
 
 script:
   - make CFLAGS="$CFLAGS" CXXFLAGS="$CXXFLAGS" LDFLAGS="$LDFLAGS"
+  - make check
