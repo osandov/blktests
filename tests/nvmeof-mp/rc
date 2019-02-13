@@ -40,7 +40,7 @@ group_requires() {
 	)
 	_have_modules "${required_modules[@]}" || return 1
 
-	for p in mkfs.ext4 mkfs.xfs multipath multipathd pidof sg_reset; do
+	for p in mkfs.ext4 mkfs.xfs multipath multipathd pidof; do
 		_have_program "$p" || return $?
 	done
 
@@ -107,7 +107,7 @@ log_out() {
 
 # Simulate network failures for device $1 during $2 seconds.
 simulate_network_failure_loop() {
-	local d dev="$1" duration="$2" deadline i rc=0
+	local d dev="$1" duration="$2" deadline i rc=0 sf
 
 	[ -e "$dev" ] || return $?
 	[ -n "$duration" ] || return $?
@@ -115,9 +115,10 @@ simulate_network_failure_loop() {
 	while [ $rc = 0 ]; do
 		sleep_until 5 ${deadline} || break
 		for d in $(held_by "$dev"); do
-			echo 1 >"$d/device/reset_controller"
+			sf=$(ls -d /sys/class/nvme/*/device/*/"${d#/dev/}/reset_controller")
+			echo 1 > "$sf"
 		done
-	done
+	done 2>>"$FULL"
 
 	for ((i=0;i<5;i++)); do
 		log_in && break
