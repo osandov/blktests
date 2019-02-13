@@ -6,13 +6,13 @@ os:
 sudo: required
 
 compiler:
-  - clang
   - gcc
+  - clang
 
 env:
   matrix:
-    - BUILD_ARCH="x86"
     - BUILD_ARCH="x86_64"
+    - BUILD_ARCH="x86"
 
 addons:
   apt:
@@ -22,12 +22,10 @@ addons:
       - make
 
 before_install:
-  - if [ "$TRAVIS_OS_NAME" = "linux" ]; then
-      sudo apt update;
-      sudo apt install -y libc6-dev libc6-dev:i386 'libstdc++-*-dev' 'libstdc++-*-dev:i386' gcc-multilib g++-multilib;
-      curl -L "https://storage.googleapis.com/shellcheck/shellcheck-stable.linux.x86_64.tar.xz" | tar -xJ;
-      sudo cp shellcheck-stable/shellcheck /usr/local/bin/;
-    fi
+  - sudo apt update || true
+  - sudo apt install -y gcc-multilib g++-multilib
+  - curl -L "https://storage.googleapis.com/shellcheck/shellcheck-stable.linux.x86_64.tar.xz" | tar -xJ
+  - sudo cp shellcheck-stable/shellcheck /usr/local/bin/
   - CFLAGS="-Werror"
   - CXXFLAGS="-Werror"
   - if [ "$BUILD_ARCH" == "x86" ]; then
