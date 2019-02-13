@@ -1,5 +1,7 @@
 # blktests
 
+[![Build Status](https://travis-ci.org/osandov/blktests.svg?branch=master)](https://travis-ci.org/osandov/blktests)
+
 blktests is a test framework for the Linux kernel block layer and storage
 stack. It is inspired by the [xfstests](https://git.kernel.org/pub/scm/fs/xfs/xfstests-dev.git/)
 filesystem testing framework.
