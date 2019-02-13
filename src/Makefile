@@ -1,6 +1,6 @@
-HAVE_C_HEADER = $(shell if echo "\#include <$(1)>" |			\
-		  $(CC) -x c -c - 2>/dev/null; then echo "$(2)";	\
-		  else echo "$(3)"; fi)
+HAVE_C_HEADER = $(shell if echo "\#include <$(1)>" |		\
+		$(CC) -E - > /dev/null 2>&1; then echo "$(2)";	\
+		else echo "$(3)"; fi)
 
 C_TARGETS := \
 	loblksize \
