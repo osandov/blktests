@@ -83,7 +83,14 @@ test_device() {
 	_put_blkzone_report
 	_get_blkzone_report "${TEST_DEV}" || return $?
 	_check_zone_cond "${idx}" "${ZONE_COND_FULL}" || return $?
-	_check_zone_cond "$((idx+1))" "${ZONE_COND_IMPLICIT_OPEN}" || return $?
+	if ((ZONE_CONDS[idx+1] != ZONE_COND_IMPLICIT_OPEN)) && \
+		   ((ZONE_CONDS[idx+1] != ZONE_COND_CLOSED)); then
+		echo -n "Zone ${idx+1} condition is neither "
+		echo -n "${ZONE_COND_ARRAY[ZONE_COND_IMPLICIT_OPEN]} nor "
+		echo -n "${ZONE_COND_ARRAY[ZONE_COND_CLOSED]} "
+		echo "cond: ${ZONE_COND_ARRAY[ZONE_CONDS[idx+1]]}"
+		return 1
+	fi
 	if [[ ${ZONE_WPTRS[idx+1]} -ne ${phys_blk_sectors} ]]; then
 		echo -n "Unexpected write pointer for zone $((idx+1)) "
 		echo "wp: ${ZONE_WPTRS[idx+1]}"
