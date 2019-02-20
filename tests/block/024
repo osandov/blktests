@@ -53,9 +53,10 @@ test() {
 	dd if=/dev/zero of=/dev/nullb0 bs=4096 oflag=direct count=1500 status=none
 	show_times
 
+	# 1800 * 0.5 ms is 0.9 seconds.
 	dd if=/dev/nullb0 of=/dev/null bs=4096 iflag=direct count=1500 status=none &
-	dd if=/dev/zero of=/dev/nullb0 bs=4096 oflag=direct count=1500 status=none &
-	dd if=/dev/zero of=/dev/nullb0 bs=4096 oflag=direct count=1500 status=none &
+	dd if=/dev/zero of=/dev/nullb0 bs=4096 oflag=direct count=1800 status=none &
+	dd if=/dev/zero of=/dev/nullb0 bs=4096 oflag=direct count=1800 status=none &
 	wait
 	show_times
 
