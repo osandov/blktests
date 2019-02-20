@@ -28,6 +28,7 @@ test() {
 		return 1
 	fi
 
+	udevadm settle
 	src/loblksize "$loop_dev" 4096
 	losetup --direct-io=on "$loop_dev"
 	cat "/sys/block/${loop_dev#/dev/}/loop/dio"
