@@ -38,11 +38,10 @@ test() {
 	cat "/sys/block/${nvmedev}n1/uuid"
 	cat "/sys/block/${nvmedev}n1/wwid"
 
-	nvme ns-rescan "/dev/${nvmedev}" > /dev/null 2>&1
-
-	rc=$?
-
-	nvme disconnect -n "${subsys_name}"
+	if ! nvme ns-rescan "/dev/${nvmedev}" >> "$FULL" 2>&1; then
+		echo "ERROR: ns-rescan failed"
+	fi
+	nvme disconnect -n "${subsys_name}" >> "$FULL" 2>&1
 
 	_remove_nvmet_subsystem_from_port "${port}" "${subsys_name}"
 	_remove_nvmet_subsystem "${subsys_name}"
@@ -53,9 +52,5 @@ test() {
 	modprobe -r nvme-loop
 	modprobe -r nvmet
 
-	if [ $rc -ne 0 ]; then
-		echo "Test Failed"
-	else
-		echo "Test complete"
-	fi
+	echo "Test complete"
 }
