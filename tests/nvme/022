@@ -38,11 +38,11 @@ test() {
 	cat "/sys/block/${nvmedev}n1/uuid"
 	cat "/sys/block/${nvmedev}n1/wwid"
 
-	nvme reset "/dev/${nvmedev}" > /dev/null 2>&1
+	if ! nvme reset "/dev/${nvmedev}" >> "$FULL" 2>&1; then
+		echo "ERROR: reset failed"
+	fi
 
-	rc=$?
-
-	nvme disconnect -n "${subsys_name}"
+	nvme disconnect -n "${subsys_name}" >> "$FULL" 2>&1
 
 	_remove_nvmet_subsystem_from_port "${port}" "${subsys_name}"
 	_remove_nvmet_subsystem "${subsys_name}"
@@ -53,9 +53,5 @@ test() {
 	modprobe -r nvme-loop
 	modprobe -r nvmet
 
-	if [ $rc -ne 0 ]; then
-		echo "Test Failed"
-	else
-		echo "Test complete"
-	fi
+	echo "Test complete"
 }
