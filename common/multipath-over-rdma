@@ -23,6 +23,37 @@ _have_legacy_dm() {
 	fi
 }
 
+# Check whether version number $1 is less than or equal to version number $2.
+version_le() {
+	local i v1 v2
+
+	IFS='.' read -ra v1 <<<"$1"
+	IFS='.' read -ra v2 <<<"$2"
+	if [ ${#v1[@]} != ${#v2[@]} ]; then
+		echo "Error: version number mismatch $1 <> $2" >&2
+		return 1
+	fi
+	for ((i=0; i < ${#v1[@]}; i++)); do
+		[ "${v1[i]}" -lt "${v2[i]}" ] && return 0
+		[ "${v1[i]}" -gt "${v2[i]}" ] && return 1
+	done
+	return 0
+}
+
+# Check whether the multipathd version is at least $1. $1 is a version number
+# with three components separated by dots.
+_multipathd_version_ge() {
+	local min_ver=$1 mp_ver
+
+	mp_ver=$(multipath -k 2>&1 |
+		sed -n 's/^multipath-tools v\([0-9]*\.[0-9]*\.[0-9]*\).*/\1/p')
+	if version_le "$min_ver" "$mp_ver"; then
+		return 0
+	fi
+	SKIP_REASON="Need multipathd version $min_ver; found multipathd version $mp_ver."
+	return 1
+}
+
 get_ipv4_addr() {
 	ip -4 -o addr show dev "$1" |
 		sed -n 's/.*[[:blank:]]inet[[:blank:]]*\([^[:blank:]/]*\).*/\1/p'
@@ -668,4 +699,23 @@ setup_test() {
 	setup_rdma || return $?
 	start_target || return $?
 	echo "Test setup finished" >>"$FULL"
+}
+
+# Run these unit tests as follows:
+# bash -c '. ./common/multipath-over-rdma && unit_tests'
+unit_tests() {
+	local t tests pass=1
+
+	tests=("version_le 0.1.2 1.2.3"
+	       "version_le 0.1.2 0.1.3"
+	       "version_le 0.1.2 0.1.2"
+	       "! version_le 3 2"
+	       "! version_le 3.1 2.3")
+	for t in "${tests[@]}"; do
+		if ! eval "$t"; then
+			echo "FAILED: $t"
+			pass=0
+		fi
+	done
+	[ $pass = 1 ] && echo PASS
 }

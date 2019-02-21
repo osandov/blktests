@@ -62,6 +62,8 @@ group_requires() {
 		_have_program "$p" || return $?
 	done
 
+	_multipathd_version_ge 0.7.0 || return $?
+
 	_have_root || return $?
 
 	_have_src_program discontiguous-io || return $?
