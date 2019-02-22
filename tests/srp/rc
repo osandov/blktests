@@ -212,7 +212,7 @@ log_in() {
 						do_rdma_cm_login "$ioc_guid" "$ibdev" "$add_param";;
 				*)
 					do_rdma_cm_login "$ioc_guid" "$ibdev" "$add_param";;
-			esac || break
+			esac
 		done
 
 		for p in /sys/class/scsi_host/*/orig_dgid; do
