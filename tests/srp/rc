@@ -115,7 +115,7 @@ use_blk_mq() {
 # Write SRP login string $1 into SRP login sysfs attribute $2.
 srp_single_login() {
 	{
-		echo "echo $1 > $PWD/$2"
+		echo "echo $1 > $2"
 		echo "$1" >"$2"
 	} &>>"$FULL"
 }
