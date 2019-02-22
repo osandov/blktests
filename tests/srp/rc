@@ -153,6 +153,7 @@ do_rdma_cm_login() {
 		a=$(get_ipv4_addr "$(basename "$d")")
 		b=$(get_ipv6_addr "$(basename "$d")")
 	fi
+	echo "Interface $d: IPv4 $a IPv6 $b" >>"$FULL"
 	[ -n "$a$b" ] || return 1
 	dests=()
 	[ -n "$a" ] && dests+=("${a}:${srp_rdma_cm_port}")
