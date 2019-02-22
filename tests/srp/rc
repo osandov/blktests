@@ -132,7 +132,7 @@ do_ib_cm_login() {
 	add_param=$4
 	gid=$(<"/sys/class/infiniband/$ibdev/ports/$port/gids/0")
 	gid=${gid//:}
-	for p in /sys/class/infiniband_srp/*; do
+	for p in "/sys/class/infiniband_srp/srp-${2}-"*; do
 		[ -e "$p" ] || continue
 		srp_single_login "id_ext=$ioc_guid,ioc_guid=$ioc_guid,dgid=$gid,pkey=7fff,service_id=$ioc_guid,$add_param" "$p/add_target"
 	done
@@ -159,7 +159,7 @@ do_rdma_cm_login() {
 	[ -n "$a" ] && dests+=("${a}:${srp_rdma_cm_port}")
 	[ -n "$b" ] && dests+=("[${b}]:${srp_rdma_cm_port}")
 	for dest in "${dests[@]}"; do
-		for p in /sys/class/infiniband_srp/*; do
+		for p in "/sys/class/infiniband_srp/srp-${2}-"*; do
 			[ -e "$p" ] || continue
 			srp_single_login "id_ext=$ioc_guid,ioc_guid=$ioc_guid,dest=$dest,$add_param" "$p/add_target"
 		done
