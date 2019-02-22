@@ -196,16 +196,15 @@ show_srp_connections() {
 # Make the SRP initiator driver log in to each SRP target port that exists
 # on the local host.
 log_in() {
-	local a add_param="${srp_login_params}" d dest gid ibdev ioc_guid port p sysfsdir
+	local a add_param="${srp_login_params}" d dest gid ibdev ioc_guid port p
 
 	ioc_guid=$(</sys/module/ib_srpt/parameters/srpt_service_guid)
 
 	for ((i=0;i<10;i++)); do
 		for d in /sys/class/infiniband_mad/umad*; do
 			[ -e "$d" ] || continue
-			sysfsdir=/sys/class/infiniband_mad/$(basename "$d")
-			ibdev=$(<"$sysfsdir/ibdev")
-			port=$(<"$sysfsdir/port")
+			ibdev=$(<"$d/ibdev")
+			port=$(<"$d/port")
 			link_layer=$(<"/sys/class/infiniband/$ibdev/ports/$port/link_layer")
 			case $link_layer in
 				InfiniBand)
