@@ -414,6 +414,7 @@ _test_dev_is_zoned() {
 
 _run_test() {
 	TEST_NAME="$1"
+	CAN_BE_ZONED=0
 	CHECK_DMESG=1
 	DMESG_FILTER="cat"
 	RUN_FOR_ZONED=0
