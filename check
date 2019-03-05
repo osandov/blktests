@@ -431,11 +431,14 @@ _run_test() {
 
 		RESULTS_DIR="$OUTPUT/nodev"
 		_call_test test
+		local ret=$?
 		if (( RUN_ZONED_TESTS && CAN_BE_ZONED )); then
 			RESULTS_DIR="$OUTPUT/nodev_zoned"
 			RUN_FOR_ZONED=1
 			_call_test test
+			ret=$(( ret || $? ))
 		fi
+		return $ret
 	else
 		if [[ ${#TEST_DEVS[@]} -eq 0 ]] && \
 			declare -fF fallback_device >/dev/null; then
