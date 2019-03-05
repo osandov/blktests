@@ -443,13 +443,13 @@ _run_test() {
 				_warning "$TEST_NAME: fallback_device call failure"
 				return 0
 			fi
-			if ! sysfs_dir="$(_find_sysfs_dir "$test_dev")"; then
+
+			if ! _find_sysfs_dirs "$test_dev"; then
 				_warning "$TEST_NAME: could not find sysfs directory for ${test_dev}"
 				cleanup_fallback_device
 				return 0
 			fi
 			TEST_DEVS=( "${test_dev}" )
-			TEST_DEV_SYSFS_DIRS["$test_dev"]="$sysfs_dir"
 			FALLBACK_DEVICE=1
 		fi
 
@@ -465,6 +465,7 @@ _run_test() {
 		local ret=0
 		for TEST_DEV in "${TEST_DEVS[@]}"; do
 			TEST_DEV_SYSFS="${TEST_DEV_SYSFS_DIRS["$TEST_DEV"]}"
+			TEST_DEV_PART_SYSFS="${TEST_DEV_PART_SYSFS_DIRS["$TEST_DEV"]}"
 			if (( !CAN_BE_ZONED )) && _test_dev_is_zoned; then
 				SKIP_REASON="${TEST_DEV} is a zoned block device"
 				_output_notrun "$TEST_NAME => $(basename "$TEST_DEV")"
@@ -484,6 +485,7 @@ _run_test() {
 		if (( FALLBACK_DEVICE )); then
 			cleanup_fallback_device
 			unset TEST_DEV_SYSFS_DIRS["${TEST_DEVS[0]}"]
+			unset TEST_DEV_PART_SYSFS_DIRS["${TEST_DEVS[0]}"]
 			TEST_DEVS=()
 		fi
 
@@ -508,6 +510,8 @@ _run_group() {
 		for i in "${!TEST_DEVS[@]}"; do
 			TEST_DEV="${TEST_DEVS[$i]}"
 			TEST_DEV_SYSFS="${TEST_DEV_SYSFS_DIRS["$TEST_DEV"]}"
+			# shellcheck disable=SC2034
+			TEST_DEV_PART_SYSFS="${TEST_DEV_PART_SYSFS_DIRS["$TEST_DEV"]}"
 			if ! group_device_requires; then
 				_output_notrun "${group}/*** => $(basename "$TEST_DEV")"
 				unset TEST_DEVS["$i"]
@@ -528,30 +532,32 @@ _run_group() {
 	return $ret
 }
 
-_find_sysfs_dir() {
+_find_sysfs_dirs() {
 	local test_dev="$1"
+	local sysfs_path
 	local major=$((0x$(stat -L -c '%t' "$test_dev")))
 	local minor=$((0x$(stat -L -c '%T' "$test_dev")))
-	local dev="$major:$minor"
 
-	local block_dir part_dir
-	for block_dir in /sys/block/*; do
-		if [[ $(cat "${block_dir}/dev") = "$dev" ]]; then
-			echo "$block_dir"
-			return
-		fi
-		for part_dir in "$block_dir"/*; do
-			if [[ -r ${part_dir}/dev && $(cat "${part_dir}/dev") = "$dev" ]]; then
-				echo "$block_dir"
-				return
-			fi
-		done
-	done
+	# Get the canonical sysfs path
+	if ! sysfs_path="$(realpath "/sys/dev/block/${major}:${minor}")"; then
+		return 1
+	fi
 
-	return 1
+	if [[ -r "${sysfs_path}"/partition ]]; then
+		# If the device is a partition device, cut the last device name
+		# of the canonical sysfs path to access to the sysfs of its
+		# holder device.
+		#   e.g.   .../block/sda/sda1  ->  ...block/sda
+		TEST_DEV_SYSFS_DIRS["$test_dev"]="${sysfs_path%/*}"
+		TEST_DEV_PART_SYSFS_DIRS["$test_dev"]="${sysfs_path}"
+	else
+		TEST_DEV_SYSFS_DIRS["$test_dev"]="${sysfs_path}"
+		TEST_DEV_PART_SYSFS_DIRS["$test_dev"]=""
+	fi
 }
 
 declare -A TEST_DEV_SYSFS_DIRS
+declare -A TEST_DEV_PART_SYSFS_DIRS
 _check() {
 	# shellcheck disable=SC2034
 	SRCDIR="$(realpath src)"
@@ -564,11 +570,9 @@ _check() {
 			_error "${test_dev} is not a block device"
 		fi
 
-		local sysfs_dir
-		if ! sysfs_dir="$(_find_sysfs_dir "$test_dev")"; then
+		if ! _find_sysfs_dirs "$test_dev"; then
 			_error "could not find sysfs directory for ${test_dev}"
 		fi
-		TEST_DEV_SYSFS_DIRS["$test_dev"]="$sysfs_dir"
 	done
 
 	local test_name group prev_group

@@ -80,7 +80,10 @@ group_requires() {
 # should return non-zero and set the \$SKIP_REASON variable. \$TEST_DEV is the
 # full path of the block device (e.g., /dev/nvme0n1 or /dev/sda1), and
 # \$TEST_DEV_SYSFS is the sysfs path of the disk (not the partition, e.g.,
-# /sys/block/nvme0n1 or /sys/block/sda).
+# /sys/block/nvme0n1 or /sys/block/sda). If the target device is a partition
+# device, \$TEST_DEV_PART_SYSFS is the sysfs path of the partition device
+# (e.g., /sys/block/nvme0n1/nvme0n1p1 or /sys/block/sda/sda1). Otherwise,
+# \$TEST_DEV_PART_SYSFS is an empty string.
 #
 # Usually, group_device_requires() just needs to check that the test device is
 # the right type of hardware or supports any necessary features using the
@@ -165,7 +168,10 @@ DESCRIPTION=""
 # set the \$SKIP_REASON variable. \$TEST_DEV is the full path of the block
 # device (e.g., /dev/nvme0n1 or /dev/sda1), and \$TEST_DEV_SYSFS is the sysfs
 # path of the disk (not the partition, e.g., /sys/block/nvme0n1 or
-# /sys/block/sda).
+# /sys/block/sda). If the target device is a partition device,
+# \$TEST_DEV_PART_SYSFS is the sysfs path of the partition device (e.g.,
+# /sys/block/nvme0n1/nvme0n1p1 or /sys/block/sda/sda1). Otherwise,
+# \$TEST_DEV_PART_SYSFS is an empty string.
 #
 # Usually, device_requires() just needs to check that the test device is the
 # right type of hardware or supports any necessary features using the
@@ -206,7 +212,13 @@ DESCRIPTION=""
 #    - \$TEST_DEV -- the block device to run the test on (e.g., /dev/sda1).
 #    - \$TEST_DEV_SYSFS -- the sysfs directory of the device (e.g.,
 #                         /sys/block/sda). In general, you should use the
-#                         _test_dev_queue_{get,set} helpers.
+#                         _test_dev_queue_{get,set} helpers. If the device is a
+#                         partition, this is the directory of its holder
+#                         device.
+#    - \$TEST_DEV_PART_SYSFS -- the sysfs directory of the device if the device
+#                               is a partition device (e.g.,
+#                               /sys/block/sda/sda1). If the device is not a
+#                               partition, this is an empty string.
 test() {
 	echo "Running \${TEST_NAME}"
 
