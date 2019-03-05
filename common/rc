@@ -208,6 +208,14 @@ _test_dev_in_hotplug_slot() {
 	return 0
 }
 
+_test_dev_is_partition() {
+	if [[ -z ${TEST_DEV_PART_SYSFS} ]]; then
+		SKIP_REASON="${TEST_DEV} is not a partition device"
+		return 1
+	fi
+	return 0
+}
+
 # Older versions of xfs_io use pwrite64 and such, so the error messages won't
 # match current versions of xfs_io. See c52086226bc6 ("filter: xfs_io output
 # has dropped "64" from error messages") in xfstests.
