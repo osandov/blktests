@@ -10,7 +10,7 @@ DESCRIPTION="unit test for NVMe flush for file backed ns"
 QUICK=1
 
 requires() {
-	_have_program nvme && _have_modules loop nvme-loop && _have_configfs
+	_have_program nvme && _have_modules loop nvme-loop nvmet && _have_configfs
 }
 
 test() {
