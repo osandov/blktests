@@ -33,7 +33,7 @@ _have_modules() {
 	local module
 
 	for module in "$@"; do
-		if ! modprobe -n -q "$1"; then
+		if ! modprobe -n -q "$module"; then
 			missing+=("$module")
 		fi
 	done
