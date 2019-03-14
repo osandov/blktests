@@ -180,6 +180,19 @@ _reset_zones() {
 	fi
 }
 
+_find_first_sequential_zone() {
+	for ((idx =  NR_CONV_ZONES; idx < REPORTED_COUNT; idx++)); do
+		if [[ ${ZONE_TYPES[idx]} -eq ${ZONE_TYPE_SEQ_WRITE_REQUIRED} ]];
+		then
+			echo "${idx}"
+			return 0
+		fi
+	done
+	echo "Sequential write required zone not found"
+
+	return 1
+}
+
 # Search zones and find two contiguous sequential required zones.
 # Return index of the first zone of the found two zones.
 # Call _get_blkzone_report() beforehand.
