@@ -2,7 +2,7 @@
 # SPDX-License-Identifier: GPL-3.0+
 # Copyright (C) 2017 Omar Sandoval
 #
-# Test loop device paritition scanning. Regression test for commit e02898b42380
+# Test loop device partition scanning. Regression test for commit e02898b42380
 # ("loop: fix LO_FLAGS_PARTSCAN hang").
 
 . tests/loop/rc
