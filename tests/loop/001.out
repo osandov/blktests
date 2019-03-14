@@ -1,3 +1,10 @@
 Running loop/001
-3
+Partition devices
+1
+2
+Partition sysfs nodes
+1
+2
+Partition devices after detach
+Partition sysfs nodes after detach
 Test complete

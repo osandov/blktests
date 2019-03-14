@@ -3,7 +3,8 @@
 # Copyright (C) 2017 Omar Sandoval
 #
 # Test loop device partition scanning. Regression test for commit e02898b42380
-# ("loop: fix LO_FLAGS_PARTSCAN hang").
+# ("loop: fix LO_FLAGS_PARTSCAN hang") and commit 758a58d0bc67 ("loop: set
+# GENHD_FL_NO_PART_SCAN after blkdev_reread_part()").
 
 . tests/loop/rc
 
@@ -12,6 +13,15 @@ QUICK=1
 
 requires() {
 	_have_program parted
+}
+
+find_loop_partition_devices() {
+	lsblk -lno NAME | sed -n "s/^${1}p//p" | sort
+}
+
+find_loop_partition_sysfs() {
+	find "$sysfs/" -mindepth 1 -maxdepth 1 -name "$1"'p*' -printf '%f\n' |
+		sed -n "s/^${1}p//p" | sort
 }
 
 test() {
@@ -23,10 +33,25 @@ test() {
 		mkpart primary 0% 50% \
 		mkpart primary 50% 100%
 
+	local loop_device name sysfs
 	loop_device="$(losetup -P -f --show "$TMPDIR/img")"
-	lsblk -ln "$loop_device" | wc -l
+	udevadm settle
+	name="$(basename "$loop_device")"
+	sysfs="/sys/block/$name"
+
+	echo "Partition devices"
+	find_loop_partition_devices "$name"
+	echo "Partition sysfs nodes"
+	find_loop_partition_sysfs "$name"
 
 	losetup -d "$loop_device"
+	udevadm settle
+
+	echo "Partition devices after detach"
+	find_loop_partition_devices "$name"
+	echo "Partition sysfs nodes after detach"
+	find_loop_partition_sysfs "$name"
+
 	rm "$TMPDIR/img"
 	echo "Test complete"
 }
