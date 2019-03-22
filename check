@@ -405,7 +405,8 @@ _call_test() {
 }
 
 _test_dev_is_zoned() {
-	if grep -qe "none" "${TEST_DEV_SYSFS}/queue/zoned" ; then
+	if [[ ! -f "${TEST_DEV_SYSFS}/queue/zoned" ]] ||
+	      grep -q none "${TEST_DEV_SYSFS}/queue/zoned"; then
 		SKIP_REASON="${TEST_DEV} is not a zoned block device"
 		return 1
 	fi
