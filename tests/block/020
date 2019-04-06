@@ -29,10 +29,15 @@ test() {
 	# shellcheck disable=SC2207
 	scheds=($(sed 's/[][]//g' /sys/block/nullb0/queue/scheduler))
 
+	local max_iodepth=$(($(cat /proc/sys/fs/aio-max-nr) / $(nproc)))
+	local iodepth=1024
+	if (( iodepth > max_iodepth )); then
+		iodepth=$max_iodepth
+	fi
 	for sched in "${scheds[@]}"; do
 		echo "Testing $sched" >> "$FULL"
 		echo "$sched" > /sys/block/nullb0/queue/scheduler
-		_fio_perf --bs=4k --ioengine=libaio --iodepth=1024 \
+		_fio_perf --bs=4k --ioengine=libaio --iodepth=$iodepth \
 			--numjobs="$(nproc)" --rw=randread --name=async \
 			--filename=/dev/nullb0 --size=1g --direct=1 \
 			--runtime=10
