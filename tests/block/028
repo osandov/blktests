@@ -9,6 +9,7 @@
 . common/scsi_debug
 
 DESCRIPTION="do I/O on scsi_debug with DIF/DIX enabled"
+DMESG_FILTER="sed -r 's/(guard tag error at sector|ref tag error at location)/blktests failure: \\1/'"
 
 requires() {
 	_have_scsi_debug

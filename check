@@ -147,6 +147,7 @@ _check_dmesg() {
 	     -e "INFO: suspicious RCU usage" \
 	     -e "INFO: possible circular locking dependency detected" \
 	     -e "general protection fault:" \
+	     -e "blktests failure" \
 	     "${seqres}.dmesg"
 	# shellcheck disable=SC2181
 	if [[ $? -eq 0 ]]; then
