@@ -26,6 +26,13 @@ scsi_debug_stress_remove() {
 		return
 	fi
 
+	_init_cgroup2
+
+	# setup cgroups
+	echo "+io" > "/sys/fs/cgroup/cgroup.subtree_control"
+	echo "+io" > "$CGROUP2_DIR/cgroup.subtree_control"
+	mkdir -p "$CGROUP2_DIR/${TEST_NAME}"
+
 	# set higher aio limit
 	echo 524288 > /proc/sys/fs/aio-max-nr
 
@@ -45,13 +52,13 @@ scsi_debug_stress_remove() {
 		((cnt++))
 	done
 
-	local num_jobs=4 runtime=21
+	local num_jobs=4 runtime=12
 	fio --rw=randread --size=128G --direct=1 --ioengine=libaio \
 		--iodepth=2048 --numjobs=$num_jobs --bs=4k \
 		--group_reporting=1 --group_reporting=1 --runtime=$runtime \
-		--loops=10000 "$fio_jobs" > "$FULL" 2>&1 &
+		--loops=10000 --cgroup=blktests/${TEST_NAME} $fio_jobs > "$FULL" 2>&1 &
 
-	sleep 7
+	sleep 6
 	local device_path
 	for dev in "${SCSI_DEBUG_DEVICES[@]}"; do
 		# shutdown devices in progress
@@ -60,6 +67,10 @@ scsi_debug_stress_remove() {
 	done
 
 	wait
+
+	sleep 5
+
+	_exit_cgroup2
 
 	_exit_scsi_debug
 }
