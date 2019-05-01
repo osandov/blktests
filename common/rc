@@ -33,6 +33,10 @@ _have_modules() {
 	local module
 
 	for module in "$@"; do
+		# check if a module is already loaded or built in.
+		if test -d "/sys/firmware/$module"; then
+			continue
+		fi
 		if ! modprobe -n -q "$module"; then
 			missing+=("$module")
 		fi
