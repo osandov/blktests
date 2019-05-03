@@ -22,7 +22,7 @@ _init_cgroup2()
 
 _exit_cgroup2()
 {
-	if [[ -v CGROUP2_DIR ]]; then
+	if [[ "${CGROUP2_DIR:-}" ]]; then
 		find "$CGROUP2_DIR" -type d -delete
 		unset CGROUP2_DIR
 	fi

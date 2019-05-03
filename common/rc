@@ -15,7 +15,7 @@ shopt -s extglob
 # for TIMEOUT / number of subtests.
 _divide_timeout() {
 	local num_tests="$1"
-	if [[ -v TIMEOUT ]]; then
+	if [[ "${TIMEOUT:-}" ]]; then
 		((TIMEOUT = (TIMEOUT + num_tests - 1) / num_tests))
 	fi
 }

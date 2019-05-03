@@ -161,7 +161,7 @@ _fio_perf() {
 _run_fio() {
 	local args=("--output=$TMPDIR/fio_perf" "--output-format=terse" "--terse-version=4" "--group_reporting=1")
 
-	if [[ -v TIMEOUT ]]; then
+	if [[ "${TIMEOUT:-}" ]]; then
 		args+=("--runtime=$TIMEOUT")
 	fi
 

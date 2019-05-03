@@ -7,7 +7,7 @@
 . common/rc
 
 group_requires() {
-	if [[ -v META_REQUIRES_SKIP ]]; then
+	if [[ "${META_REQUIRES_SKIP:-}" ]]; then
 		SKIP_REASON="META_REQUIRES_SKIP was set"
 		return 1
 	fi
@@ -15,7 +15,7 @@ group_requires() {
 }
 
 group_device_requires() {
-	if [[ -v META_DEVICE_REQUIRES_SKIP ]]; then
+	if [[ "${META_DEVICE_REQUIRES_SKIP:-}" ]]; then
 		SKIP_REASON="META_DEVICE_REQUIRES_SKIP was set"
 		return 1
 	fi
