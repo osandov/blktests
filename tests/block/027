@@ -38,9 +38,10 @@ scsi_debug_stress_remove() {
 
 	local dev fio_jobs scheds queue_path
 	local cnt=1
+	fio_jobs=()
 	for dev in "${SCSI_DEBUG_DEVICES[@]}"; do
 		# create fio job
-		fio_jobs=$fio_jobs" --name=job1 --filename=/dev/$dev "
+		fio_jobs+=("--name=job$dev" "--filename=/dev/$dev")
 
 		# set queue scheduler and queue_depth
 		queue_path="/sys/block/$dev/queue"
@@ -56,7 +57,8 @@ scsi_debug_stress_remove() {
 	fio --rw=randread --size=128G --direct=1 --ioengine=libaio \
 		--iodepth=2048 --numjobs=$num_jobs --bs=4k \
 		--group_reporting=1 --group_reporting=1 --runtime=$runtime \
-		--loops=10000 --cgroup=blktests/${TEST_NAME} $fio_jobs > "$FULL" 2>&1 &
+		--loops=10000 --cgroup="blktests/${TEST_NAME}" \
+		"${fio_jobs[@]}" > "$FULL" 2>&1 &
 
 	sleep 6
 	local device_path
