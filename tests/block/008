@@ -45,6 +45,11 @@ test_device() {
 	done
 
 	# while job is running, hotplug CPUs
+	# fio test may take too long time to complete read/write in special
+	# size in some bad situations. Set a timeout here which does not block
+	# overall test.
+	start_time=$(date +%s)
+	timeout=${TIMEOUT:=900}
 	while sleep .2; kill -0 $! 2> /dev/null; do
 		if (( offlining && ${#offline_cpus[@]} == max_offline )); then
 			offlining=0
@@ -64,6 +69,11 @@ test_device() {
 			online_cpus+=("${offline_cpus[$idx]}")
 			unset offline_cpus["$idx"]
 			offline_cpus=("${offline_cpus[@]}")
+		fi
+		end_time=$(date +%s)
+		if (( end_time - start_time > timeout + 15 )); then
+			echo "fio did not finish after $timeout seconds!"
+			break
 		fi
 	done
 

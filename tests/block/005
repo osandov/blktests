@@ -31,10 +31,20 @@ test_device() {
 	_run_fio_rand_io --filename="$TEST_DEV" --size="$size" &
 
 	# while job is running, switch between schedulers
+	# fio test may take too long time to complete read/write in special
+	# size in some bad situations. Set a timeout here which does not block
+	# overall test.
+	start_time=$(date +%s)
+	timeout=${TIMEOUT:=900}
 	while kill -0 $! 2>/dev/null; do
 		idx=$((RANDOM % ${#scheds[@]}))
 		_test_dev_queue_set scheduler "${scheds[$idx]}"
 		sleep .2
+		end_time=$(date +%s)
+		if (( end_time - start_time > timeout + 15 )); then
+			echo "fio did not finish after $timeout seconds!"
+			break
+		fi
 	done
 
 	FIO_PERF_FIELDS=("read iops")
