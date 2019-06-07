@@ -193,6 +193,49 @@ _find_first_sequential_zone() {
 	return 1
 }
 
+_find_last_sequential_zone() {
+	for ((idx = REPORTED_COUNT - 1; idx > 0; idx--)); do
+		if ((ZONE_TYPES[idx] == ZONE_TYPE_SEQ_WRITE_REQUIRED)); then
+			echo "${idx}"
+			return 0
+		fi
+	done
+
+	echo "-1"
+	return 1
+}
+
+# Try to find a sequential required zone between given two zone indices
+_find_sequential_zone_in_middle() {
+	local -i s=${1}
+	local -i e=${2}
+	local -i idx
+	local -i i=1
+
+	if ((s < 0 || e >= REPORTED_COUNT || e <= s + 1)); then
+		echo "Invalid arguments: ${s} ${e}"
+		return 1
+	fi
+
+	idx=$(((s + e) / 2))
+
+	while ((idx != s && idx != e)); do
+		if ((ZONE_TYPES[idx] == ZONE_TYPE_SEQ_WRITE_REQUIRED)); then
+			echo "${idx}"
+			return 0
+		fi
+		if ((i%2 == 0)); then
+			((idx += i))
+		else
+			((idx -= i))
+		fi
+		((i++))
+	done
+
+	echo "-1"
+	return 1
+}
+
 # Search zones and find two contiguous sequential required zones.
 # Return index of the first zone of the found two zones.
 # Call _get_blkzone_report() beforehand.
@@ -208,5 +251,102 @@ _find_two_contiguous_seq_zones() {
 	done
 
 	echo "Contiguous sequential write required zones not found"
+	return 1
+}
+
+_test_dev_is_dm() {
+	if [[ ! -r "${TEST_DEV_SYSFS}/dm/name" ]]; then
+		SKIP_REASON="$TEST_DEV is not device-mapper"
+		return 1
+	fi
+	return 0
+}
+
+_test_dev_is_logical() {
+	if ! _test_dev_is_partition && ! _test_dev_is_dm; then
+		SKIP_REASON="$TEST_DEV is not a logical device"
+		return 1
+	fi
+	return 0
+}
+
+_test_dev_has_dm_map() {
+	local target_type=${1}
+	local dm_name
+
+	dm_name=$(<"${TEST_DEV_SYSFS}/dm/name")
+	if ! dmsetup status "${dm_name}" | grep -qe "${target_type}"; then
+		SKIP_REASON="$TEST_DEV does not have ${target_type} map"
+		return 1
+	fi
+	if dmsetup status "${dm_name}" | grep -v "${target_type}"; then
+		SKIP_REASON="$TEST_DEV has map other than ${target_type}"
+		return 1
+	fi
+	return 0
+}
+
+# Get device file path from the device ID "major:minor".
+_get_dev_path_by_id() {
+	for d in /sys/block/* /sys/block/*/*; do
+		if [[ ! -r "${d}/dev" ]]; then
+			continue
+		fi
+		if [[ "${1}" == "$(<"${d}/dev")" ]]; then
+			echo "/dev/${d##*/}"
+			return 0
+		fi
+	done
+	return 1
+}
+
+# Given sector of TEST_DEV, return the device which contain the sector and
+# corresponding sector of the container device.
+_get_dev_container_and_sector() {
+	local -i sector=${1}
+	local cont_dev
+	local -i offset
+	local -a tbl_line
+
+	if _test_dev_is_partition; then
+		offset=$(<"${TEST_DEV_PART_SYSFS}/start")
+		cont_dev=$(_get_dev_path_by_id "$(<"${TEST_DEV_SYSFS}/dev")")
+		echo "${cont_dev}" "$((offset + sector))"
+		return 0
+	fi
+
+	if ! _test_dev_is_dm; then
+		echo "${TEST_DEV} is not a logical device"
+		return 1
+	fi
+	if ! _test_dev_has_dm_map linear &&
+			! _test_dev_has_dm_map flakey; then
+		echo -n "dm mapping test other than linear/flakey is"
+		echo "not implemented"
+		return 1
+	fi
+
+	# Parse dm table lines for dm-linear or dm-flakey target
+	while read -r -a tbl_line; do
+		local -i map_start=${tbl_line[0]}
+		local -i map_end=$((tbl_line[0] + tbl_line[1]))
+
+		if ((sector < map_start)) || (((map_end) <= sector)); then
+			continue
+		fi
+
+		offset=${tbl_line[4]}
+		if ! cont_dev=$(_get_dev_path_by_id "${tbl_line[3]}"); then
+			echo -n "Cannot access to container device: "
+			echo "${tbl_line[3]}"
+			return 1
+		fi
+
+		echo "${cont_dev}" "$((offset + sector - map_start))"
+		return 0
+
+	done < <(dmsetup table "$(<"${TEST_DEV_SYSFS}/dm/name")")
+
+	echo -n "Cannot find container device of ${TEST_DEV}"
 	return 1
 }
