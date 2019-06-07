@@ -1,0 +1,110 @@
+#!/bin/bash
+# SPDX-License-Identifier: GPL-3.0+
+# Copyright (C) 2019 Western Digital Corporation or its affiliates.
+#
+# Test zones are mapped correctly between a logical device and its container
+# device. Move write pointers of sequential write required zones on the
+# container devices, and confirm same write pointer positions of zones on the
+# logical devices.
+
+. tests/zbd/rc
+
+DESCRIPTION="zone mapping between logical and container devices"
+CAN_BE_ZONED=1
+QUICK=1
+
+requires() {
+	_have_program dmsetup
+}
+
+device_requires() {
+	_test_dev_is_logical
+}
+
+# Select test target zones. Pick up the first sequential required zones. If
+# available, add one or two more sequential required zones. One is at the last
+# end of TEST_DEV. The other is in middle between the first and the last zones.
+select_zones() {
+	local -i zone_idx
+	local -a zones
+
+	zone_idx=$(_find_first_sequential_zone) || return $?
+	zones=( "${zone_idx}" )
+	if zone_idx=$(_find_last_sequential_zone); then
+		zones+=( "${zone_idx}" )
+		if zone_idx=$(_find_sequential_zone_in_middle \
+				      "${zones[0]}" "${zones[1]}"); then
+			zones+=( "${zone_idx}" )
+		fi
+	fi
+	echo "${zones[@]}"
+}
+
+test_device() {
+	local -i bs
+	local -a test_z # test target zones
+	local -a test_z_start
+
+	echo "Running ${TEST_NAME}"
+
+	# Get physical block size to meet zoned block device I/O requirement
+	_get_sysfs_variable "${TEST_DEV}" || return $?
+	bs=${SYSFS_VARS[SV_PHYS_BLK_SIZE]}
+	_put_sysfs_variable
+
+	# Get test target zones
+	_get_blkzone_report "${TEST_DEV}" || return $?
+	read -r -a test_z < <(select_zones)
+	for ((i = 0; i < ${#test_z[@]}; i++)); do
+		test_z_start+=("${ZONE_STARTS[test_z[i]]}")
+	done
+	echo "${test_z[*]}" >> "$FULL"
+	echo "${test_z_start[*]}" >> "$FULL"
+	_put_blkzone_report
+	if ((!${#test_z[@]})); then
+		echo "Test target zones not available on ${TEST_DEV}"
+		return 1
+	fi
+
+	# Reset and move write pointers of the container device
+	for ((i=0; i < ${#test_z[@]}; i++)); do
+		local -a arr
+
+		read -r -a arr < <(_get_dev_container_and_sector \
+					   "${test_z_start[i]}")
+		container_dev="${arr[0]}"
+		container_start="${arr[1]}"
+
+		echo "${container_dev}" "${container_start}" >> "$FULL"
+
+		if ! blkzone reset -o "${container_start}" -c 1 \
+		     "${container_dev}"; then
+			echo "Reset zone failed"
+			return 1
+		fi
+
+		if ! dd if=/dev/zero of="${container_dev}" bs="${bs}" \
+		     count=$((4096 * (i + 1) / bs)) oflag=direct \
+		     seek=$((container_start * 512 / bs)) \
+		     >> "$FULL" 2>&1 ; then
+			echo "dd failed"
+		fi
+
+		# Wait for partition table re-read event settles
+		udevadm settle
+	done
+
+	# Check write pointer positions on the logical device
+	_get_blkzone_report "${TEST_DEV}" || return $?
+	for ((i=0; i < ${#test_z[@]}; i++)); do
+		if ((ZONE_WPTRS[test_z[i]] != 8 * (i + 1))); then
+			echo "Unexpected write pointer position"
+			echo -n "zone=${i}, wp=${ZONE_WPTRS[i]}, "
+			echo "dev=${TEST_DEV}"
+		fi
+		echo "${ZONE_WPTRS[${test_z[i]}]}" >> "$FULL"
+	done
+	_put_blkzone_report
+
+	echo "Test complete"
+}
