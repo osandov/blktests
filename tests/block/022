@@ -1,0 +1,58 @@
+#!/bin/bash
+# SPDX-License-Identifier: GPL-3.0+
+# Copyright (C) 2019 Bob Liu <bob.liu@oracle.com>
+#
+# Test hang caused by freeze/unfreeze sequence. Regression
+# test for 7996a8b5511a ("blk-mq: fix hang caused by freeze/unfreeze sequence").
+
+. tests/block/rc
+. common/null_blk
+
+DESCRIPTION="Test hang caused by freeze/unfreeze sequence"
+TIMED=1
+
+requires() {
+	_have_null_blk && _have_module_param null_blk shared_tags
+}
+
+hotplug_test() {
+	while :
+	do
+		echo 1 > /sys/kernel/config/nullb/"$1"/power
+		echo 0 > /sys/kernel/config/nullb/"$1"/power
+	done
+}
+
+test() {
+	echo "Running ${TEST_NAME}"
+	: "${TIMEOUT:=30}"
+
+	if ! _init_null_blk shared_tags=1 nr_devices=0 queue_mode=2; then
+		return 1
+	fi
+
+	mkdir -p /sys/kernel/config/nullb/0
+	mkdir -p /sys/kernel/config/nullb/1
+	hotplug_test 0 &
+	pid0=$!
+	hotplug_test 1 &
+	pid1=$!
+
+	#bind process to two different CPU
+	taskset -p 1 $pid0 >/dev/null
+	taskset -p 2 $pid1 >/dev/null
+
+	sleep "$TIMEOUT"
+	{
+		kill -9 $pid0
+		wait $pid0
+		kill -9 $pid1
+		wait $pid1
+	} 2>/dev/null
+
+	rmdir /sys/kernel/config/nullb/1
+	rmdir /sys/kernel/config/nullb/0
+
+	_exit_null_blk
+	echo "Test complete"
+}
