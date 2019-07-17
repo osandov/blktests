@@ -19,8 +19,7 @@ requires() {
 test() {
 	echo "Running ${TEST_NAME}"
 
-	modprobe nvmet
-	modprobe nvme-loop
+	_setup_nvmet
 
 	local port
 	port="$(_create_nvmet_port "loop")"
@@ -50,9 +49,6 @@ test() {
 	_remove_nvmet_subsystem "blktests-subsystem-1"
 	losetup -d "$loop_dev"
 	rm "$TMPDIR/img"
-
-	modprobe -r nvme-loop
-	modprobe -r nvmet
 
 	echo "Test complete"
 }

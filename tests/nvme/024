@@ -17,8 +17,7 @@ requires() {
 test() {
 	echo "Running ${TEST_NAME}"
 
-	modprobe nvmet
-	modprobe nvme-loop
+	_setup_nvmet
 
 	local port
 	local nvmedev
@@ -48,9 +47,6 @@ test() {
 	_remove_nvmet_port "${port}"
 
 	rm -f "${file_path}"
-
-	modprobe -r nvme-loop
-	modprobe -r nvmet
 
 	echo "Test complete"
 }

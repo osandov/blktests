@@ -16,11 +16,9 @@ requires() {
 test() {
 	echo "Running ${TEST_NAME}"
 
+	_setup_nvmet
+
 	local iterations=1000
-
-	modprobe nvmet
-	modprobe nvme-loop
-
 	local port
 	port="$(_create_nvmet_port "loop")"
 
@@ -41,7 +39,5 @@ test() {
 
 	_remove_nvmet_port "${port}"
 
-	modprobe -r nvme-loop
-	modprobe -r nvmet
 	echo "Test complete"
 }

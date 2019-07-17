@@ -17,8 +17,7 @@ requires() {
 test() {
 	echo "Running ${TEST_NAME}"
 
-	modprobe nvmet
-	modprobe nvme-loop
+	_setup_nvmet
 
 	local port
 	local nvmedev
@@ -53,9 +52,6 @@ test() {
 
 	rm "${file_path}"
 	rm -f local*verify*state
-
-	modprobe -r nvme_loop
-	modprobe -r nvmet
 
 	echo "Test complete"
 }

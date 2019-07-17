@@ -20,8 +20,7 @@ test() {
 	local loop_dev
 	local subsys_nqn="blktests-subsystem-1"
 
-	modprobe nvmet
-	modprobe nvme-loop
+	_setup_nvmet
 
 	loop_dev="$(losetup -f)"
 
@@ -44,6 +43,5 @@ test() {
 
 	_remove_nvmet_subsystem "${subsys_nqn}"
 
-	modprobe -r nvme-loop nvmet
 	echo "Test complete"
 }

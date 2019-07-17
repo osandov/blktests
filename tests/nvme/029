@@ -50,8 +50,7 @@ test_user_io()
 test() {
 	echo "Running ${TEST_NAME}"
 
-	modprobe nvmet
-	modprobe nvme-loop
+	_setup_nvmet
 
 	local port
 	local nvmedev
@@ -91,9 +90,6 @@ test() {
 	losetup -d "${loop_dev}"
 
 	rm "${file_path}"
-
-	modprobe -r nvme-loop
-	modprobe -r nvmet
 
 	echo "Test complete"
 }

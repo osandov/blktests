@@ -21,8 +21,7 @@ test() {
 	local loop_dev
 	local subsys_name="blktests-subsystem-1"
 
-	modprobe nvmet
-	modprobe nvme-loop
+	_setup_nvmet
 
 	truncate -s 1G "$TMPDIR/img"
 
@@ -40,9 +39,6 @@ test() {
 	losetup -d "$loop_dev"
 
 	rm "$TMPDIR/img"
-
-	modprobe -r nvme-loop
-	modprobe -r nvmet
 
 	echo "Test complete"
 }

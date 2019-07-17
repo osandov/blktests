@@ -24,6 +24,17 @@ _test_dev_is_nvme() {
 	return 0
 }
 
+_cleanup_nvmet() {
+	modprobe -r nvme-loop
+	modprobe -r nvmet
+}
+
+_setup_nvmet() {
+	_register_test_cleanup _cleanup_nvmet
+	modprobe nvmet
+	modprobe nvme-loop
+}
+
 _create_nvmet_port() {
 	local trtype="$1"
 

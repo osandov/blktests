@@ -20,8 +20,7 @@ test() {
 	local file_path
 	local subsys_name="blktests-subsystem-1"
 
-	modprobe nvmet
-	modprobe nvme-loop
+	_setup_nvmet
 
 	file_path="${TMPDIR}/img"
 
@@ -37,9 +36,6 @@ test() {
 	_remove_nvmet_port "${port}"
 
 	rm "${file_path}"
-
-	modprobe -r nvme-loop
-	modprobe -r nvmet
 
 	echo "Test complete"
 }
