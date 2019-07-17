@@ -124,3 +124,8 @@ _filter_discovery() {
 		  -e '/Discovery Log Number|Log Entry|trtype|subnqn/p'
 
 }
+
+_discovery_genctr() {
+	nvme discover -t loop |
+		sed -n -e 's/^.*Generation counter \([0-9]\+\).*$/\1/p'
+}
