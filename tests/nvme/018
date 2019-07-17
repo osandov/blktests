@@ -44,9 +44,8 @@ test() {
 	sectors="$(blockdev --getsz "/dev/${nvmedev}n1")"
 	bs="$(blockdev --getbsz "/dev/${nvmedev}n1")"
 
-	if nvme read "/dev/${nvmedev}n1" -s "$sectors" -c 0 -z "$bs"; then
-		echo "ERROR: Successfully read out of device lba range"
-	fi
+	nvme read "/dev/${nvmedev}n1" -s "$sectors" -c 0 -z "$bs" 2>"$FULL" \
+		&& echo "ERROR: Successfully read out of device lba range"
 
 	nvme disconnect -n "${subsys_name}"
 
