@@ -68,8 +68,8 @@ _cleanup_nvmet() {
 	shopt -u nullglob
 	stty isig
 
-	modprobe -r nvme-loop
-	modprobe -r nvmet
+	modprobe -r nvme-loop 2>/dev/null
+	modprobe -r nvmet 2>/dev/null
 }
 
 _setup_nvmet() {
