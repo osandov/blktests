@@ -120,6 +120,7 @@ _find_nvme_loop_dev() {
 }
 
 _filter_discovery() {
-	sed -r  -e "s/portid:  [0-9]+/portid:  X/" \
-		-e "s/Generation counter [0-9]+/Generation counter X/"
+	sed -n -r -e "s/Generation counter [0-9]+/Generation counter X/" \
+		  -e '/Discovery Log Number|Log Entry|trtype|subnqn/p'
+
 }

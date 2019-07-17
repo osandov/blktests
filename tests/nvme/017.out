@@ -1,13 +1,6 @@
 Running nvme/017
-
 Discovery Log Number of Records 1, Generation counter X
 =====Discovery Log Entry 0======
 trtype:  loop
-adrfam:  pci
-subtype: nvme subsystem
-treq:    not specified
-portid:  X
-trsvcid: 
 subnqn:  blktests-subsystem-1
-traddr:  
 Test complete
