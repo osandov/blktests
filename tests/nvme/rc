@@ -169,6 +169,13 @@ _find_nvme_loop_dev() {
 		transport="$(cat "/sys/class/nvme/${dev}/transport")"
 		if [[ "$transport" == "loop" ]]; then
 			echo "$dev"
+			for ((i = 0; i < 10; i++)); do
+				if [[ -e /sys/block/$dev/uuid &&
+					-e /sys/block/$dev/wwid ]]; then
+					return
+				fi
+				sleep .1
+			done
 		fi
 	done
 }
