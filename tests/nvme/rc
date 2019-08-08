@@ -36,7 +36,7 @@ _cleanup_nvmet() {
 	fi
 
 	# Don't let successive Ctrl-Cs interrupt the cleanup processes
-	stty -isig
+	trap '' SIGINT
 
 	shopt -s nullglob
 
@@ -66,7 +66,7 @@ _cleanup_nvmet() {
 	done
 
 	shopt -u nullglob
-	stty isig
+	trap SIGINT
 
 	modprobe -r nvme-loop 2>/dev/null
 	modprobe -r nvmet 2>/dev/null
