@@ -117,8 +117,9 @@ simulate_network_failure_loop() {
 	while [ $rc = 0 ]; do
 		sleep_until 5 ${deadline} || break
 		for d in $(held_by "$dev"); do
-			sf=$(ls -d /sys/class/nvme/*/device/*/"${d#/dev/}/reset_controller")
-			echo 1 > "$sf"
+			for sf in /sys/class/nvme/*/device/*/"${d#/dev/}/reset_controller"; do
+				[ -e "$sf" ] && echo 1 > "$sf"
+			done
 		done
 	done 2>>"$FULL"
 
