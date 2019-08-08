@@ -1,0 +1,107 @@
+#!/bin/bash
+# SPDX-License-Identifier: GPL-2.0+
+# Copyright (c) 2016-2018 Western Digital Corporation or its affiliates
+#
+# Submit SCSI resets while a fio --verify job is running. This is a regression
+# test for Linux kernel commit fd5614124406 ("scsi: RDMA/srp: Fix a
+# sleep-in-invalid-context bug") # v5.3.
+
+. tests/srp/rc
+
+DESCRIPTION="Run sg_reset while I/O is ongoing"
+TIMED=1
+
+# $1: SCSI device of which to change the state to running, e.g. sdc.
+make_running() {
+	local dev=$1 sp state
+
+	for sp in /sys/class/scsi_device/*/device/block/"$dev"; do
+		if [ -e "$sp" ]; then
+			break
+		else
+			return 1
+		fi
+	done
+	sp=$(dirname "$(dirname "$sp")")/state
+	# If the SCSI error handler changed the device state to offline,
+	# change the state back to running.
+	state=$(<"$sp")
+	if [ "$state" = offline ]; then
+		echo running > "$sp"
+		echo "$dev: state $state -> running" >>"$FULL"
+	else
+		echo "$dev: state $state" >>"$FULL"
+	fi
+}
+
+# $1: dm device to examine, e.g.
+# /dev/disk/by-id/dm-uuid-mpath-360014056e756c6c62300000000000000
+make_all_running() {
+	local d h dev=$1
+
+	while [ -L "$dev" ]; do
+		dev=$(realpath "$dev")
+	done
+	dev=${dev#/dev/}
+	for h in /sys/class/block/*/holders/"$dev"; do
+		[ -e "$h" ] || continue
+		d=$(basename "$(dirname "$(dirname "$h")")")
+		make_running "$d"
+	done
+}
+
+# $1: dm device to act on.
+set_running_loop() {
+	local dev="$1"
+
+	[ -e "$dev" ] || return $?
+	while true; do
+		sleep 1
+		make_all_running "$dev"
+	done
+	echo "set_running_loop $dev finished" >>"$FULL"
+}
+
+# $1: dm device to reset periodically; $2: how long the reset loop should run.
+sg_reset_loop() {
+	local cmd dev="$1" duration="$2" deadline i=0 reset_type
+
+	[ -e "$dev" ] || return $?
+	[ -n "$duration" ] || return $?
+	reset_type=(-d -b)
+	deadline=$(($(uptime_s) + duration))
+	while true; do
+		sleep_until 1 ${deadline} || break
+		cmd="sg_reset --no-esc ${reset_type[i++ % 2]} $dev"
+		{ echo "+ $cmd"; eval "$cmd"; } >>"$FULL" 2>&1
+	done
+	echo "sg_reset_loop $dev finished" >>"$FULL"
+}
+
+test_sg_reset() {
+	local dev fio_status m job
+
+	use_blk_mq y y || return $?
+	dev=$(get_bdev 0) || return $?
+	sg_reset_loop "$dev" "$TIMEOUT" &
+	# Redirect stderr to suppress the bash "Terminated" message.
+	set_running_loop "$dev" 2>/dev/null &
+	job=$!
+	run_fio --verify=md5 --rw=randwrite --bs=64K --loops=$((10**6)) \
+		--iodepth=16 --group_reporting --sync=1 --direct=1 \
+		--ioengine=libaio --runtime="${TIMEOUT}" \
+		--filename="$dev" --name=sg-reset-test --thread --numjobs=1 \
+		--output="${RESULTS_DIR}/srp/fio-output-014.txt" \
+		>>"$FULL"
+	fio_status=$?
+	kill "$job"
+	make_all_running "$dev"
+	wait
+	return $fio_status
+}
+
+test() {
+	: "${TIMEOUT:=30}"
+	trap 'trap "" EXIT; teardown' EXIT
+	setup && test_sg_reset && echo Passed
+}
