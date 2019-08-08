@@ -124,7 +124,7 @@ simulate_network_failure_loop() {
 	done 2>>"$FULL"
 
 	for ((i=0;i<5;i++)); do
-		log_in && break
+		log_in 2>/dev/null && break
 		sleep 1
 	done
 }
