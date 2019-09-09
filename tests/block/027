@@ -56,7 +56,7 @@ scsi_debug_stress_remove() {
 	local num_jobs=4 runtime=12
 	fio --rw=randread --size=128G --direct=1 --ioengine=libaio \
 		--iodepth=2048 --numjobs=$num_jobs --bs=4k \
-		--group_reporting=1 --group_reporting=1 --runtime=$runtime \
+		--group_reporting=1 --runtime=$runtime \
 		--loops=10000 --cgroup="blktests/${TEST_NAME}" \
 		"${fio_jobs[@]}" > "$FULL" 2>&1 &
 
