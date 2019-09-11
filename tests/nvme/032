@@ -1,0 +1,69 @@
+#!/bin/bash
+# SPDX-License-Identifier: GPL-3.0+
+# Copyright (C) 2019 Yi Zhang <yi.zhang@redhat.com>
+#
+# Test nvme pci adapter rescan/reset/remove operation during I/O
+#
+# Regression test for bellow two commits:
+# http://lists.infradead.org/pipermail/linux-nvme/2017-May/010367.html
+# 986f75c876db nvme: avoid to use blk_mq_abort_requeue_list()
+# 806f026f9b90 nvme: use blk_mq_start_hw_queues() in nvme_kill_queues()
+
+. tests/nvme/rc
+
+DESCRIPTION="test nvme pci adapter rescan/reset/remove during I/O"
+QUICK=1
+
+requires() {
+	_have_fio
+}
+
+device_requires() {
+	_test_dev_is_nvme
+}
+
+test_device() {
+	echo "Running ${TEST_NAME}"
+
+	local sysfs
+	local attr
+	local m
+
+	pdev="$(_get_pci_dev_from_blkdev)"
+	sysfs="/sys/bus/pci/devices/${pdev}"
+
+	# start fio job
+	_run_fio_rand_io --filename="$TEST_DEV" --size=1g \
+		--group_reporting  &> /dev/null &
+
+	sleep 5
+
+	if [[ ! -d "$sysfs" ]]; then
+		echo "$sysfs doesn't exist"
+	fi
+
+	# do rescan/reset/remove operation
+	for attr in rescan reset remove; do
+		if [[ -f "$sysfs/$attr" ]]; then
+			echo 1 > "$sysfs/$attr"
+		fi
+	done
+
+	{ kill $!; wait; } &> /dev/null
+
+	echo 1 > /sys/bus/pci/rescan
+
+	# wait nvme reinitialized
+	for ((m = 0; m < 10; m++)); do
+		if [[ -b "${TEST_DEV}" ]]; then
+			break
+		fi
+		sleep 0.5
+	done
+	if (( m > 9 )); then
+		echo "nvme still not reinitialized after 5 seconds!"
+	fi
+	udevadm settle
+
+	echo "Test complete"
+}
