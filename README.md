@@ -21,7 +21,8 @@ The dependencies are minimal, but make sure you have them installed:
 Some tests require the following:
 
 - e2fsprogs and xfsprogs
-- multipath-tools (Debian, openSUSE) or device-mapper-multipath (Fedora)
+- multipath-tools (Debian, openSUSE, Arch Linux) or device-mapper-multipath
+  (Fedora)
 - dmsetup (Debian) or device-mapper (Fedora, openSUSE, Arch Linux)
 
 Build blktests with `make`. Optionally, install it to a known location with
