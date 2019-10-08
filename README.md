@@ -28,7 +28,8 @@ Build blktests with `make`. Optionally, install it to a known location with
 `make install` (`/usr/local/blktests` by default, but this can be changed by
 passing `DESTDIR` and/or `prefix`).
 
-Add the list of block devices you want to test on in a file named `config`:
+Add the list of block devices you want to test on in a file named `config`
+(**note:** these tests are potentially destructive):
 
 ```sh
 TEST_DEVS=(/dev/nvme0n1 /dev/sdb)
@@ -36,8 +37,8 @@ TEST_DEVS=(/dev/nvme0n1 /dev/sdb)
 
 And as root, run the default set of tests with `./check`.
 
-Note that these tests are destructive, so don't add anything to the `TEST_DEVS`
-array containing data that you want to keep.
+**Do not** add anything to the `TEST_DEVS` array containing data that you want
+to keep.
 
 See [here](Documentation/running-tests.md) for more detailed information on
 configuration and running tests.
