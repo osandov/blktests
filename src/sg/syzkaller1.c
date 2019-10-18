@@ -34,7 +34,6 @@
 #include <linux/if_ether.h>
 #include <linux/if_tun.h>
 #include <linux/ip.h>
-#include <linux/kvm.h>
 #include <linux/sched.h>
 #include <linux/tcp.h>
 #include <net/if_arp.h>
