@@ -246,3 +246,8 @@ _test_dev_is_partition() {
 _filter_xfs_io_error() {
 	sed -e 's/^\(.*\)64\(: .*$\)/\1\2/'
 }
+
+# System uptime in seconds.
+_uptime_s() {
+	awk '{ print int($1) }' /proc/uptime
+}
