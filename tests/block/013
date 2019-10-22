@@ -27,7 +27,7 @@ test_device() {
 
 	local out
 	out="$(blockdev --rereadpt "$TEST_DEV" 2>&1)"
-	if ! grep -o "Device or resource busy" <<< "$out"; then
+	if ! echo "$out" | grep -o "Device or resource busy"; then
 		echo "$out"
 	fi
 
