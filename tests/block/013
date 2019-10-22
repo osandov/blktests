@@ -8,7 +8,6 @@
 #
 # Regression test for commit 77032ca66f86 ("Return EBUSY from BLKRRPART for
 # mounted whole-dev fs").
-# along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 . tests/block/rc
 
