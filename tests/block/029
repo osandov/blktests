@@ -1,0 +1,64 @@
+#!/bin/bash
+# SPDX-License-Identifier: GPL-2.0
+# Copyright 2019 Google LLC
+#
+# Trigger blk_mq_update_nr_hw_queues().
+
+. tests/block/rc
+. common/null_blk
+
+DESCRIPTION="trigger blk_mq_update_nr_hw_queues()"
+QUICK=1
+
+requires() {
+	_have_null_blk
+}
+
+# Configure one null_blk instance.
+configure_null_blk() {
+	local nullb0="/sys/kernel/config/nullb/nullb0"
+
+	mkdir "$nullb0" &&
+	echo 0 > "$nullb0/completion_nsec" &&
+	echo 512 > "$nullb0/blocksize" &&
+	echo 16 > "$nullb0/size" &&
+	echo 1 > "$nullb0/memory_backed" &&
+	echo 1 > "$nullb0/power" &&
+	ls -l /dev/nullb* &>>"$FULL"
+}
+
+modify_nr_hw_queues() {
+	local deadline num_cpus
+
+	deadline=$(($(_uptime_s) + TIMEOUT))
+	num_cpus=$(nproc)
+	while [ "$(_uptime_s)" -lt "$deadline" ]; do
+		sleep .1
+		echo 1 > /sys/kernel/config/nullb/nullb0/submit_queues
+		sleep .1
+		echo "$num_cpus" > /sys/kernel/config/nullb/nullb0/submit_queues
+	done
+}
+
+test() {
+	local sq=/sys/kernel/config/nullb/nullb0/submit_queues
+
+	: "${TIMEOUT:=30}"
+	_init_null_blk nr_devices=0 queue_mode=2 &&
+	configure_null_blk
+	if { echo 1 >$sq; } 2>/dev/null; then
+		modify_nr_hw_queues &
+		fio --rw=randwrite --bs=4K --loops=$((10**6)) \
+		    --iodepth=64 --group_reporting --sync=1 --direct=1 \
+		    --ioengine=libaio --filename="/dev/nullb0" \
+		    --runtime="${TIMEOUT}" --name=nullb0 \
+		    --output="${RESULTS_DIR}/block/fio-output-029.txt" \
+		    >>"$FULL"
+		wait
+	else
+		echo "Skipping test because $sq cannot be modified" >>"$FULL"
+	fi
+	rmdir /sys/kernel/config/nullb/nullb0
+	_exit_null_blk
+	echo Passed
+}
