@@ -69,7 +69,7 @@ sg_reset_loop() {
 	[ -e "$dev" ] || return $?
 	[ -n "$duration" ] || return $?
 	reset_type=(-d -b)
-	deadline=$(($(uptime_s) + duration))
+	deadline=$(($(_uptime_s) + duration))
 	while true; do
 		sleep_until 1 ${deadline} || break
 		cmd="sg_reset --no-esc ${reset_type[i++ % 2]} $dev"

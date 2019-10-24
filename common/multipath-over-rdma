@@ -129,19 +129,12 @@ held_by() {
 	done
 }
 
-# System uptime in seconds.
-uptime_s() {
-	local a b
-
-	echo "$(</proc/uptime)" | { read -r a b && echo "${a%%.*}"; }
-}
-
 # Sleep until either $1 seconds have elapsed or until the deadline $2 has been
 # reached. Return 1 if and only if the deadline has been met.
 sleep_until() {
 	local duration=$1 deadline=$2 u
 
-	u=$(uptime_s)
+	u=$(_uptime_s)
 	if [ $((u + duration)) -le "$deadline" ]; then
 		sleep "$duration"
 	else

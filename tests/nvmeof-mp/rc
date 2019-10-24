@@ -113,7 +113,7 @@ simulate_network_failure_loop() {
 
 	[ -e "$dev" ] || return $?
 	[ -n "$duration" ] || return $?
-	deadline=$(($(uptime_s) + duration))
+	deadline=$(($(_uptime_s) + duration))
 	while [ $rc = 0 ]; do
 		sleep_until 5 ${deadline} || break
 		for d in $(held_by "$dev"); do
