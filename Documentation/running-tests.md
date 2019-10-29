@@ -21,7 +21,9 @@ will run all tests in the `loop` group and the `block/002` test.
 
 Test configuration goes in the `config` file at the top-level directory of the
 blktests repository. Test configuration options can also be set as environment
-variables instead of in the `config` file.
+variables instead of in the `config` file. It is also possible to use a
+different file for configuration, using `--config=<file_name>`. Note that, for
+multiple uses of this option, all files will be loaded.
 
 ### Test Devices
 
