@@ -650,7 +650,7 @@ Miscellaneous:
 	esac
 }
 
-if ! TEMP=$(getopt -o 'do:q::x:h' --long 'quick::,exclude:,output:,help' -n "$0" -- "$@"); then
+if ! TEMP=$(getopt -o 'do:q::x:h' --long 'device-only,quick::,exclude:,output:,help' -n "$0" -- "$@"); then
 	exit 1
 fi
 
