@@ -636,6 +636,10 @@ Test runs:
 			 tests to run
 
 Miscellaneous:
+  -c, --config=FILE	 load configuration from FILE instead of the default
+			 (\"./config\"); if this option is used multiple times,
+			 all of the given files are loaded
+
   -h, --help             display this help message and exit"
 
 	case "$1" in
@@ -650,60 +654,39 @@ Miscellaneous:
 	esac
 }
 
-if ! TEMP=$(getopt -o 'do:q::x:h' --long 'device-only,quick::,exclude:,output:,help' -n "$0" -- "$@"); then
+if ! TEMP=$(getopt -o 'do:q::x:c:h' --long 'device-only,quick::,exclude:,output:,config:,help' -n "$0" -- "$@"); then
 	exit 1
 fi
 
 eval set -- "$TEMP"
 unset TEMP
 
-LOGGER_PROG="$(type -P logger)" || LOGGER_PROG=true
-
-if [[ -r config ]]; then
-	# shellcheck disable=SC1091
-	. config
-fi
-
-# Default configuration.
-: "${DEVICE_ONLY:=0}"
-: "${QUICK_RUN:=0}"
-: "${RUN_ZONED_TESTS:=0}"
-: "${OUTPUT:=results}"
-if [[ "${EXCLUDE:-}" ]] && ! declare -p EXCLUDE | grep -q '^declare -a'; then
-	# If EXCLUDE was not defined as an array, convert it to one.
-	# shellcheck disable=SC2128,SC2190,SC2206
-	EXCLUDE=($EXCLUDE)
-elif [[ ! "${EXCLUDE:-}" ]]; then
-	EXCLUDE=()
-fi
-if [[ "${TEST_DEVS:-}" ]] && ! declare -p TEST_DEVS | grep -q '^declare -a'; then
-	# If TEST_DEVS was not defined as an array, convert it to one.
-	# shellcheck disable=SC2128,SC2206
-	TEST_DEVS=($TEST_DEVS)
-elif [[ ! "${TEST_DEVS:-}" ]]; then
-	TEST_DEVS=()
-fi
-
+LOADED_CONFIG=0
+OPTION_EXCLUDE=()
 while true; do
 	case "$1" in
 		'-d'|'--device-only')
-			DEVICE_ONLY=1
+			OPTION_DEVICE_ONLY=1
 			shift
 			;;
 		'-o'|'--output')
-			OUTPUT="$2"
+			OPTION_OUTPUT="$2"
 			shift 2
 			;;
 		'-q'|'--quick')
-			QUICK_RUN=1
-			# Use the timeout specified on the command line, from
-			# the config, or the default.
-			TIMEOUT="${2:-${TIMEOUT:-30}}"
+			OPTION_QUICK_RUN=1
+			OPTION_TIMEOUT="$2"
 			shift 2
 			;;
 		'-x'|'--exclude')
 			# shellcheck disable=SC2190
-			EXCLUDE+=("$2")
+			OPTION_EXCLUDE+=("$2")
+			shift 2
+			;;
+		'-c'|'--config')
+			# shellcheck source=/dev/null
+			. "$2"
+			LOADED_CONFIG=1
 			shift 2
 			;;
 		'-h'|'--help')
@@ -719,6 +702,53 @@ while true; do
 	esac
 done
 
+# Load the default configuration file if "-c" was not used.
+if [[ $LOADED_CONFIG -eq 0 && -r config ]]; then
+	# shellcheck source=/dev/null
+	. config
+fi
+
+# Options on the command line take precedence over the configuration file. If
+# neither set the option and we didn't get it from the environment, then we
+# fall back to the default.
+DEVICE_ONLY="${OPTION_DEVICE_ONLY:-${DEVICE_ONLY:-0}}"
+
+OUTPUT="${OPTION_OUTPUT:-${OUTPUT:-results}}"
+
+QUICK_RUN="${OPTION_QUICK_RUN:-${QUICK_RUN:-0}}"
+if [[ -n $OPTION_QUICK_RUN && $OPTION_QUICK_RUN -ne 0 ]]; then
+	TIMEOUT="${OPTION_TIMEOUT:-${TIMEOUT:-30}}"
+fi
+
+if [[ "${EXCLUDE:-}" ]] && ! declare -p EXCLUDE | grep -q '^declare -a'; then
+	# If EXCLUDE was not defined as an array, convert it to one.
+	# shellcheck disable=SC2128,SC2190,SC2206
+	EXCLUDE=($EXCLUDE)
+elif [[ ! "${EXCLUDE:-}" ]]; then
+	EXCLUDE=()
+fi
+# Convert the exclude list to an associative array. The lists from the
+# configuration file and command line options are merged.
+TEMP_EXCLUDE=("${EXCLUDE[@]}" "${OPTION_EXCLUDE[@]}")
+unset EXCLUDE
+declare -A EXCLUDE
+for filter in "${TEMP_EXCLUDE[@]}"; do
+	EXCLUDE["$filter"]=1
+done
+unset OPTION_EXCLUDE TEMP_EXCLUDE
+
+if [[ "${TEST_DEVS:-}" ]] && ! declare -p TEST_DEVS | grep -q '^declare -a'; then
+	# If TEST_DEVS was not defined as an array, convert it to one.
+	# shellcheck disable=SC2128,SC2206
+	TEST_DEVS=($TEST_DEVS)
+elif [[ ! "${TEST_DEVS:-}" ]]; then
+	TEST_DEVS=()
+fi
+
+: "${LOGGER_PROG:="$(type -P logger || echo true)"}"
+: "${RUN_ZONED_TESTS:=0}"
+
+# Sanity check options.
 if [[ $QUICK_RUN -ne 0 && ! "${TIMEOUT:-}" ]]; then
 	_error "QUICK_RUN specified without TIMEOUT"
 fi
@@ -726,15 +756,6 @@ fi
 if [[ $DEVICE_ONLY -ne 0 && ${#TEST_DEVS[@]} -eq 0 ]]; then
 	_error "DEVICE_ONLY specified without TEST_DEVS"
 fi
-
-# Convert the exclude list to an associative array.
-TEMP_EXCLUDE=("${EXCLUDE[@]}")
-unset EXCLUDE
-declare -A EXCLUDE
-for filter in "${TEMP_EXCLUDE[@]}"; do
-	EXCLUDE["$filter"]=1
-done
-unset TEMP_EXCLUDE
 
 mkdir -p "$OUTPUT"
 OUTPUT="$(realpath "$OUTPUT")"

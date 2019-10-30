@@ -20,8 +20,13 @@ will run all tests in the `loop` group and the `block/002` test.
 ## Configuration
 
 Test configuration goes in the `config` file at the top-level directory of the
-blktests repository. Test configuration options can also be set as environment
-variables instead of in the `config` file.
+blktests repository. A different file can be specified with the `-c` command
+line option. The `-c` option can be used multiple times; the files will all be
+loaded in the order that they are specified on the command line.
+
+Test configuration options can also be set as environment variables. The
+configuration file has precedence over environment variables, and command line
+options have precedence over the configuration file.
 
 ### Test Devices
 
