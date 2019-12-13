@@ -138,30 +138,51 @@ do_ib_cm_login() {
 	done
 }
 
+rdma_dev_to_net_dev() {
+	local b d rdma_dev=$1
+
+	b=/sys/class/infiniband/$rdma_dev/parent
+	if [ -e "$b" ]; then
+		echo "$(<"$b")"
+	else
+		echo "${rdma_dev%_siw}"
+	fi
+}
+
 # Tell the SRP initiator to log in to an SRP target using the RDMA/CM.
 # Arguments: $1: SRP target IOC GUID; $2: IB device to log in to; $3: additional
 # login parameters.
 do_rdma_cm_login() {
-	local a b add_param d dest dests ibdev ioc_guid pd
+	local a b c add_param d dest dests ibdev ioc_guid params
 
 	ioc_guid=$1
 	ibdev=$2
 	add_param=$3
-	pd=/sys/class/infiniband/$ibdev/parent
-	if [ -e "$pd" ]; then
-		d=$(<"$pd")
+	if d=$(rdma_dev_to_net_dev "$ibdev"); then
 		a=$(get_ipv4_addr "$(basename "$d")")
 		b=$(get_ipv6_addr "$(basename "$d")")
 	fi
 	echo "Interface $d: IPv4 $a IPv6 $b" >>"$FULL"
 	[ -n "$a$b" ] || return 1
+	b=${b}%$(<"/sys/class/net/$d/ifindex")
 	dests=()
-	[ -n "$a" ] && dests+=("${a}:${srp_rdma_cm_port}")
-	[ -n "$b" ] && dests+=("[${b}]:${srp_rdma_cm_port}")
+	for c in $a; do
+		dests+=("${c}:${srp_rdma_cm_port}")
+	done
+	for c in $b; do
+		dests+=("[${c}]:${srp_rdma_cm_port}")
+	done
 	for dest in "${dests[@]}"; do
+		src=${dest%:*}
 		for p in "/sys/class/infiniband_srp/srp-${2}-"*; do
 			[ -e "$p" ] || continue
-			srp_single_login "id_ext=$ioc_guid,ioc_guid=$ioc_guid,dest=$dest,$add_param" "$p/add_target"
+			ibdev=$(<"$p/ibdev")
+			port=$(<"$p/port")
+			gid=$(<"/sys/class/infiniband/$ibdev/ports/$port/gids/0")
+			gid=${gid//:}
+			gid_pfx=${gid:0:16}
+			params+="id_ext=$ioc_guid,initiator_ext=$gid_pfx,ioc_guid=$ioc_guid,src=$src,dest=$dest,$add_param"
+			srp_single_login "${params}" "$p/add_target"
 		done
 	done
 }
@@ -201,11 +222,11 @@ log_in() {
 	ioc_guid=$(</sys/module/ib_srpt/parameters/srpt_service_guid)
 
 	for ((i=0;i<10;i++)); do
-		for d in /sys/class/infiniband_mad/umad*; do
-			[ -e "$d" ] || continue
-			ibdev=$(<"$d/ibdev")
-			port=$(<"$d/port")
-			link_layer=$(<"/sys/class/infiniband/$ibdev/ports/$port/link_layer")
+		for p in /sys/class/infiniband/*/ports/*; do
+			[ -e "$p" ] || continue
+			port=$(basename "$p")
+			ibdev=$(basename "$(dirname "$(dirname "$p")")")
+			link_layer=$(<"$p/link_layer")
 			case $link_layer in
 				InfiniBand)
 					do_ib_cm_login   "$ioc_guid" "$ibdev" "$port" "$add_param" ||
@@ -454,34 +475,34 @@ configure_target_ports() {
 
 # Load LIO and configure the SRP target driver and LUNs.
 start_lio_srpt() {
-	local b d gid guid i ini_gids ini_guids opts p target_gids target_guids vdev
+	local b d gid i ini_ids=() opts p target_ids=() vdev
 
-	# shellcheck disable=SC2207
-	target_guids=($(all_primary_gids | sed 's/^fe80:0000:0000:0000://'))
-	# shellcheck disable=SC2207
-	target_gids=($(all_primary_gids | sed 's/^/0x/;s/://g'))
+	for gid in $(all_primary_gids); do
+		if [ "${gid#fe8}" != "$gid" ]; then
+			gid=${gid#fe80:0000:0000:0000:}
+		else
+			gid=0x${gid//:}
+		fi
+		target_ids+=("$gid")
+	done
+	echo "target_ids=${target_ids[*]}" >>"$FULL"
 	for p in /sys/class/infiniband/*/ports/*; do
 		[ -e "$p" ] || continue
-		link_layer=$(<"$p/link_layer")
-		case "$link_layer" in
-			InfiniBand)
-				guid=$(<"$p/gids/0")
-				gid=$(echo "${guid}" | sed 's/^fe8/0x000/;s/://g')
-				guid=${guid#fe80:0000:0000:0000:}
-				[ "$guid" = "0000:0000:0000:0000" ] && continue
-				ini_guids+=("$guid")
-				ini_gids+=("$gid")
-				;;
-			*)
-				d=$(<"$(dirname "$(dirname "$p")")/parent")
-				for b in $(get_ipv4_addr "$d") \
-						 $(get_ipv6_addr "$d"|expand_ipv6_addr); do
-					ini_guids+=("$b")
-					ini_gids+=("$b")
-				done
-				;;
-		esac
+		gid=$(<"$p/gids/0")
+		if [ "${gid#fe8}" != "$gid" ]; then
+			gid=${gid#fe80:0000:0000:0000:}
+			ini_ids+=("$gid")
+		else
+			gid="0x${gid//:}"
+			ini_ids+=("$gid")
+		fi
+		d=$(rdma_dev_to_net_dev "$(basename "$(dirname "$(dirname "$p")")")")
+		for b in $(get_ipv4_addr "$d") \
+				 $(get_ipv6_addr "$d"|expand_ipv6_addr); do
+			ini_ids+=("$b")
+		done
 	done
+	echo "ini_ids=${ini_ids[*]}" >>"$FULL"
 	mount_configfs || return $?
 	modprobe target_core_mod || return $?
 	modprobe target_core_iblock || return $?
@@ -519,10 +540,7 @@ start_lio_srpt() {
 			echo "${srp_rdma_cm_port}" > discovery_auth/rdma_cm_port ||
 				return $?
 		fi
-		configure_target_ports "${target_guids[@]}" -- "${ini_guids[@]}" || {
-			echo "Retrying with old port name format"
-			configure_target_ports "${target_gids[@]}" -- "${ini_gids[@]}"
-		}
+		configure_target_ports "${target_ids[@]}" -- "${ini_ids[@]}"
 	)
 }
 
