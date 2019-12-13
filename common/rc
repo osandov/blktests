@@ -87,6 +87,21 @@ _have_program() {
 	return 1
 }
 
+# Check whether the iproute2 snapshot is greater than or equal to $1.
+_have_iproute2() {
+	local snapshot
+
+	if ! snapshot=$(ip -V | sed 's/ip utility, iproute2-ss//'); then
+		SKIP_REASON="ip utility not found"
+		return 1
+	fi
+	if [ "$snapshot" -lt "$1" ]; then
+		SKIP_REASON="ip utility too old"
+		return 1
+	fi
+	return 0
+}
+
 _have_src_program() {
 	if [[ ! -x "$SRCDIR/$1" ]]; then
 		SKIP_REASON="$1 was not built; run \`make\`"
@@ -132,6 +147,19 @@ _have_kernel_option() {
 	done
 
 	return 1
+}
+
+# Check whether the version of the running kernel is greater than or equal to
+# $1.$2.$3
+_have_kver() {
+	local d=$1 e=$2 f=$3
+
+	IFS='.' read -r a b c < <(uname -r | sed 's/-.*//')
+	if [ $((a * 65536 + b * 256 + c)) -lt $((d * 65536 + e * 256 + f)) ];
+	then
+		SKIP_REASON="Kernel version too old"
+		return 1
+	fi
 }
 
 _have_tracefs() {
