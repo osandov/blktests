@@ -409,7 +409,7 @@ has_rdma_rxe() {
 }
 
 # Load the rdma_rxe kernel module and associate it with all network interfaces.
-start_rdma_rxe() {
+start_soft_rdma() {
 	{
 		modprobe rdma_rxe || return $?
 		(
@@ -425,7 +425,7 @@ start_rdma_rxe() {
 
 # Dissociate the rdma_rxe kernel module from all network interfaces and unload
 # the rdma_rxe kernel module.
-stop_rdma_rxe() {
+stop_soft_rdma() {
 	(
 		cd /sys/class/net &&
 			for i in *; do
@@ -608,7 +608,7 @@ unload_null_blk() {
 }
 
 setup_rdma() {
-	start_rdma_rxe
+	start_soft_rdma
 	(
 		echo "RDMA interfaces:"
 		cd /sys/class/infiniband &&
@@ -627,7 +627,7 @@ teardown_uncond() {
 	killall -9 multipathd >&/dev/null
 	rm -f /etc/multipath.conf
 	stop_target
-	stop_rdma_rxe
+	stop_soft_rdma
 	unload_null_blk
 }
 
