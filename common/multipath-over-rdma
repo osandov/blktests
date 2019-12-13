@@ -61,7 +61,7 @@ get_ipv4_addr() {
 
 # Convert e.g. ::1 into 0000:0000:0000:0000:0000:0000:0000:0001.
 expand_ipv6_addr() {
-	awk -F : 'BEGIN{left=1} { for(i=1;i<=NF;i++) { a=substr("0000", 1+length($i)) $i; if ($i == "") left=0; else if (left) pre = pre ":" a; else suf = suf ":" a }; mid=substr(":0000:0000:0000:0000:0000:0000:0000:0000", (pre!="")+length(pre)+length(suf)); print substr(pre,2) mid suf}'
+	awk -F : '{ left=1; for(i=1;i<=NF;i++) { a=substr("0000", 1+length($i)) $i; if ($i == "") left=0; else if (left) pre = pre ":" a; else suf = suf ":" a }; mid=substr("0000:0000:0000:0000:0000:0000:0000:0000", (pre=="")+length(pre)+length(suf)); print substr(pre,2) mid suf}'
 }
 
 get_ipv6_addr() {
