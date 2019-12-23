@@ -4,12 +4,13 @@ HAVE_C_HEADER = $(shell if echo "\#include <$(1)>" |		\
 
 C_TARGETS := \
 	loblksize \
+	loop_change_fd \
 	loop_get_status_null \
+	mount_clear_sock \
+	nbdsetsize \
 	openclose \
 	sg/dxfer-from-dev \
 	sg/syzkaller1 \
-	nbdsetsize \
-	loop_change_fd \
 	zbdioctl
 
 CXX_TARGETS := \

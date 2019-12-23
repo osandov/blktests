@@ -1,0 +1,30 @@
+#!/bin/bash
+# SPDX-License-Identifier: GPL-3.0+
+# Copyright (C) 2019 Sun Ke
+#
+# Regression test for commit 2b5c8f0063e4 ("nbd: replace kill_bdev() with
+# __invalidate_device() again").
+
+. tests/nbd/rc
+
+DESCRIPTION="mount/unmount concurrently with NBD_CLEAR_SOCK"
+QUICK=1
+
+requires() {
+	_have_nbd && _have_src_program mount_clear_sock
+}
+
+test() {
+	echo "Running ${TEST_NAME}"
+
+	_start_nbd_server
+	nbd-client -L -N export localhost /dev/nbd0 >> "$FULL" 2>&1
+	mkfs.ext4 /dev/nbd0 >> "$FULL" 2>&1
+
+	mkdir -p "${TMPDIR}/mnt"
+	src/mount_clear_sock /dev/nbd0 "${TMPDIR}/mnt" ext4 5000
+	umount "${TMPDIR}/mnt" > /dev/null 2>&1
+
+	nbd-client -d /dev/nbd0 >> "$FULL" 2>&1
+	_stop_nbd_server
+}
