@@ -180,7 +180,7 @@ _run_fio_rand_io() {
 
 _run_fio_verify_io() {
 	_run_fio --name=verify --rw=randwrite --direct=1 --ioengine=libaio --bs=4k \
-		--norandommap --iodepth=16 --verify=crc32c "$@"
+		--iodepth=16 --verify=crc32c "$@"
 }
 
 _fio_perf_report() {
