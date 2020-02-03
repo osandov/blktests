@@ -3,7 +3,7 @@
 # Copyright (C) 2018 Sagi Grimberg
 #
 # Test NVMe out of range access on a file backend. Regression test for commit
-# 9c891c139894 ("nvmet: check fileio lba range access boundaries").
+# 9c891c139894 ("nvmet: check fileio LBA range access boundaries").
 
 . tests/nvme/rc
 
@@ -44,7 +44,7 @@ test() {
 	bs="$(blockdev --getbsz "/dev/${nvmedev}n1")"
 
 	nvme read "/dev/${nvmedev}n1" -s "$sectors" -c 0 -z "$bs" &>"$FULL" \
-		&& echo "ERROR: Successfully read out of device lba range"
+		&& echo "ERROR: nvme read for out of range LBA was not rejected"
 
 	nvme disconnect -n "${subsys_name}"
 
