@@ -18,7 +18,7 @@
 int main(int argc, char **argv)
 {
 	const char *mountpoint, *dev, *fstype;
-	int loops, fd;
+	int loops, fd, i;
 
 	if (argc != 5) {
 		fprintf(stderr, "usage: %s DEV MOUNTPOINT FSTYPE LOOPS", argv[0]);
@@ -36,7 +36,7 @@ int main(int argc, char **argv)
 		return EXIT_FAILURE;
 	}
 
-	for (int i = 0; i < loops; i++) {
+	for (i = 0; i < loops; i++) {
 		pid_t mount_pid, clear_sock_pid;
 		int wstatus;
 
