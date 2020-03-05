@@ -1,0 +1,13 @@
+#!/bin/bash
+# SPDX-License-Identifier: GPL-3.0+
+# Copyright (C) 2020 Omar Sandoval
+#
+# Test skipping from test().
+
+. tests/meta/rc
+
+DESCRIPTION="skip in test()"
+
+test() {
+	SKIP_REASON="(╯°□°)╯︵ ┻━┻"
+}

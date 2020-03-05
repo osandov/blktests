@@ -1,0 +1,13 @@
+#!/bin/bash
+# SPDX-License-Identifier: GPL-3.0+
+# Copyright (C) 2020 Omar Sandoval
+#
+# Test skipping from test_device().
+
+. tests/meta/rc
+
+DESCRIPTION="skip in test_device()"
+
+test_device() {
+	SKIP_REASON="(╯°□°)╯︵ ┻━┻"
+}

@@ -187,6 +187,12 @@ DESCRIPTION=""
 # failure. You should prefer letting the test fail because of broken output
 # over, say, checking the exit status of every command you run.
 #
+# If the test cannot be run, this function may set the \$SKIP_REASON variable
+# and return. In that case, the return value and output are ignored, and the
+# test is considered skipped. This should only be done when the requirements
+# can only be detected with a non-trivial amount of setup; use
+# group_requires(), requires(), and/or device_requires() instead when possible.
+#
 # Various variables are defined for the test:
 #    - \$TEST_NAME -- the full name of the test.
 #    - \$TMPDIR -- a temporary directory deleted after the test is run.

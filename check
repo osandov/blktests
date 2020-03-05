@@ -364,7 +364,9 @@ _call_test() {
 
 		_cleanup
 
-		if ! diff "tests/${TEST_NAME}.out" "${seqres}.out" >/dev/null; then
+		if [[ -v SKIP_REASON ]]; then
+			TEST_RUN["status"]="not run"
+		elif ! diff "tests/${TEST_NAME}.out" "${seqres}.out" >/dev/null; then
 			mv "${seqres}.out" "${seqres}.out.bad"
 			TEST_RUN["status"]=fail
 			TEST_RUN["reason"]=output
