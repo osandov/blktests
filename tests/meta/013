@@ -1,0 +1,17 @@
+#!/bin/bash
+# SPDX-License-Identifier: GPL-3.0+
+# Copyright (C) 2020 Omar Sandoval
+#
+# Test requires() with test_device().
+
+. tests/meta/rc
+
+DESCRIPTION="skip test_device() in requires()"
+
+requires() {
+	SKIP_REASON="(╯°□°)╯︵ ┻━┻"
+}
+
+test_device() {
+	echo '¯\_(ツ)_/¯'
+}

@@ -158,19 +158,8 @@ _check_dmesg() {
 	fi
 }
 
-# Associative arrays are local by default. declare -g was added in 4.2, but it
-# was apparently broken for associative arrays initially.
-declare -A LAST_TEST_RUN
-declare -A TEST_RUN
-
 _read_last_test_run() {
 	local seqres="${RESULTS_DIR}/${TEST_NAME}"
-
-	LAST_TEST_RUN["date"]=""
-	LAST_TEST_RUN["status"]=""
-	LAST_TEST_RUN["reason"]=""
-	LAST_TEST_RUN["exit_status"]=""
-	LAST_TEST_RUN["runtime"]=""
 
 	if [[ ! -e $seqres ]]; then
 		return
@@ -178,7 +167,9 @@ _read_last_test_run() {
 
 	local key value
 	while IFS=$'\t' read -r key value; do
-		LAST_TEST_RUN["$key"]="$value"
+		if [[ ! $key =~ ^date|status|reason|exit_status$ ]]; then
+			LAST_TEST_RUN["$key"]="$value"
+		fi
 	done <"$seqres"
 }
 
@@ -240,43 +231,45 @@ _output_last_test_run() {
 		_output_status "$TEST_NAME" ""
 	fi
 
-	(
-	local key value
-	while IFS= read -r key; do
-		if [[ $key =~ ^date|status|reason|exit_status$ ]]; then
-			continue
-		fi
-		value="${LAST_TEST_RUN["$key"]}"
-		printf '    %s\t%s\t...\n' "${key}" "${value}"
-	done < <(printf '%s\n' "${!LAST_TEST_RUN[@]}" | sort)
-	) | column -t -s $'\t'
+	{
+	local key
+	for key in "${!LAST_TEST_RUN[@]}"; do
+		printf '    %s\t%s\t...\n' "$key" "${LAST_TEST_RUN["$key"]}"
+	done
+	} | sort -t $'\t' -k 1,1 | column -t -s $'\t'
 }
 
 _output_test_run() {
 	if [[ -t 1 ]]; then
-		# -4 for date, status, reason, and exit_status, which we don't
-		# output, +1 for the test name.
-		tput cuu $((${#LAST_TEST_RUN[@]} - 3))
+		# Move the cursor back up to the status.
+		tput cuu $((${#LAST_TEST_RUN[@]} + 1))
 	fi
 
+	local status=${TEST_RUN["status"]}
+	if [[ $status = pass || $status = fail ]]; then
+		status+="ed"
+	fi
 	if [[ "${TEST_DEV:-}" ]]; then
-		_output_status "$TEST_NAME => $(basename "$TEST_DEV")" "${TEST_RUN["status"]}ed"
+		_output_status "$TEST_NAME => $(basename "$TEST_DEV")" "$status"
 	else
-		_output_status "$TEST_NAME" "${TEST_RUN["status"]}ed"
+		_output_status "$TEST_NAME" "$status"
 	fi
 
-	(
+	{
 	local key last_value value
-	while IFS= read -r key; do
-		if [[ $key =~ ^date|status|reason|exit_status$ ]]; then
-			continue
-		fi
+	{
+	for key in "${!LAST_TEST_RUN[@]}"; do
 		last_value="${LAST_TEST_RUN["$key"]}"
 		value="${TEST_RUN["$key"]}"
 		printf '    %s\t%s\t...\t%s\n' "$key" "$last_value" "$value"
-	done < <(printf '%s\n' "${!LAST_TEST_RUN[@]}" | sort)
+	done
+	} | sort -t $'\t' -k 1,1
 
-	while IFS= read -r key; do
+	{
+	for key in "${!TEST_RUN[@]}"; do
+		if [[ $key =~ ^date|status|reason|exit_status$ ]]; then
+			continue
+		fi
 		# [[ -v array[key] ]] was added in Bash 4.3. Do it this ugly
 		# way to support older versions.
 		if [[ -n ${LAST_TEST_RUN["$key"]} || ${LAST_TEST_RUN["$key"]-unset} != unset ]]; then
@@ -284,8 +277,13 @@ _output_test_run() {
 		fi
 		value="${TEST_RUN["$key"]}"
 		printf '    %s\t\t...\t%s\n' "$key" "$value"
-	done < <(printf '%s\n' "${!TEST_RUN[@]}" | sort)
-	) | column -t -s $'\t'
+	done
+	} | sort -t $'\t' -k 1,1
+	} | column -t -s $'\t'
+
+	if [[ $status = "not run" ]]; then
+		echo "    $SKIP_REASON"
+	fi
 }
 
 _register_test_cleanup() {
@@ -327,61 +325,65 @@ _call_test() {
 	FULL="${seqres}.full"
 	declare -A TEST_DEV_QUEUE_SAVED
 
+	declare -A LAST_TEST_RUN
 	_read_last_test_run
 	_output_last_test_run
 
+	declare -A TEST_RUN
 	TEST_RUN["date"]="$(date "+%F %T")"
 
 	mkdir -p "$(dirname "$seqres")"
 	# Remove leftovers from last time.
 	rm -f "${seqres}" "${seqres}."*
 
-	if [[ -w /dev/kmsg ]]; then
-		local dmesg_marker="run blktests $TEST_NAME at ${TEST_RUN["date"]}"
-		echo "$dmesg_marker" >> /dev/kmsg
+	if [[ -v SKIP_REASON ]]; then
+		TEST_RUN["status"]="not run"
 	else
-		local dmesg_marker=""
-		CHECK_DMESG=0
+		if [[ -w /dev/kmsg ]]; then
+			local dmesg_marker="run blktests $TEST_NAME at ${TEST_RUN["date"]}"
+			echo "$dmesg_marker" >> /dev/kmsg
+		else
+			local dmesg_marker=""
+			CHECK_DMESG=0
+		fi
+		$LOGGER_PROG "run blktests $TEST_NAME"
+
+		unset TEST_CLEANUP
+		trap _cleanup EXIT
+		if ! TMPDIR="$(mktemp --tmpdir -p "$OUTPUT" -d "tmpdir.${TEST_NAME//\//.}.XXX")"; then
+			return
+		fi
+
+		TIMEFORMAT="%Rs"
+		pushd . >/dev/null || return
+		{ time "$test_func" >"${seqres}.out" 2>&1; } 2>"${seqres}.runtime"
+		TEST_RUN["exit_status"]=$?
+		popd >/dev/null || return
+		TEST_RUN["runtime"]="$(cat "${seqres}.runtime")"
+		rm -f "${seqres}.runtime"
+
+		_cleanup
+
+		if ! diff "tests/${TEST_NAME}.out" "${seqres}.out" >/dev/null; then
+			mv "${seqres}.out" "${seqres}.out.bad"
+			TEST_RUN["status"]=fail
+			TEST_RUN["reason"]=output
+		elif [[ ${TEST_RUN["exit_status"]} -ne 0 ]]; then
+			TEST_RUN["status"]=fail
+			TEST_RUN["reason"]="exit"
+		elif ! _check_dmesg "$dmesg_marker"; then
+			TEST_RUN["status"]=fail
+			TEST_RUN["reason"]=dmesg
+		else
+			TEST_RUN["status"]=pass
+		fi
+		rm -f "${seqres}.out"
 	fi
-	$LOGGER_PROG "run blktests $TEST_NAME"
-
-	unset TEST_CLEANUP
-	trap _cleanup EXIT
-	if ! TMPDIR="$(mktemp --tmpdir -p "$OUTPUT" -d "tmpdir.${TEST_NAME//\//.}.XXX")"; then
-		return
-	fi
-
-	TIMEFORMAT="%Rs"
-	pushd . >/dev/null || return
-	{ time "$test_func" >"${seqres}.out" 2>&1; } 2>"${seqres}.runtime"
-	TEST_RUN["exit_status"]=$?
-	popd >/dev/null || return
-	TEST_RUN["runtime"]="$(cat "${seqres}.runtime")"
-	rm -f "${seqres}.runtime"
-
-	_cleanup
-
-	if ! diff "tests/${TEST_NAME}.out" "${seqres}.out" >/dev/null; then
-		mv "${seqres}.out" "${seqres}.out.bad"
-		TEST_RUN["status"]=fail
-		TEST_RUN["reason"]=output
-	elif [[ ${TEST_RUN["exit_status"]} -ne 0 ]]; then
-		TEST_RUN["status"]=fail
-		TEST_RUN["reason"]="exit"
-	elif ! _check_dmesg "$dmesg_marker"; then
-		TEST_RUN["status"]=fail
-		TEST_RUN["reason"]=dmesg
-	else
-		TEST_RUN["status"]=pass
-	fi
-	rm -f "${seqres}.out"
 
 	_write_test_run
 	_output_test_run
 
-	if [[ ${TEST_RUN["status"]} = pass ]]; then
-		return 0
-	else
+	if [[ ${TEST_RUN["status"]} = fail ]]; then
 		case "${TEST_RUN["reason"]}" in
 		output)
 			diff -u "tests/${TEST_NAME}.out" "${seqres}.out.bad" | awk "
@@ -411,6 +413,8 @@ _call_test() {
 			;;
 		esac
 		return 1
+	else
+		return 0
 	fi
 }
 
@@ -446,10 +450,6 @@ _run_test() {
 	if declare -fF test >/dev/null; then
 		if declare -fF requires >/dev/null; then
 			requires
-			if [[ -v SKIP_REASON ]]; then
-				_output_notrun "$TEST_NAME"
-				return 0
-			fi
 		fi
 
 		RESULTS_DIR="$OUTPUT/nodev"
@@ -485,32 +485,28 @@ _run_test() {
 
 		if declare -fF requires >/dev/null; then
 			requires
-			if [[ -v SKIP_REASON ]]; then
-				_output_notrun "$TEST_NAME"
-				return 0
-			fi
 		fi
 
 		local ret=0
 		for TEST_DEV in "${TEST_DEVS[@]}"; do
 			TEST_DEV_SYSFS="${TEST_DEV_SYSFS_DIRS["$TEST_DEV"]}"
 			TEST_DEV_PART_SYSFS="${TEST_DEV_PART_SYSFS_DIRS["$TEST_DEV"]}"
-			if (( !CAN_BE_ZONED )) && ! _test_dev_is_not_zoned; then
-				_output_notrun "$TEST_NAME => $(basename "$TEST_DEV")"
-				unset SKIP_REASON
-				continue
-			fi
-			if declare -fF device_requires >/dev/null; then
-				device_requires
-				if [[ -v SKIP_REASON ]]; then
-					_output_notrun "$TEST_NAME => $(basename "$TEST_DEV")"
-					unset SKIP_REASON
-					continue
+
+			local unset_skip_reason=0
+			if [[ ! -v SKIP_REASON ]]; then
+				unset_skip_reason=1
+				if (( !CAN_BE_ZONED )) && ! _test_dev_is_not_zoned; then
+					SKIP_REASON="${TEST_DEV} is a zoned block device"
+				elif declare -fF device_requires >/dev/null; then
+					device_requires
 				fi
 			fi
 			RESULTS_DIR="$OUTPUT/$(basename "$TEST_DEV")"
 			if ! _call_test test_device; then
 				ret=1
+			fi
+			if (( unset_skip_reason )); then
+				unset SKIP_REASON
 			fi
 		done
 
