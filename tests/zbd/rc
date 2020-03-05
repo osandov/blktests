@@ -12,11 +12,9 @@
 #
 
 group_requires() {
-	_have_root || return $?
-	_have_program blkzone || return $?
-	_have_program dd || return $?
-	_have_kernel_option BLK_DEV_ZONED || return $?
-	_have_modules null_blk && _have_module_param null_blk zoned
+	_have_root && _have_program blkzone && _have_program dd &&
+		_have_kernel_option BLK_DEV_ZONED && _have_modules null_blk &&
+		_have_module_param null_blk zoned
 }
 
 group_device_requires() {

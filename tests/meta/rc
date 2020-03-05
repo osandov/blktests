@@ -9,17 +9,13 @@
 group_requires() {
 	if [[ "${META_REQUIRES_SKIP:-}" ]]; then
 		SKIP_REASON="META_REQUIRES_SKIP was set"
-		return 1
 	fi
-	return 0
 }
 
 group_device_requires() {
 	if [[ "${META_DEVICE_REQUIRES_SKIP:-}" ]]; then
 		SKIP_REASON="META_DEVICE_REQUIRES_SKIP was set"
-		return 1
 	fi
-	return 0
 }
 
 _have_writeable_kmsg() {

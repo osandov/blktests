@@ -10,7 +10,6 @@ DESCRIPTION="skip in requires()"
 
 requires() {
 	SKIP_REASON="(╯°□°)╯︵ ┻━┻"
-	return 1
 }
 
 test() {

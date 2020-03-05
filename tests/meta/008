@@ -10,7 +10,6 @@ DESCRIPTION="skip in device_requires()"
 
 device_requires() {
 	SKIP_REASON="(╯°□°)╯︵ $TEST_DEV ┻━┻"
-	return 1
 }
 
 test_device() {

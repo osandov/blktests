@@ -19,10 +19,10 @@ group_requires() {
 	# option.
 	if _have_kernel_option NVME_MULTIPATH; then
 		SKIP_REASON="CONFIG_NVME_MULTIPATH has been set in .config"
-		return 1
+		return
 	fi
 
-	_have_configfs || return $?
+	_have_configfs || return
 	required_modules=(
 		dm_multipath
 		dm_queue_length
@@ -38,30 +38,30 @@ group_requires() {
 		scsi_dh_emc
 		scsi_dh_rdac
 	)
-	_have_modules "${required_modules[@]}" || return 1
+	_have_modules "${required_modules[@]}" || return
 
 	for p in mkfs.ext4 mkfs.xfs multipath multipathd pidof; do
-		_have_program "$p" || return $?
+		_have_program "$p" || return
 	done
 
-	_multipathd_version_ge 0.7.0 || return $?
+	_multipathd_version_ge 0.7.0 || return
 	
-	_have_root || return $?
+	_have_root || return
 
-	_have_kernel_option DM_UEVENT || return $?
+	_have_kernel_option DM_UEVENT || return
 
 	# shellcheck disable=SC2043
 	for name in multipathd; do
 		if pidof "$name" >/dev/null; then
 			SKIP_REASON="$name must be stopped before the nvmeof-mp tests are run"
-			return 1
+			return
 		fi
 	done
 	if [ -e /etc/multipath.conf ] &&
 	    ! diff -q /etc/multipath.conf tests/nvmeof-mp/multipath.conf >&/dev/null
 	then
 		SKIP_REASON="/etc/multipath.conf already exists"
-		return 1
+		return
 	fi
 }
 

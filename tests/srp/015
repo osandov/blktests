@@ -8,10 +8,9 @@ DESCRIPTION="File I/O on top of multipath concurrently with logout and login (mq
 TIMED=1
 
 requires() {
-	_have_modules siw
-	_have_kver 5 5
-	# See also commit 4336c5821a7b ("rdma: add 'link add/delete' commands").
-	_have_iproute2 190404
+	# See also iproute commit 4336c5821a7b ("rdma: add 'link add/delete'
+	# commands").
+	_have_modules siw && _have_kver 5 5 && _have_iproute2 190404
 }
 
 test_disconnect_repeatedly() {

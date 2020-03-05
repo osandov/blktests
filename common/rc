@@ -139,7 +139,7 @@ _have_kernel_option() {
 	for f in /proc/config.gz /boot/config-$(uname -r); do
 		[ -e "$f" ] || continue
 		if zgrep -q "^CONFIG_${opt}=[my]$" "$f"; then
-			SKIP_REASON=""
+			unset SKIP_REASON
 			return 0
 		else
 			SKIP_REASON="kernel option $opt has not been enabled"

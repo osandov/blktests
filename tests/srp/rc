@@ -29,10 +29,10 @@ is_lio_configured() {
 group_requires() {
 	local m name p required_modules
 
-	_have_configfs || return $?
+	_have_configfs || return
 	if is_lio_configured; then
 		SKIP_REASON="LIO must be unloaded before the SRP tests are run"
-		return 1
+		return
 	fi
 	required_modules=(
 		dm_multipath
@@ -56,31 +56,31 @@ group_requires() {
 		target_core_iblock
 		target_core_mod
 	)
-	_have_modules "${required_modules[@]}" || return 1
+	_have_modules "${required_modules[@]}" || return
 
 	for p in mkfs.ext4 mkfs.xfs multipath multipathd pidof sg_reset; do
-		_have_program "$p" || return $?
+		_have_program "$p" || return
 	done
 
-	_multipathd_version_ge 0.7.0 || return $?
+	_multipathd_version_ge 0.7.0 || return
 
-	_have_root || return $?
+	_have_root || return
 
-	_have_src_program discontiguous-io || return $?
+	_have_src_program discontiguous-io || return
 
-	_have_kernel_option DM_UEVENT || return $?
+	_have_kernel_option DM_UEVENT || return
 
 	for name in srp_daemon multipathd; do
 		if pidof "$name" >/dev/null; then
 			SKIP_REASON="$name must be stopped before the SRP tests are run"
-			return 1
+			return
 		fi
 	done
 	if [ -e /etc/multipath.conf ] &&
 	    ! diff -q /etc/multipath.conf tests/srp/multipath.conf >&/dev/null
 	then
 		SKIP_REASON="/etc/multipath.conf already exists"
-		return 1
+		return
 	fi
 }
 

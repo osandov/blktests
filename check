@@ -423,6 +423,15 @@ _test_dev_is_zoned() {
 	return 0
 }
 
+_test_dev_is_not_zoned() {
+	if _test_dev_is_zoned; then
+		SKIP_REASON="${TEST_DEV} is a zoned block device"
+		return 1
+	fi
+	unset SKIP_REASON
+	return 0
+}
+
 _run_test() {
 	TEST_NAME="$1"
 	CAN_BE_ZONED=0
@@ -435,9 +444,12 @@ _run_test() {
 	. "tests/${TEST_NAME}"
 
 	if declare -fF test >/dev/null; then
-		if declare -fF requires >/dev/null && ! requires; then
-			_output_notrun "$TEST_NAME"
-			return 0
+		if declare -fF requires >/dev/null; then
+			requires
+			if [[ -v SKIP_REASON ]]; then
+				_output_notrun "$TEST_NAME"
+				return 0
+			fi
 		fi
 
 		RESULTS_DIR="$OUTPUT/nodev"
@@ -471,24 +483,30 @@ _run_test() {
 			return 0
 		fi
 
-		if declare -fF requires >/dev/null && ! requires; then
-			_output_notrun "$TEST_NAME"
-			return 0
+		if declare -fF requires >/dev/null; then
+			requires
+			if [[ -v SKIP_REASON ]]; then
+				_output_notrun "$TEST_NAME"
+				return 0
+			fi
 		fi
 
 		local ret=0
 		for TEST_DEV in "${TEST_DEVS[@]}"; do
 			TEST_DEV_SYSFS="${TEST_DEV_SYSFS_DIRS["$TEST_DEV"]}"
 			TEST_DEV_PART_SYSFS="${TEST_DEV_PART_SYSFS_DIRS["$TEST_DEV"]}"
-			if (( !CAN_BE_ZONED )) && _test_dev_is_zoned; then
-				SKIP_REASON="${TEST_DEV} is a zoned block device"
+			if (( !CAN_BE_ZONED )) && ! _test_dev_is_not_zoned; then
 				_output_notrun "$TEST_NAME => $(basename "$TEST_DEV")"
+				unset SKIP_REASON
 				continue
 			fi
-			unset SKIP_REASON
-			if declare -fF device_requires >/dev/null && ! device_requires; then
-				_output_notrun "$TEST_NAME => $(basename "$TEST_DEV")"
-				continue
+			if declare -fF device_requires >/dev/null; then
+				device_requires
+				if [[ -v SKIP_REASON ]]; then
+					_output_notrun "$TEST_NAME => $(basename "$TEST_DEV")"
+					unset SKIP_REASON
+					continue
+				fi
 			fi
 			RESULTS_DIR="$OUTPUT/$(basename "$TEST_DEV")"
 			if ! _call_test test_device; then
@@ -514,9 +532,12 @@ _run_group() {
 	# shellcheck disable=SC1090
 	. "tests/${group}/rc"
 
-	if declare -fF group_requires >/dev/null && ! group_requires; then
-		_output_notrun "${group}/***"
-		return 0
+	if declare -fF group_requires >/dev/null; then
+		group_requires
+		if [[ -v SKIP_REASON ]]; then
+			_output_notrun "${group}/***"
+			return 0
+		fi
 	fi
 
 	if declare -fF group_device_requires >/dev/null; then
@@ -526,9 +547,11 @@ _run_group() {
 			TEST_DEV_SYSFS="${TEST_DEV_SYSFS_DIRS["$TEST_DEV"]}"
 			# shellcheck disable=SC2034
 			TEST_DEV_PART_SYSFS="${TEST_DEV_PART_SYSFS_DIRS["$TEST_DEV"]}"
-			if ! group_device_requires; then
+			group_device_requires
+			if [[ -v SKIP_REASON ]]; then
 				_output_notrun "${group}/*** => $(basename "$TEST_DEV")"
 				unset TEST_DEVS["$i"]
+				unset SKIP_REASON
 			fi
 		done
 		# Fix the array indices.
