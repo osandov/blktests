@@ -430,6 +430,22 @@ _nvmet_passthru_target_cleanup() {
 	_remove_nvmet_passhtru "${subsys_name}"
 }
 
+_find_nvme_ns() {
+	local uuid=$1
+	local dev
+	local hidden
+
+	for dev in /sys/block/nvme*; do
+		hidden="$(cat "${dev}/hidden")"
+		[[ "$hidden" -eq 1 ]] && continue
+		u="$(cat "${dev}/uuid")"
+		if [[ "$uuid" = "$u" ]] ; then
+			basename "${dev}"
+			break
+                fi
+        done
+}
+
 _filter_discovery() {
 	sed -n -r -e "s/Generation counter [0-9]+/Generation counter X/" \
 		  -e '/Discovery Log Number|Log Entry|trtype|subnqn/p'

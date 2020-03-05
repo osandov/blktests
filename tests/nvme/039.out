@@ -1,0 +1,18 @@
+Running nvme/039
+ANA state failback
+1: grpid 1 state optimized
+1: grpid 2 state inaccessible
+2: grpid 1 state inaccessible
+2: grpid 2 state optimized
+ANA state change
+1: grpid 1 state change
+1: grpid 2 state change
+2: grpid 1 state change
+2: grpid 2 state change
+ANA state failover
+1: grpid 1 state inaccessible
+1: grpid 2 state optimized
+2: grpid 1 state optimized
+2: grpid 2 state inaccessible
+NQN:blktests-subsystem-1 disconnected 2 controller(s)
+Test complete
