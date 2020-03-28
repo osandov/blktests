@@ -1,0 +1,53 @@
+#!/bin/bash
+# SPDX-License-Identifier: GPL-2.0
+# Copyright 2020 Google LLC
+#
+# Trigger the blk_mq_realloc_hw_ctxs() error path. Regression test for commit
+# d0930bb8f46b ("blk-mq: Fix a recently introduced regression in
+# blk_mq_realloc_hw_ctxs()").
+
+. tests/block/rc
+. common/null_blk
+
+DESCRIPTION="trigger the blk_mq_realloc_hw_ctxs() error path"
+QUICK=1
+
+requires() {
+	_have_null_blk && _have_module_param null_blk init_hctx
+}
+
+test() {
+	local i sq=/sys/kernel/config/nullb/nullb0/submit_queues
+
+	: "${TIMEOUT:=30}"
+	# Legend: init_hctx=<interval>,<probability>,<space>,<times>
+	# Set <space> to $(nproc) + 1 to make loading of null_blk succeed.
+	if ! _init_null_blk nr_devices=0 queue_mode=2 \
+	     "init_hctx=$(nproc),100,$(($(nproc) + 1)),-1"; then
+		echo "Loading null_blk failed"
+		return 1
+	fi
+	if ! _configure_null_blk nullb0 completion_nsec=0 blocksize=512 size=16\
+	     submit_queues="$(nproc)" memory_backed=1 power=1; then
+		echo "Configuring null_blk failed"
+		return 1
+	fi
+	# Since older null_blk versions do not allow "submit_queues" to be
+	# modified, check first whether that configs attribute is writeable.
+	# Each iteration of the loop below triggers $(nproc) + 1
+	# null_init_hctx() calls. Since <interval>=$(nproc), all possible
+	# blk_mq_realloc_hw_ctxs() error paths will be triggered. Whether or
+	# not this test succeeds depends on whether or not _check_dmesg()
+	# detects a kernel warning.
+	if { echo "$(<"$sq")" >$sq; } 2>/dev/null; then
+		for ((i = 0; i < 100; i++)); do
+			echo 1 > $sq
+			nproc > $sq
+		done
+	else
+		SKIP_REASON="Skipping test because $sq cannot be modified"
+	fi
+	rmdir /sys/kernel/config/nullb/nullb0
+	_exit_null_blk
+	echo Passed
+}
