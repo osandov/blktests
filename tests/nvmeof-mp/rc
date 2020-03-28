@@ -278,7 +278,7 @@ stop_nvme_target() {
 	)
 	unload_module nvmet_rdma &&
 		unload_module nvmet &&
-		unload_null_blk
+		_exit_null_blk
 }
 
 start_target() {

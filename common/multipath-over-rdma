@@ -5,6 +5,7 @@
 # Functions and global variables used by both the srp and nvmeof-mp tests.
 
 . common/shellcheck
+. common/null_blk
 
 debug=
 filesystem_type=ext4
@@ -634,13 +635,6 @@ configure_null_blk() {
 	ls -l /dev/nullb* &>>"$FULL"
 }
 
-unload_null_blk() {
-	local d
-
-	for d in /sys/kernel/config/nullb/*; do [ -d "$d" ] && rmdir "$d"; done
-	unload_module null_blk
-}
-
 setup_rdma() {
 	start_soft_rdma
 	(
@@ -662,7 +656,7 @@ teardown_uncond() {
 	rm -f /etc/multipath.conf
 	stop_target
 	stop_soft_rdma
-	unload_null_blk
+	_exit_null_blk
 }
 
 teardown() {
@@ -698,7 +692,7 @@ setup_test() {
 		[ -e "/sys/module/$m" ] || modprobe "$m" || return $?
 	done
 
-	modprobe null_blk nr_devices=0 || return $?
+	_init_null_blk nr_devices=0 || return $?
 
 	configure_null_blk || return $?
 
