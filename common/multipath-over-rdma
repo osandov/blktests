@@ -620,18 +620,11 @@ run_fio() {
 configure_null_blk() {
 	local i
 
-	(
-		cd /sys/kernel/config/nullb || return $?
-		for i in nullb0 nullb1; do (
-			{ mkdir -p $i &&
-				  cd $i &&
-				  echo 0 > completion_nsec &&
-				  echo 512 > blocksize &&
-				  echo $((ramdisk_size>>20)) > size &&
-				  echo 1 > memory_backed &&
-				  echo 1 > power; } || exit $?
-		) done
-	)
+	for i in nullb0 nullb1; do
+		_configure_null_blk $i completion_nsec=0 blocksize=512 \
+				    size=$((ramdisk_size>>20)) memory_backed=1 \
+				    power=1 || return $?
+	done
 	ls -l /dev/nullb* &>>"$FULL"
 }
 

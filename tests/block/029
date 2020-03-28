@@ -14,19 +14,6 @@ requires() {
 	_have_null_blk
 }
 
-# Configure one null_blk instance.
-configure_null_blk() {
-	local nullb0="/sys/kernel/config/nullb/nullb0"
-
-	mkdir "$nullb0" &&
-	echo 0 > "$nullb0/completion_nsec" &&
-	echo 512 > "$nullb0/blocksize" &&
-	echo 16 > "$nullb0/size" &&
-	echo 1 > "$nullb0/memory_backed" &&
-	echo 1 > "$nullb0/power" &&
-	ls -l /dev/nullb* &>>"$FULL"
-}
-
 modify_nr_hw_queues() {
 	local deadline num_cpus
 
@@ -45,7 +32,8 @@ test() {
 
 	: "${TIMEOUT:=30}"
 	_init_null_blk nr_devices=0 queue_mode=2 &&
-	configure_null_blk
+	_configure_null_blk nullb0 completion_nsec=0 blocksize=512 \
+			    size=16 memory_backed=1 power=1 &&
 	if { echo 1 >$sq; } 2>/dev/null; then
 		modify_nr_hw_queues &
 		fio --rw=randwrite --bs=4K --loops=$((10**6)) \

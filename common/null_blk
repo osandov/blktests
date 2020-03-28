@@ -29,6 +29,20 @@ _init_null_blk() {
 	return 0
 }
 
+# Configure one null_blk instance with name $1 and parameters $2..${$#}.
+_configure_null_blk() {
+	local nullb=/sys/kernel/config/nullb/$1 param val
+
+	shift
+	mkdir "$nullb" || return $?
+	while [[ $# -gt 0 ]]; do
+		param="${1%%=*}"
+		val="${1#*=}"
+		shift
+		echo "$val" > "$nullb/$param" || return $?
+	done
+}
+
 _exit_null_blk() {
 	_remove_null_blk_devices
 	udevadm settle
