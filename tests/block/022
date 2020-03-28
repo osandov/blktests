@@ -50,9 +50,6 @@ test() {
 		wait $pid1
 	} 2>/dev/null
 
-	rmdir /sys/kernel/config/nullb/1
-	rmdir /sys/kernel/config/nullb/0
-
 	_exit_null_blk
 	echo "Test complete"
 }

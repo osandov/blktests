@@ -58,7 +58,6 @@ test() {
 	else
 		echo "Skipping test because $sq cannot be modified" >>"$FULL"
 	fi
-	rmdir /sys/kernel/config/nullb/nullb0
 	_exit_null_blk
 	echo Passed
 }

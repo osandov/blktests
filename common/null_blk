@@ -8,11 +8,15 @@ _have_null_blk() {
 	_have_modules null_blk
 }
 
-_init_null_blk() {
+_remove_null_blk_devices() {
 	if [[ -d /sys/kernel/config/nullb ]]; then
 		find /sys/kernel/config/nullb -mindepth 1 -maxdepth 1 \
 		     -type d -delete
 	fi
+}
+
+_init_null_blk() {
+	_remove_null_blk_devices
 
 	local zoned=""
 	if (( RUN_FOR_ZONED )); then zoned="zoned=1"; fi
@@ -26,6 +30,7 @@ _init_null_blk() {
 }
 
 _exit_null_blk() {
+	_remove_null_blk_devices
 	udevadm settle
 	modprobe -r null_blk
 }
