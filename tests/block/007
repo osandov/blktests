@@ -15,7 +15,8 @@ requires() {
 }
 
 device_requires() {
-	_test_dev_supports_io_poll && _test_dev_supports_io_poll_delay
+	_require_test_dev_supports_io_poll &&
+		_require_test_dev_supports_io_poll_delay
 }
 
 run_fio_job() {

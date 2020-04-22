@@ -18,7 +18,10 @@ group_requires() {
 }
 
 group_device_requires() {
-	_test_dev_is_zoned
+	if ! _test_dev_is_zoned; then
+		SKIP_REASON="${TEST_DEV} is not a zoned block device"
+		return
+	fi
 }
 
 _fallback_null_blk_zoned() {
@@ -253,14 +256,10 @@ _find_two_contiguous_seq_zones() {
 }
 
 _test_dev_is_dm() {
-	if [[ ! -r "${TEST_DEV_SYSFS}/dm/name" ]]; then
-		SKIP_REASON="$TEST_DEV is not device-mapper"
-		return 1
-	fi
-	return 0
+	[[ -r "${TEST_DEV_SYSFS}/dm/name" ]]
 }
 
-_test_dev_is_logical() {
+_require_test_dev_is_logical() {
 	if ! _test_dev_is_partition && ! _test_dev_is_dm; then
 		SKIP_REASON="$TEST_DEV is not a logical device"
 		return 1
@@ -274,11 +273,9 @@ _test_dev_has_dm_map() {
 
 	dm_name=$(<"${TEST_DEV_SYSFS}/dm/name")
 	if ! dmsetup status "${dm_name}" | grep -qe "${target_type}"; then
-		SKIP_REASON="$TEST_DEV does not have ${target_type} map"
 		return 1
 	fi
 	if dmsetup status "${dm_name}" | grep -v "${target_type}"; then
-		SKIP_REASON="$TEST_DEV has map other than ${target_type}"
 		return 1
 	fi
 	return 0

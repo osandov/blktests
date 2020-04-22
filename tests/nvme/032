@@ -19,7 +19,7 @@ requires() {
 }
 
 device_requires() {
-	_test_dev_is_nvme
+	_require_test_dev_is_nvme
 }
 
 test_device() {

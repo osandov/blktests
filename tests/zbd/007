@@ -18,7 +18,7 @@ requires() {
 }
 
 device_requires() {
-	_test_dev_is_logical
+	_require_test_dev_is_logical
 }
 
 # Select test target zones. Pick up the first sequential required zones. If

@@ -181,17 +181,25 @@ _have_tracepoint() {
 	return 0
 }
 
-_test_dev_can_discard() {
-	if [[ $(cat "${TEST_DEV_SYSFS}/queue/discard_max_bytes") -eq 0 ]]; then
-		SKIP_REASON="$TEST_DEV does not support discard"
+_test_dev_is_rotational() {
+	[[ $(cat "${TEST_DEV_SYSFS}/queue/rotational") -ne 0 ]]
+}
+
+_require_test_dev_is_rotational() {
+	if ! _test_dev_is_rotational; then
+		SKIP_REASON="$TEST_DEV is not rotational"
 		return 1
 	fi
 	return 0
 }
 
-_test_dev_is_rotational() {
-	if [[ $(cat "${TEST_DEV_SYSFS}/queue/rotational") -eq 0 ]]; then
-		SKIP_REASON="$TEST_DEV is not rotational"
+_test_dev_can_discard() {
+	[[ $(cat "${TEST_DEV_SYSFS}/queue/discard_max_bytes") -gt 0 ]]
+}
+
+_require_test_dev_can_discard() {
+	if ! _test_dev_can_discard; then
+		SKIP_REASON="$TEST_DEV does not support discard"
 		return 1
 	fi
 	return 0
@@ -214,7 +222,7 @@ _test_dev_queue_set() {
 	echo "$2" >"${TEST_DEV_SYSFS}/queue/$1"
 }
 
-_test_dev_is_pci() {
+_require_test_dev_is_pci() {
 	if ! readlink -f "$TEST_DEV_SYSFS/device" | grep -q pci; then
 		# nvme needs some special casing
 		if readlink -f "$TEST_DEV_SYSFS/device" | grep -q nvme; then
@@ -247,7 +255,7 @@ _get_pci_parent_from_blkdev() {
 		tail -2 | head -1
 }
 
-_test_dev_in_hotplug_slot() {
+_require_test_dev_in_hotplug_slot() {
 	local parent
 	parent="$(_get_pci_parent_from_blkdev)"
 
@@ -261,7 +269,11 @@ _test_dev_in_hotplug_slot() {
 }
 
 _test_dev_is_partition() {
-	if [[ -z ${TEST_DEV_PART_SYSFS} ]]; then
+	[[ -n ${TEST_DEV_PART_SYSFS} ]]
+}
+
+_require_test_dev_is_partition() {
+	if ! _test_dev_is_partition; then
 		SKIP_REASON="${TEST_DEV} is not a partition device"
 		return 1
 	fi

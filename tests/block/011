@@ -15,7 +15,7 @@ requires() {
 }
 
 device_requires() {
-	_test_dev_is_pci
+	_require_test_dev_is_pci
 }
 
 test_device() {

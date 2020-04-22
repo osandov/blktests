@@ -14,7 +14,7 @@ requires() {
 }
 
 device_requires() {
-	_test_dev_is_pci && _test_dev_in_hotplug_slot
+	_require_test_dev_is_pci && _require_test_dev_in_hotplug_slot
 }
 
 test_device() {

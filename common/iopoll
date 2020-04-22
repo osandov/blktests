@@ -17,7 +17,7 @@ _have_fio_with_poll() {
 	return 0
 }
 
-_test_dev_supports_io_poll() {
+_require_test_dev_supports_io_poll() {
 	local old_io_poll
 	if ! old_io_poll="$(cat "${TEST_DEV_SYSFS}/queue/io_poll" 2>/dev/null)"; then
 		SKIP_REASON="kernel does not support polling"
@@ -30,7 +30,7 @@ _test_dev_supports_io_poll() {
 	return 0
 }
 
-_test_dev_supports_io_poll_delay() {
+_require_test_dev_supports_io_poll_delay() {
 	local old_io_poll_delay
 	if ! old_io_poll_delay="$(cat "${TEST_DEV_SYSFS}/queue/io_poll_delay" 2>/dev/null)"; then
 		SKIP_REASON="kernel does not support hybrid polling"

@@ -14,7 +14,7 @@ requires() {
 }
 
 device_requires() {
-	_test_dev_can_discard
+	_require_test_dev_can_discard
 }
 
 test_device() {

@@ -85,10 +85,10 @@ group_requires() {
 #
 # Usually, group_device_requires() just needs to check that the test device is
 # the right type of hardware or supports any necessary features using the
-# _test_dev_foo helpers. If group_device_requires() sets \$SKIP_REASON, all
-# tests in this group will be skipped on that device.
+# _require_test_dev_foo helpers. If group_device_requires() sets \$SKIP_REASON,
+# all tests in this group will be skipped on that device.
 # group_device_requires() {
-# 	_test_dev_is_foo && _test_dev_supports_bar
+# 	_require_test_dev_is_foo && _require_test_dev_supports_bar
 # }
 
 # TODO: define any helpers that are specific to this group.
@@ -171,10 +171,10 @@ DESCRIPTION=""
 #
 # Usually, device_requires() just needs to check that the test device is the
 # right type of hardware or supports any necessary features using the
-# _test_dev_foo helpers. If device_requires() sets \$SKIP_REASON, the test will
-# be skipped on that device.
+# _require_test_dev_foo helpers. If device_requires() sets \$SKIP_REASON, the
+# test will be skipped on that device.
 # device_requires() {
-# 	_test_dev_is_foo && _test_dev_supports_bar
+# 	_require_test_dev_is_foo && _require_test_dev_supports_bar
 # }
 
 # TODO: define the test. The output of this function (stdout and stderr) will

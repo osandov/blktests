@@ -421,21 +421,8 @@ _call_test() {
 }
 
 _test_dev_is_zoned() {
-	if [[ ! -f "${TEST_DEV_SYSFS}/queue/zoned" ]] ||
-	      grep -q none "${TEST_DEV_SYSFS}/queue/zoned"; then
-		SKIP_REASON="${TEST_DEV} is not a zoned block device"
-		return 1
-	fi
-	return 0
-}
-
-_test_dev_is_not_zoned() {
-	if _test_dev_is_zoned; then
-		SKIP_REASON="${TEST_DEV} is a zoned block device"
-		return 1
-	fi
-	unset SKIP_REASON
-	return 0
+	[[ -e "${TEST_DEV_SYSFS}/queue/zoned" &&
+	   $(cat "${TEST_DEV_SYSFS}/queue/zoned") != none ]]
 }
 
 _run_test() {
@@ -497,7 +484,7 @@ _run_test() {
 			local unset_skip_reason=0
 			if [[ ! -v SKIP_REASON ]]; then
 				unset_skip_reason=1
-				if (( !CAN_BE_ZONED )) && ! _test_dev_is_not_zoned; then
+				if (( !CAN_BE_ZONED )) && _test_dev_is_zoned; then
 					SKIP_REASON="${TEST_DEV} is a zoned block device"
 				elif declare -fF device_requires >/dev/null; then
 					device_requires
