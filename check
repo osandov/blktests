@@ -167,7 +167,7 @@ _read_last_test_run() {
 
 	local key value
 	while IFS=$'\t' read -r key value; do
-		if [[ ! $key =~ ^date|status|reason|exit_status$ ]]; then
+		if [[ ! $key =~ ^description|date|status|reason|exit_status$ ]]; then
 			LAST_TEST_RUN["$key"]="$value"
 		fi
 	done <"$seqres"
@@ -267,7 +267,7 @@ _output_test_run() {
 
 	{
 	for key in "${!TEST_RUN[@]}"; do
-		if [[ $key =~ ^date|status|reason|exit_status$ ]]; then
+		if [[ $key =~ ^description|date|status|reason|exit_status$ ]]; then
 			continue
 		fi
 		# [[ -v array[key] ]] was added in Bash 4.3. Do it this ugly
@@ -331,6 +331,7 @@ _call_test() {
 
 	declare -A TEST_RUN
 	TEST_RUN["date"]="$(date "+%F %T")"
+	TEST_RUN["description"]="${DESCRIPTION}"
 
 	mkdir -p "$(dirname "$seqres")"
 	# Remove leftovers from last time.
