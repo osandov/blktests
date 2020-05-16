@@ -102,7 +102,9 @@ use_blk_mq() {
 	)
 	(
 		cd /sys/module/scsi_mod/parameters || return $?
-		echo "$scsi_mode" >use_blk_mq || return $?
+		if [ -e use_blk_mq ]; then
+			echo "$scsi_mode" >use_blk_mq || return $?
+		fi
 	)
 
 	log_out &&
