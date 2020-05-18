@@ -87,13 +87,17 @@ use_blk_mq() {
 }
 
 log_in() {
-	local i ipv4_addr
+	local i ipv4_addr loginparams
 
 	[ -c /dev/nvme-fabrics ] &&
 		for i in $(rdma_network_interfaces); do
 			ipv4_addr=$(get_ipv4_addr "$i")
 			if [ -n "${ipv4_addr}" ]; then
-				{ echo -n "transport=rdma,traddr=${ipv4_addr},trsvcid=${nvme_port},nqn=$nvme_subsysnqn" > /dev/nvme-fabrics; } 2>>"$FULL"
+				loginparams="transport=rdma,traddr=${ipv4_addr},trsvcid=${nvme_port},nqn=$nvme_subsysnqn"
+				echo "Login parameters: $loginparams" >>"$FULL"
+				{
+					echo -n "$loginparams" > /dev/nvme-fabrics
+				} 2>>"$FULL"
 			fi
 		done
 }
