@@ -476,18 +476,6 @@ stop_soft_rdma() {
 	} >>"$FULL"
 }
 
-# /dev/sd... device node assigned to the scsi_debug kernel module.
-scsi_debug_dev_path() {
-	local bd="" d
-
-	for d in /sys/bus/pseudo/drivers/scsi_debug/adapter*/host*/target*/*/block/*; do
-		[ -e "$d" ] || continue
-		bd=${d/*\//}
-	done
-	[ -n "$bd" ] || return 1
-	echo "/dev/$bd"
-}
-
 # Look up the block device below the filesystem for directory $1.
 block_dev_of_dir() {
 	df "$1" | {
