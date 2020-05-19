@@ -3,6 +3,7 @@
 # Copyright (c) 2018 Western Digital Corporation or its affiliates
 
 . common/rc
+. common/scsi_debug
 . common/multipath-over-rdma
 
 vdev_path=(/dev/nullb0 /dev/nullb1 scsi_debug_dev_path_will_be_set_later)
@@ -594,16 +595,9 @@ stop_lio_srpt() {
 start_srpt() {
 	local bd i
 
-	modprobe scsi_debug delay=0 dif=3 dix=1 dev_size_mb=$((ramdisk_size>>20))
-	for ((i=0;i<10;i++)); do
-		bd=$(scsi_debug_dev_path) && break
-		sleep .1
-	done
-	if [ -z "$bd" ]; then
-		echo "scsi_debug device instance not found"
-		return 1
-	fi
-	vdev_path[2]=$bd
+	_init_scsi_debug delay=0 dev_size_mb=$((ramdisk_size>>20)) dif=3 dix=1\
+		|| return $?
+	vdev_path[2]=/dev/${SCSI_DEBUG_DEVICES[0]}
 	modprobe ib_uverbs
 	modprobe ib_umad
 	modprobe rdma_cm
@@ -614,7 +608,7 @@ start_srpt() {
 # Unload the SRP target driver.
 stop_srpt() {
 	stop_lio_srpt || return $?
-	unload_module scsi_debug
+	_exit_scsi_debug
 }
 
 start_target() {
