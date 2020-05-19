@@ -184,7 +184,7 @@ do_rdma_cm_login() {
 			gid=$(<"/sys/class/infiniband/$ibdev/ports/$port/gids/0")
 			gid=${gid//:}
 			gid_pfx=${gid:0:16}
-			params+="id_ext=$ioc_guid,initiator_ext=$gid_pfx,ioc_guid=$ioc_guid,src=$src,dest=$dest,$add_param"
+			params+=",id_ext=$ioc_guid,initiator_ext=$gid_pfx,ioc_guid=$ioc_guid,src=$src,dest=$dest,$add_param"
 			srp_single_login "${params}" "$p/add_target"
 		done
 	done
