@@ -504,9 +504,9 @@ create_filesystem() {
 
 	case "$filesystem_type" in
 		ext4)
-			mkfs.ext4 -F -O ^has_journal -q "$dev";;
+			mkfs.ext4 -F -O ^has_journal "$dev" >>"$FULL" 2>&1;;
 		xfs)
-			mkfs.xfs -f -q "$dev";;
+			mkfs.xfs -f "$dev" >>"$FULL" 2>&1;;
 		*)
 			return 1;;
 	esac
