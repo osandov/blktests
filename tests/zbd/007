@@ -68,7 +68,7 @@ test_device() {
 
 	# Reset and move write pointers of the container device
 	for ((i=0; i < ${#test_z[@]}; i++)); do
-		local -a arr
+		local -a arr opts
 
 		read -r -a arr < <(_get_dev_container_and_sector \
 					   "${test_z_start[i]}")
@@ -77,8 +77,11 @@ test_device() {
 
 		echo "${container_dev}" "${container_start}" >> "$FULL"
 
-		if ! blkzone reset -o "${container_start}" -c 1 \
-		     "${container_dev}"; then
+		opts=(-o "${container_start}" -c 1)
+		if blkzone -h | grep -q -e --force; then
+			opts+=(--force)
+		fi
+		if ! blkzone reset "${opts[@]}" "${container_dev}"; then
 			echo "Reset zone failed"
 			return 1
 		fi
