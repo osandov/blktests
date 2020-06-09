@@ -516,12 +516,12 @@ start_lio_srpt() {
 	i=0
 	for r in "${vdev_path[@]}"; do
 		if [ -b "$(readlink -f "$r")" ]; then
-			oflag=oflag=direct
+			oflag=(oflag=direct)
 		else
-			oflag=
+			oflag=()
 		fi
 		echo -n "Zero-initializing $r ... " >>"$FULL"
-		dd if=/dev/zero of="${r}" bs=1M count=$((ramdisk_size>>20)) "$oflag" >/dev/null 2>&1 || return $?
+		dd if=/dev/zero of="${r}" bs=1M count=$((ramdisk_size>>20)) "${oflag[@]}" >/dev/null 2>&1 || return $?
 		echo "done" >>"$FULL"
 		mkdir -p "$(mountpoint $i)" || return $?
 		((i++))
