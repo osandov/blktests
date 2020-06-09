@@ -660,8 +660,6 @@ teardown() {
 setup_test() {
 	local i m modules
 
-	set -u
-
 	if ! shutdown_client; then
 		echo "failed to shutdown client"
 		return 1
