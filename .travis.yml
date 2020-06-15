@@ -24,7 +24,7 @@ addons:
 before_install:
   - sudo apt update || true
   - sudo apt install -y gcc-multilib g++-multilib
-  - curl -L "https://storage.googleapis.com/shellcheck/shellcheck-stable.linux.x86_64.tar.xz" | tar -xJ
+  - curl -L "https://github.com/koalaman/shellcheck/releases/download/stable/shellcheck-stable.linux.x86_64.tar.xz" | tar -xJ
   - sudo cp shellcheck-stable/shellcheck /usr/local/bin/
   - CFLAGS="-Werror"
   - CXXFLAGS="-Werror"
