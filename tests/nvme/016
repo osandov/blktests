@@ -38,7 +38,7 @@ test() {
 	_remove_nvmet_port "${port}"
 
 	for ((i = iterations; i > 1; i--)); do
-		_remove_nvmet_ns "${subsys_nqn}" $i
+		_remove_nvmet_ns "${subsys_nqn}" "$i"
 	done
 
 	_remove_nvmet_subsystem "${subsys_nqn}"

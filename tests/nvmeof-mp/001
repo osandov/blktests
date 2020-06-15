@@ -13,7 +13,7 @@ count_devices() {
 	for d in /sys/class/nvme-fabrics/ctl/*/*/device; do
 		[ -d "$d" ] && ((devs++))
 	done
-	echo $devs
+	echo "$devs"
 }
 
 wait_for_devices() {

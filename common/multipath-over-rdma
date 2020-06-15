@@ -258,7 +258,7 @@ remove_mpath_dev() {
 			stop_bdev_users "$(readlink -f "$1")"
 			sleep .5
 		done
-		if [ $i = 0 ]; then
+		if [[ $i = 0 ]]; then
 			echo "failed"
 			return 1
 		fi

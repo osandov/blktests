@@ -19,7 +19,7 @@ count_luns() {
 		done
 		[ "$luns" -gt 0 ] && break
 	done
-	echo $luns
+	echo "$luns"
 }
 
 wait_for_luns() {

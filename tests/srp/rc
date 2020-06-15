@@ -464,9 +464,9 @@ configure_target_ports() {
 					cd "${ini}" &&
 					for ((i = 0; i < ${#vdevs[@]}; i++)) do
 					    (
-						    mkdir lun_$i &&
-							    cd lun_$i &&
-							    ln -s ../../../lun/lun_$i .
+						    mkdir "lun_$i" &&
+							    cd "lun_$i" &&
+							    ln -s "../../../lun/lun_$i" .
 					    ) || return $?
 					done
 			) || return $?
@@ -521,7 +521,7 @@ start_lio_srpt() {
 			oflag=
 		fi
 		echo -n "Zero-initializing $r ... " >>"$FULL"
-		dd if=/dev/zero of="${r}" bs=1M count=$((ramdisk_size>>20)) ${oflag} >/dev/null 2>&1 || return $?
+		dd if=/dev/zero of="${r}" bs=1M count=$((ramdisk_size>>20)) "$oflag" >/dev/null 2>&1 || return $?
 		echo "done" >>"$FULL"
 		mkdir -p "$(mountpoint $i)" || return $?
 		((i++))

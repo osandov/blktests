@@ -51,7 +51,7 @@ test() {
 	run_setter "$loop_dev" &
 	set_pid=$!
 
-	sleep ${TIMEOUT:-30}
+	sleep "${TIMEOUT:-30}"
 
 	# Discard KILLED messages from bash...
 	{

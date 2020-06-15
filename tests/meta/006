@@ -10,6 +10,6 @@ DESCRIPTION="produce lots of bad output"
 
 test() {
 	for ((i = 1; i <= 100; i++)); do
-		echo $i '¯\_(ツ)_/¯'
+		echo "$i" '¯\_(ツ)_/¯'
 	done
 }

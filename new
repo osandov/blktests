@@ -97,7 +97,7 @@ EOF
 fi
 
 for ((i = 1; ; i++)); do
-	seq="$(printf "%03d" $i)"
+	seq="$(printf "%03d" "$i")"
 	test_name="${group}/${seq}"
 	if [[ ! -e tests/${test_name} ]]; then
 		break

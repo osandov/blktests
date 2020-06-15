@@ -249,7 +249,7 @@ start_nvme_target() {
 				true
 			fi
 		done &&
-		if [ $num_ports = 0 ]; then
+		if [[ $num_ports = 0 ]]; then
 			echo "No NVMeOF target ports"
 			false
 		fi && (
