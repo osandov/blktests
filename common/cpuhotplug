@@ -14,9 +14,9 @@ _have_cpu_hotplug() {
 
 	local cpu_dir cpu
 	for cpu_dir in /sys/devices/system/cpu/cpu+([0-9]); do
+		cpu="${cpu_dir#/sys/devices/system/cpu/cpu}"
 		ALL_CPUS+=("$cpu")
 		if [[ -w ${cpu_dir}/online ]]; then
-			cpu="${cpu_dir#/sys/devices/system/cpu/cpu}"
 			HOTPLUGGABLE_CPUS+=("$cpu")
 			# shellcheck disable=SC2034
 			CPUS_ONLINE_SAVED["$cpu"]="$(cat "${cpu_dir}/online")"
