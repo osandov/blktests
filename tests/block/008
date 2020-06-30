@@ -9,6 +9,7 @@
 
 DESCRIPTION="do IO while hotplugging CPUs"
 TIMED=1
+CAN_BE_ZONED=1
 
 requires() {
 	_have_cpu_hotplug && _have_fio
