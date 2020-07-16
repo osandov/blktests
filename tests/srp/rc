@@ -516,7 +516,7 @@ start_lio_srpt() {
 	i=0
 	for r in "${vdev_path[@]}"; do
 		if [ -b "$(readlink -f "$r")" ]; then
-			oflag=(oflag=direct)
+			oflag=("oflag=direct")
 		else
 			oflag=()
 		fi
