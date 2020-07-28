@@ -253,21 +253,28 @@ _find_sequential_zone_in_middle() {
 	return 1
 }
 
-# Search zones and find two contiguous sequential required zones.
+# Search zones and find two contiguous sequential write required zones.
 # Return index of the first zone of the found two zones.
+# When the argument cap_eq_len is specified, find the two contiguous
+# sequential write required zones with first zone that has zone capacity
+# same as zone size.
 # Call _get_blkzone_report() beforehand.
 _find_two_contiguous_seq_zones() {
+	local cap_eq_len="${1}"
 	local -i type_seq=${ZONE_TYPE_SEQ_WRITE_REQUIRED}
 
 	for ((idx = NR_CONV_ZONES; idx < REPORTED_COUNT; idx++)); do
 		if [[ ${ZONE_TYPES[idx]} -eq ${type_seq} &&
 		      ${ZONE_TYPES[idx+1]} -eq ${type_seq} ]]; then
+			if [[ -n ${cap_eq_len} ]] &&
+				   ((ZONE_CAPS[idx] != ZONE_LENGTHS[idx])); then
+				continue
+			fi
 			echo "${idx}"
 			return 0
 		fi
 	done
 
-	echo "Contiguous sequential write required zones not found"
 	return 1
 }
 
