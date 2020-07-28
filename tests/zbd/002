@@ -80,9 +80,12 @@ _check_blkzone_report() {
 		fi
 
 		# Check write pointer
-		if [[ ${wptr} -lt 0 || ${wptr} -gt ${len} ]]; then
+		if ((cond != ZONE_COND_READ_ONLY &&
+		     cond != ZONE_COND_FULL &&
+		     cond != ZONE_COND_OFFLINE &&
+		     (wptr < 0 || wptr > len) )); then
 			echo -n "Write pointer is invalid at zone ${idx}. "
-			echo "wp:${wptr}"
+			echo "wp:${wptr}, cond:${cond}"
 			return 1
 		fi
 
