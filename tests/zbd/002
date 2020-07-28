@@ -24,6 +24,7 @@ _check_blkzone_report() {
 	local -i cur_start=${ZONE_STARTS[0]}
 	local -i next_start=0
 	local -i len=0
+	local -i cap=0
 	local -i wptr=0
 	local -i cond=0
 	local -i zone_type=0
@@ -50,6 +51,7 @@ _check_blkzone_report() {
 
 		next_start=${ZONE_STARTS[$((idx+1))]}
 		len=${ZONE_LENGTHS[$idx]}
+		cap=${ZONE_CAPS[$idx]}
 		wptr=${ZONE_WPTRS[$idx]}
 		cond=${ZONE_CONDS[$idx]}
 		zone_type=${ZONE_TYPES[$idx]}
@@ -67,6 +69,13 @@ _check_blkzone_report() {
 			echo -n "Zone size is not same as chunk_sectors "
 			echo -n "at zone ${idx}. "
 			echo "size: ${len}, chunk_sectors: ${chunk_sectors}"
+			return 1
+		fi
+
+		# Check zone capacity
+		if [[ ${cap} -gt ${len} ]]; then
+			echo -n "Zone capacity is invalid at zone ${idx}. "
+			echo "capacity: ${cap}, size: ${len}"
 			return 1
 		fi
 
