@@ -684,10 +684,13 @@ setup_test() {
 
 	# Load the I/O scheduler kernel modules
 	(
-		cd "/lib/modules/$(uname -r)/kernel/block" &&
-			for m in *.ko; do
-				[ -e "$m" ] && modprobe "${m%.ko}"
-			done
+		KERNEL_BLOCK="/lib/modules/$(uname -r)/kernel/block"
+		if [[ -d $KERNEL_BLOCK ]]; then
+			cd "$KERNEL_BLOCK" &&
+				for m in *.ko; do
+					[ -e "$m" ] && modprobe "${m%.ko}"
+				done
+		fi
 	)
 
 	if [ -d /sys/kernel/debug/dynamic_debug ]; then
