@@ -20,6 +20,7 @@ test_device() {
 	xfs_io -c "pwrite -w -S 0xaa -b 2M 0 2M" -d "$TEST_DEV" >>"$FULL"
 	dd if="$TEST_DEV" bs=2M count=1 2>>"$FULL" | hexdump
 	blockdev --setro "$TEST_DEV"
+	# It is valid to set a device that is already read-only to read-only.
 	blockdev --setro "$TEST_DEV"
 	blockdev --getro "$TEST_DEV"
 	# writes should fail while device is read-only
