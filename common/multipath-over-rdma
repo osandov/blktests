@@ -406,7 +406,7 @@ has_rdma_rxe() {
 	local f
 
 	for f in /sys/class/infiniband/*/parent; do
-		if [ -e "$f" ] && [ "$(<"$f")" = "$1" ]; then
+		if [ -e "$f" ] && [ "$(tr -d '\0' <"$f")" = "$1" ]; then
 			return 0
 		fi
 	done
