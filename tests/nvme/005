@@ -13,7 +13,7 @@ QUICK=1
 requires() {
 	_have_modules loop nvme-core nvme-loop nvmet && \
 		_have_module_param_value nvme_core multipath Y && \
-		_have_configfs
+		_have_configfs && _have_program nvme
 }
 
 test() {
