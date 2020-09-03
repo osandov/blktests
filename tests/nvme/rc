@@ -64,7 +64,7 @@ _cleanup_nvmet() {
 		transport="$(cat "/sys/class/nvme/${dev}/transport")"
 		if [[ "$transport" == "loop" ]]; then
 			echo "WARNING: Test did not clean up loop device: ${dev}"
-			nvme disconnect -d "${dev}"
+			_nvme_disconnect_ctrl "${dev}"
 		fi
 	done
 
@@ -95,6 +95,33 @@ _setup_nvmet() {
 	_register_test_cleanup _cleanup_nvmet
 	modprobe nvmet
 	modprobe nvme-loop
+}
+
+_nvme_disconnect_ctrl() {
+	local ctrl="$1"
+
+	nvme disconnect -d "${ctrl}"
+}
+
+_nvme_disconnect_subsys() {
+	local subsysnqn="$1"
+
+	nvme disconnect -n "${subsysnqn}"
+}
+
+_nvme_connect_subsys() {
+	local trtype="$1"
+	local subsysnqn="$2"
+
+	ARGS=(-t "${trtype}" -n "${subsysnqn}")
+	nvme connect "${ARGS[@]}"
+}
+
+_nvme_discover() {
+	local trtype="$1"
+
+	ARGS=(-t "${trtype}")
+	nvme discover "${ARGS[@]}"
 }
 
 _create_nvmet_port() {
@@ -206,6 +233,6 @@ _filter_discovery() {
 }
 
 _discovery_genctr() {
-	nvme discover -t loop |
+	_nvme_discover loop |
 		sed -n -e 's/^.*Generation counter \([0-9]\+\).*$/\1/p'
 }
