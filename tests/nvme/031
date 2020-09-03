@@ -18,9 +18,8 @@ DESCRIPTION="test deletion of NVMeOF controllers immediately after setup"
 QUICK=1
 
 requires() {
-	_have_program nvme &&
-	_have_modules loop nvme-loop nvmet &&
-	_have_configfs
+	_nvme_requires
+	_have_modules loop
 }
 
 test() {

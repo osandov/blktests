@@ -10,8 +10,8 @@ DESCRIPTION="run data verification fio job on NVMeOF file-backed ns"
 TIMED=1
 
 requires() {
-	_have_program nvme && _have_fio && _have_configfs && \
-		_have_modules nvme-loop nvmet
+	_nvme_requires
+	_have_fio
 }
 
 test() {

@@ -10,7 +10,7 @@ DESCRIPTION="create an NVMeOF host with a file-backed ns"
 QUICK=1
 
 requires() {
-	_have_program nvme && _have_modules nvme-loop nvmet && _have_configfs
+	_nvme_requires
 }
 
 test() {

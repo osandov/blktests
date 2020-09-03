@@ -9,7 +9,7 @@
 DESCRIPTION="create/delete many NVMeOF block device-backed ns and test discovery"
 
 requires() {
-	_have_program nvme && _have_modules nvme-loop nvmet && _have_configfs
+	_nvme_requires
 }
 
 test() {

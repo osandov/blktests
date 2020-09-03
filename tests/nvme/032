@@ -11,11 +11,15 @@
 
 . tests/nvme/rc
 
+#restrict test to nvme-pci only
+nvme_trtype=pci
+
 DESCRIPTION="test nvme pci adapter rescan/reset/remove during I/O"
 QUICK=1
 CAN_BE_ZONED=1
 
 requires() {
+	_nvme_requires
 	_have_fio
 }
 
