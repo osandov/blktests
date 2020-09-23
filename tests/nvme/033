@@ -1,0 +1,87 @@
+#!/bin/bash
+# SPDX-License-Identifier: GPL-3.0+
+# Copyright (C) 2020 Weiping Zhang <zwp10758@gmail.com>
+#
+# Test nvme update hardware queue count larger than system cpu count
+#
+
+. tests/nvme/rc
+
+DESCRIPTION="test nvme update hardware queue count larger than system cpu count"
+QUICK=1
+
+requires() {
+	_have_program dd
+}
+
+device_requires() {
+	_test_dev_is_nvme
+}
+
+test_device() {
+	echo "Running ${TEST_NAME}"
+
+	local old_write_queues
+	local cur_hw_io_queues
+	local file
+	local sys_dev=$TEST_DEV_SYSFS/device
+
+	# backup old module parameter: write_queues
+	file=/sys/module/nvme/parameters/write_queues
+	if [[ ! -e "$file" ]]; then
+		echo "$file does not exist"
+		return 1
+	fi
+	old_write_queues="$(cat $file)"
+
+	# get current hardware queue count
+	file="$sys_dev/queue_count"
+	if [[ ! -e "$file" ]]; then
+		echo "$file does not exist"
+		return 1
+	fi
+	cur_hw_io_queues="$(cat "$file")"
+	# minus admin queue
+	cur_hw_io_queues=$((cur_hw_io_queues - 1))
+
+	# set write queues count to increase more hardware queues
+	file=/sys/module/nvme/parameters/write_queues
+	echo "$cur_hw_io_queues" > "$file"
+
+	# reset controller, make it effective
+	file="$sys_dev/reset_controller"
+	if [[ ! -e "$file" ]]; then
+		echo "$file does not exist"
+		return 1
+	fi
+	echo 1 > "$file"
+
+	# wait nvme reinitialized
+	for ((m = 0; m < 10; m++)); do
+		if [[ -b "${TEST_DEV}" ]]; then
+			break
+		fi
+		sleep 0.5
+	done
+	if (( m > 9 )); then
+		echo "nvme still not reinitialized after 5 seconds!"
+		return 1
+	fi
+
+	# read data from device (may kernel panic)
+	dd if="${TEST_DEV}" of=/dev/null bs=4096 count=1 status=none
+
+	# If all work well restore hardware queue to default
+	file=/sys/module/nvme/parameters/write_queues
+	echo "$old_write_queues" > "$file"
+
+	# reset controller
+	file="$sys_dev/reset_controller"
+	echo 1 > "$file"
+
+	# read data from device (may kernel panic)
+	dd if="${TEST_DEV}" of=/dev/null bs=4096 count=1 iflag=direct status=none
+	dd if=/dev/zero of="${TEST_DEV}" bs=4096 count=1 oflag=direct status=none
+
+	echo "Test complete"
+}
