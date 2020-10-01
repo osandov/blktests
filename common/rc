@@ -272,6 +272,14 @@ _test_dev_is_partition() {
 	[[ -n ${TEST_DEV_PART_SYSFS} ]]
 }
 
+_test_dev_max_active_zones() {
+	if [[ -r "${TEST_DEV_SYSFS}/queue/max_active_zones" ]]; then
+		_test_dev_queue_get max_active_zones
+	else
+		echo 0
+	fi
+}
+
 _require_test_dev_is_partition() {
 	if ! _test_dev_is_partition; then
 		SKIP_REASON="${TEST_DEV} is not a partition device"
