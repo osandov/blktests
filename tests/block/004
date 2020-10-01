@@ -21,19 +21,18 @@ device_requires() {
 test_device() {
 	echo "Running ${TEST_NAME}"
 
-	local directio=""
-	local zbdmode=""
+	local -a opts=()
 
 	if _test_dev_is_zoned; then
 		_test_dev_queue_set scheduler deadline
-		directio="--direct=1"
-		zbdmode="--zonemode=zbd"
+		opts+=("--direct=1" "--zonemode=zbd")
+		opts+=("--max_open_zones=$(_test_dev_max_active_zones)")
 	fi
 
 	FIO_PERF_FIELDS=("write iops")
 	_fio_perf --bs=4k --rw=randwrite --norandommap --fsync=1 \
 		--number_ios=256 --numjobs=64 --name=flushes \
-		${directio} ${zbdmode} --filename="$TEST_DEV"
+		"${opts[@]}" --filename="$TEST_DEV"
 
 	echo "Test complete"
 }
