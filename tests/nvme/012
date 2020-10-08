@@ -40,7 +40,7 @@ test() {
 
 	_nvme_connect_subsys "${nvme_trtype}" "${subsys_name}"
 
-	nvmedev="$(_find_nvme_dev)"
+	nvmedev=$(_find_nvme_dev "${subsys_name}")
 	cat "/sys/block/${nvmedev}n1/uuid"
 	cat "/sys/block/${nvmedev}n1/wwid"
 

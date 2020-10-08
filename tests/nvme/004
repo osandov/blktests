@@ -37,7 +37,7 @@ test() {
 	_nvme_connect_subsys "${nvme_trtype}" blktests-subsystem-1
 
 	local nvmedev
-	nvmedev="$(_find_nvme_dev)"
+	nvmedev=$(_find_nvme_dev "blktests-subsystem-1")
 	cat "/sys/block/${nvmedev}n1/uuid"
 	cat "/sys/block/${nvmedev}n1/wwid"
 

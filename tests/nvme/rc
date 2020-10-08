@@ -273,12 +273,13 @@ _remove_nvmet_subsystem_from_port() {
 }
 
 _find_nvme_dev() {
+	local subsys=$1
+	local subsysnqn
 	local dev
-	local transport
 	for dev in /sys/class/nvme/nvme*; do
 		dev="$(basename "$dev")"
-		transport="$(cat "/sys/class/nvme/${dev}/transport")"
-		if [[ "$transport" == "${nvme_trtype}" ]]; then
+		subsysnqn="$(cat "/sys/class/nvme/${dev}/subsysnqn")"
+		if [[ "$subsysnqn" == "$subsys" ]]; then
 			echo "$dev"
 			for ((i = 0; i < 10; i++)); do
 				if [[ -e /sys/block/$dev/uuid &&
