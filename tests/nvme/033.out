@@ -1,0 +1,7 @@
+Running nvme/033
+Discovery Log Number of Records 1, Generation counter X
+=====Discovery Log Entry 0======
+trtype:  loop
+subnqn:  blktests-subsystem-1
+NQN:blktests-subsystem-1 disconnected 1 controller(s)
+Test complete
