@@ -5,14 +5,16 @@
 # Test mkfs with data verification for block device backed ns.
 
 . tests/nvme/rc
+. common/xfs
 
 DESCRIPTION="run mkfs and data verification fio job on NVMeOF block device-backed ns"
 TIMED=1
 
 requires() {
 	_nvme_requires
-	_have_program mkfs.xfs && _have_program fio && \
-		_have_modules loop
+	_have_xfs
+	_have_program fio
+	_have_modules loop
 	_require_nvme_trtype_is_fabrics
 }
 
