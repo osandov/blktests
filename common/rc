@@ -189,6 +189,14 @@ _have_fs() {
 	fi
 }
 
+_require_min_cpus() {
+	if [[ $(nproc) -ge $1 ]]; then
+		return 0
+	fi
+	SKIP_REASON="minimum $1 cpus required"
+	return 1
+}
+
 _test_dev_is_rotational() {
 	[[ $(cat "${TEST_DEV_SYSFS}/queue/rotational") -ne 0 ]]
 }

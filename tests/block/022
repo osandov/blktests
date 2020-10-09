@@ -13,6 +13,7 @@ TIMED=1
 
 requires() {
 	_have_null_blk && _have_module_param null_blk shared_tags
+	_require_min_cpus 2
 }
 
 hotplug_test() {
