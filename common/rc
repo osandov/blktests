@@ -269,7 +269,7 @@ _require_test_dev_in_hotplug_slot() {
 
 	local slt_cap
 	slt_cap="$(setpci -s "${parent}" CAP_EXP+14.w)"
-	if [[ $((0x${slt_cap} & 0x20)) -eq 0 ]]; then
+	if [[ $((0x${slt_cap} & 0x60)) -ne 0x60 ]]; then
 		SKIP_REASON="$TEST_DEV is not in a hot pluggable slot"
 		return 1
 	fi
