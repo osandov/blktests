@@ -325,6 +325,17 @@ set_scheduler() {
 	fi
 }
 
+# Get block dev scheduler list
+get_scheduler_list() {
+	local b=$1 p
+	p=/sys/block/"$b"/queue/scheduler
+	if [ -e "$p" ]; then
+		sed 's/[][]//g' /sys/block/"$b"/queue/scheduler
+	else
+		return 1
+	fi
+}
+
 # Get a /dev/... path that points at dm device number $1. Set its I/O scheduler
 # to $2 and its timeout to $3. The shell script that includes this file must
 # define a function get_bdev_path() that translates device number $1 into a
