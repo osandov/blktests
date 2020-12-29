@@ -280,11 +280,24 @@ _test_dev_is_partition() {
 	[[ -n ${TEST_DEV_PART_SYSFS} ]]
 }
 
-_test_dev_max_active_zones() {
+# Return max open zones or max active zones of the test target device.
+# If the device has both, return smaller value.
+_test_dev_max_open_active_zones() {
+	local -i moz=0
+	local -i maz=0
+
+	if [[ -r "${TEST_DEV_SYSFS}/queue/max_open_zones" ]]; then
+		moz=$(_test_dev_queue_get max_open_zones)
+	fi
+
 	if [[ -r "${TEST_DEV_SYSFS}/queue/max_active_zones" ]]; then
-		_test_dev_queue_get max_active_zones
+		maz=$(_test_dev_queue_get max_active_zones)
+	fi
+
+	if ((!moz)) || ((maz && maz < moz)); then
+		echo "${maz}"
 	else
-		echo 0
+		echo "${moz}"
 	fi
 }
 

@@ -30,10 +30,10 @@ test_device() {
 
 	echo "Running ${TEST_NAME}"
 
-	# When the test device has max_active_zone limit, reset all zones. This
-	# ensures the write operations in this test case do not open zones
+	# When the test device has max_open/active_zones limit, reset all zones.
+	# This ensures the write operations in this test case do not open zones
 	# beyond the limit.
-	(($(_test_dev_max_active_zones))) && blkzone reset "${TEST_DEV}"
+	(($(_test_dev_max_open_active_zones))) && blkzone reset "${TEST_DEV}"
 
 	# Get physical block size as dd block size to meet zoned block device
 	# requirement
