@@ -28,7 +28,8 @@ cleanup_fallback_device() {
 test_device() {
 	local -i zone_idx
 	local -i offset
-	local zbdmode=""
+	local -i moaz
+	local -a zbdmode=()
 
 	echo "Running ${TEST_NAME}"
 
@@ -36,11 +37,13 @@ test_device() {
 
 	zone_idx=$(_find_first_sequential_zone) || return $?
 	offset=$((ZONE_STARTS[zone_idx] * 512))
+	moaz=$(_test_dev_max_open_active_zones)
 
 	# If the test target zone has smaller zone capacity than zone size,
-	# enable zonemode=zbd to have fio handle the zone capacity limit.
-	if ((ZONE_CAPS[zone_idx] != ZONE_LENGTHS[zone_idx])); then
-		zbdmode="--zonemode=zbd"
+	# or if the test target device has max open/active zones limit, enable
+	# zonemode=zbd and specify the limit to handle the zone restrictions.
+	if ((ZONE_CAPS[zone_idx] != ZONE_LENGTHS[zone_idx])) || ((moaz)); then
+		zbdmode=("--zonemode=zbd" "--max_open_zones=${moaz}")
 	fi
 
 	blkzone reset -o "${ZONE_STARTS[zone_idx]}" "${TEST_DEV}"
@@ -51,7 +54,7 @@ test_device() {
 	FIO_PERF_FIELDS=("write io" "write iops")
 	_fio_perf --filename="${TEST_DEV}" --name zbdwo --rw=write --direct=1 \
 		  --ioengine=libaio --iodepth=128 --bs=256k \
-		  --offset="${offset}" ${zbdmode}
+		  --offset="${offset}" "${zbdmode[@]}"
 
 	_put_blkzone_report
 
