@@ -1,0 +1,36 @@
+name: CI
+
+on: [push, pull_request]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        compiler: [gcc, clang]
+        arch: [x86_64, x86]
+    steps:
+      - uses: actions/checkout@v2
+      - name: Install multilib
+        run: |
+          sudo apt-get update
+          sudo apt-get install gcc-multilib g++-multilib
+        if: ${{ matrix.arch == 'x86' }}
+      - name: Build
+        env:
+          CC: ${{ matrix.compiler }}
+          CXX: ${{ matrix.compiler == 'gcc' && 'g++' || 'clang++' }}
+          CFLAGS: -Werror ${{ matrix.arch == 'x86' && '-m32' || '' }}
+          CXXFLAGS: -Werror ${{ matrix.arch == 'x86' && '-m32' || '' }}
+          LDFLAGS: ${{ matrix.arch == 'x86' && '-m32' || '' }}
+        run: make
+
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - name: Install ShellCheck
+        run: |
+          curl -L "https://github.com/koalaman/shellcheck/releases/download/stable/shellcheck-stable.linux.x86_64.tar.xz" | tar -xJ shellcheck-stable/shellcheck
+          sudo cp shellcheck-stable/shellcheck /usr/local/bin/
+      - run: make check
