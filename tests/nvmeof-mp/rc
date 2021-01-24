@@ -265,8 +265,8 @@ stop_nvme_target() {
 			rm -f -- ports/*/subsystems/* &&
 			for d in {*/*/*/*,*/*}; do
 				[ -e "$d" ] &&
-					[ "$(basename "$(dirname "$d")")" != ana_groups ] &&
-					rmdir "$d"
+				[[ ! "$(basename "$(dirname "$d")")" =~ ana_groups|passthru ]] &&
+				rmdir "$d"
 			done
 	)
 	unload_module nvmet_rdma &&
