@@ -42,7 +42,7 @@ test() {
 	if { echo "$(<"$sq")" >$sq; } 2>/dev/null; then
 		for ((i = 0; i < 100; i++)); do
 			echo 1 > $sq
-			nproc > $sq
+			{ nproc > $sq; } >>"$FULL" 2>&1
 		done
 	else
 		SKIP_REASON="Skipping test because $sq cannot be modified"
