@@ -545,34 +545,21 @@ stop_lio_srpt() {
 		fi
 	done
 
-	if [ -e /sys/kernel/config/target/srpt ]; then
-		(
-			cd /sys/kernel/config/target/srpt && (
-				for d in */*/acls/*/*/lun*; do [ -L "$d" ] && rm "$d"; done
-				for d in */*/acls/*/lun*; do [ -d "$d" ] && rmdir "$d"; done
-				for d in */*/acls/*; do [ -d "$d" ] && rmdir "$d"; done
-				for d in */*/lun/lun*/*; do [ -L "$d" ] && rm "$d"; done
-				for d in */*/lun/lun*; do [ -d "$d" ] && rmdir "$d"; done
-				for d in */*; do [ -e "$d/lun" ] && rmdir "$d"; done
-				for d in *; do [ -e "$d/fabric_statistics" ] && rmdir "$d"; done
-				true
-			) &&
-				cd .. &&
-				for ((i=0;i<10;i++)); do
-					rmdir srpt
-					[ -e srpt ] || break
-					sleep .1
-				done &&
-				[ ! -e srpt ] &&
-				unload_module ib_srpt 10
-		) || return $?
-	fi
+	rmdir /sys/kernel/config/target/*/*/*/np/* >&/dev/null
+	rmdir /sys/kernel/config/target/*/*/*/np >&/dev/null
+	rm -f /sys/kernel/config/target/*/*/*/acls/*/*/* >&/dev/null
+	rmdir /sys/kernel/config/target/*/*/*/acls/*/* >&/dev/null
+	rmdir /sys/kernel/config/target/*/*/*/acls/* >&/dev/null
+	rm -f /sys/kernel/config/target/*/*/*/lun/*/* >&/dev/null
+	rmdir /sys/kernel/config/target/*/*/*/lun/* >&/dev/null
+	rmdir /sys/kernel/config/target/*/*/*/*/* >&/dev/null
+	rmdir /sys/kernel/config/target/*/*/* >&/dev/null
+	rmdir /sys/kernel/config/target/*/* >&/dev/null
+	rmdir /sys/kernel/config/target/* >&/dev/null
 
-	rmdir /sys/kernel/config/target/core/*/* >&/dev/null
-	rmdir /sys/kernel/config/target/core/* >&/dev/null
-
-	for m in ib_srpt target_core_pscsi target_core_iblock target_core_file \
-			 target_core_stgt target_core_user target_core_mod
+	for m in ib_srpt iscsi_target_mod target_core_pscsi target_core_iblock \
+			 target_core_file target_core_stgt target_core_user \
+			 target_core_mod
 	do
 		unload_module $m 10 || return $?
 	done
