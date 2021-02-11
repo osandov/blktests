@@ -1,0 +1,30 @@
+#!/bin/bash
+
+_generate_test_report() {
+	local device
+	device="$(basename "$RESULTS_DIR")"
+
+	#xunit to follow
+	if [[ $REPORT_FORMAT == 'text' ]]; then
+		printf '\n%s\n' "$device" >> "$AGGRES"
+		printf '%s\n' "$TEST_NAME" >> "$AGGRES"
+
+	local key value
+	for key in "${!TEST_RUN[@]}"; do
+		value="${TEST_RUN["$key"]}"
+		printf '%s\t%s\n' "$key" "$value" >> "$AGGRES"
+	done
+	fi
+}
+
+_report_main() {
+	AGGRES="${OUTPUT}/report_${REPORT_FORMAT}"
+
+	echo "genereting report ... ${REPORT_FORMAT} (in ${AGGRES})"
+
+	#xunit to follow
+	if [[ $REPORT_FORMAT == 'text' ]]; then
+		echo "$REPORT_FORMAT report generated on $(date)" > "$AGGRES"
+	fi
+}
+

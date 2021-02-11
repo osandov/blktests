@@ -386,6 +386,10 @@ _call_test() {
 	_write_test_run
 	_output_test_run
 
+	if [[ $GENERATE_REPORT -eq 1 ]]; then
+		_generate_test_report
+	fi
+
 	if [[ ${TEST_RUN["status"]} = fail ]]; then
 		case "${TEST_RUN["reason"]}" in
 		output)
@@ -585,6 +589,15 @@ _check() {
 	# shellcheck disable=SC2034
 	SRCDIR="$(realpath src)"
 
+	if [[ $GENERATE_REPORT -eq 1 && $REPORT_FORMAT != 'text' ]]; then
+		_error "Supported report formats: text"
+	else
+		# shellcheck disable=SC1091
+		. "common/reports"
+		_report_main
+	fi
+
+
 	local test_dev
 	for test_dev in "${TEST_DEVS[@]}"; do
 		if [[ ! -e $test_dev ]]; then
@@ -644,6 +657,9 @@ Test runs:
   -x, --exclude=TEST	 exclude a test (or test group) from the list of
 			 tests to run
 
+  -R, --report=format	 generate report in specified format for each TEST_DEVS
+			 Supported formats: text
+
 Miscellaneous:
   -c, --config=FILE	 load configuration from FILE instead of the default
 			 (\"./config\"); if this option is used multiple times,
@@ -663,7 +679,7 @@ Miscellaneous:
 	esac
 }
 
-if ! TEMP=$(getopt -o 'do:q::x:c:h' --long 'device-only,quick::,exclude:,output:,config:,help' -n "$0" -- "$@"); then
+if ! TEMP=$(getopt -o 'do:q::x:R:c:h' --long 'device-only,quick::,exclude:,output:,report:,config:,help' -n "$0" -- "$@"); then
 	exit 1
 fi
 
@@ -672,6 +688,7 @@ unset TEMP
 
 LOADED_CONFIG=0
 OPTION_EXCLUDE=()
+GENERATE_REPORT=0
 while true; do
 	case "$1" in
 		'-d'|'--device-only')
@@ -690,6 +707,11 @@ while true; do
 		'-x'|'--exclude')
 			# shellcheck disable=SC2190
 			OPTION_EXCLUDE+=("$2")
+			shift 2
+			;;
+		'-R'|'--report')
+			GENERATE_REPORT=1
+			REPORT_FORMAT="$2"
 			shift 2
 			;;
 		'-c'|'--config')
