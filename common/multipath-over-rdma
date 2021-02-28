@@ -57,6 +57,9 @@ _multipathd_version_ge() {
 }
 
 get_ipv4_addr() {
+	if [ ! -e "/sys/class/net/$1" ]; then
+		echo "get_ipv4_addr(): $1 is not a network interface" 1>&2
+	fi
 	ip -4 -o addr show dev "$1" |
 		sed -n 's/.*[[:blank:]]inet[[:blank:]]*\([^[:blank:]/]*\).*/\1/p'
 }
@@ -76,41 +79,11 @@ is_number() {
 	[ "$1" -eq "0$1" ] 2>/dev/null
 }
 
-# Check whether a device is an RDMA device. An example argument:
-# /sys/devices/pci0000:00/0000:00:03.0/0000:04:00.0
-is_rdma_device() {
-	local d i inode1 inode2
-
-	inode1=$(stat -c %i "$1")
-	# echo "inode1 = $inode1"
-	for i in /sys/class/infiniband/*; do
-		d=/sys/class/infiniband/"$(readlink "$i")"
-		d=$(dirname "$(dirname "$d")")
-		inode2=$(stat -c %i "$d")
-		# echo "inode2 = $inode2"
-		if [ "$inode1" = "$inode2" ]; then
-			return
-		fi
-	done
-	false
-}
-
 # Lists RDMA capable network interface names, e.g. ib0 ib1.
 rdma_network_interfaces() {
-	(
-		cd /sys/class/net &&
-			for i in *; do
-				[ -e "$i" ] || continue
-				# Skip IPoIB (ARPHRD_INFINIBAND) network
-				# interfaces.
-				[ "$(<"$i"/type)" = 32 ] && continue
-				[ -L "$i/device" ] || continue
-				d=$(readlink "$i/device" 2>/dev/null)
-				if [ -n "$d" ] && is_rdma_device "$i/$d"; then
-					echo "$i"
-				fi
-			done
-	)
+	rdma link show |
+		sed -n 's/^.*[[:blank:]]netdev[[:blank:]]\+\([^[:blank:]]*\)[[:blank:]]*/\1/p' |
+		sort -u
 }
 
 # Check whether any stacked block device holds block device $1. If so, echo
@@ -411,47 +384,36 @@ all_primary_gids() {
 	done
 }
 
-# Check whether or not an rdma_rxe instance has been associated with network
-# interface $1.
-has_rdma_rxe() {
-	local f
-
-	for f in /sys/class/infiniband/*/parent; do
-		if [ -e "$f" ] && [ "$(<"$f")" = "$1" ]; then
-			return 0
-		fi
-	done
-
-	return 1
+# Check whether or not an rdma_rxe or siw instance has been associated with
+# network interface $1.
+has_soft_rdma() {
+	rdma link | grep -q " netdev $1[[:blank:]]*\$"
 }
 
 # Load the rdma_rxe or siw kernel module and associate it with all network
 # interfaces.
 start_soft_rdma() {
+	local type
+
 	{
 	if [ -n "$use_siw" ]; then
 		modprobe siw || return $?
-		(
-			cd /sys/class/net &&
-				for i in *; do
-					[ -e "$i" ] || continue
-					[ -e "/sys/class/infiniband/${i}_siw" ] && continue
-					rdma link add "${i}_siw" type siw netdev "$i" ||
-						echo "Failed to bind the siw driver to $i"
-				done
-		)
+		type=siw
 	else
 		modprobe rdma_rxe || return $?
-		(
-			cd /sys/class/net &&
-				for i in *; do
-					if [ -e "$i" ] && ! has_rdma_rxe "$i"; then
-						echo "$i" > /sys/module/rdma_rxe/parameters/add ||
-							echo "Failed to bind the rdma_rxe driver to $i"
-					fi
-				done
-		)
+		type=rxe
 	fi
+	(
+		cd /sys/class/net &&
+			for i in *; do
+				[ -e "$i" ] || continue
+				[ "$i" = "lo" ] && continue
+				[ "$(<"$i/addr_len")" = 6 ] || continue
+				has_soft_rdma "$i" && continue
+				rdma link add "${i}_$type" type $type netdev "$i" ||
+				echo "Failed to bind the $type driver to $i"
+			done
+	)
 	} >>"$FULL"
 }
 
@@ -459,27 +421,16 @@ start_soft_rdma() {
 # unload the rdma_rxe kernel module.
 stop_soft_rdma() {
 	{
-	(
-		cd /sys/class/net &&
-			for i in *; do
-				if [ -e "$i" ] && has_rdma_rxe "$i"; then
-					{ echo "$i" > /sys/module/rdma_rxe/parameters/remove; } \
-						2>/dev/null
-				fi
-			done
-	)
+	rdma link |
+		sed -n 's,^link[[:blank:]]*\([^/]*\)/.* netdev .*,\1,p' |
+		while read -r i; do
+		      echo "$i ..."
+		      rdma link del "${i}" || echo "Failed to remove ${i}"
+		done
 	if ! unload_module rdma_rxe 10; then
 		echo "Unloading rdma_rxe failed"
 		return 1
 	fi
-	(
-		cd /sys/class/net &&
-			for i in *_siw; do
-				[ -e "$i" ] || continue
-				rdma link del "${i}" ||
-					echo "Failed to unbind the siw driver from ${i%_siw}"
-			done
-	)
 	if ! unload_module siw 10; then
 		echo "Unloading siw failed"
 		return 1
