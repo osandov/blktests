@@ -60,7 +60,7 @@ group_requires() {
 	_have_modules "${required_modules[@]}" || return
 
 	for p in mkfs.ext4 mkfs.xfs multipath multipathd pidof rdma \
-		 sg_reset; do
+		 sg_reset fio; do
 		_have_program "$p" || return
 	done
 

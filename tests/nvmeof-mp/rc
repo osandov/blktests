@@ -42,7 +42,7 @@ and multipathing has been enabled in the nvme_core kernel module"
 	)
 	_have_modules "${required_modules[@]}" || return
 
-	for p in mkfs.ext4 mkfs.xfs multipath multipathd pidof rdma; do
+	for p in mkfs.ext4 mkfs.xfs multipath multipathd pidof rdma fio; do
 		_have_program "$p" || return
 	done
 
