@@ -1,0 +1,43 @@
+#!/bin/bash
+# SPDX-License-Identifier: GPL-2.0
+# Copyright 2021 Google LLC
+#
+# Test support for sharing a tag set across hardware queues ("host tag set").
+
+. tests/block/rc
+. common/null_blk
+
+DESCRIPTION="do IO on null-blk with a host tag set"
+TIMED=1
+
+requires() {
+	_have_null_blk && _have_module_param null_blk shared_tag_bitmap
+}
+
+test() {
+	local fio_status bs=512
+
+	: "${TIMEOUT:=30}"
+	if ! _init_null_blk nr_devices=0 queue_mode=2 shared_tag_bitmap=1; then
+		echo "Loading null_blk failed"
+		return 1
+	fi
+	if ! _configure_null_blk nullb0 completion_nsec=0 blocksize=$bs size=1\
+	     submit_queues="$(nproc)" memory_backed=1 power=1; then
+		echo "Configuring null_blk failed"
+		return 1
+	fi
+	fio --verify=md5 --rw=randwrite --bs=$bs --loops=$((10**6)) \
+		--iodepth=64 --group_reporting --sync=1 --direct=1 \
+		--ioengine=libaio --runtime="${TIMEOUT}" --thread \
+		--name=block-031 --filename=/dev/nullb0 \
+		--output="${RESULTS_DIR}/block/fio-output-031.txt" \
+		>>"$FULL"
+	fio_status=$?
+	rmdir /sys/kernel/config/nullb/nullb0
+	_exit_null_blk
+	case $fio_status in
+		0) echo "Passed";;
+		*) echo "Failed (fio status = $fio_status)";;
+	esac
+}
