@@ -34,7 +34,7 @@ test() {
 		# crash or hang.
 		for ((i = 0; i < 100; i++)); do
 			dd if=/dev/nullb0 of=/dev/null bs=4K count=4 \
-				iflag=direct status=none &
+				iflag=direct status=none > /dev/null 2>&1 &
 		done
 		wait
 	done
