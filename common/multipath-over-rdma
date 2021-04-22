@@ -187,7 +187,7 @@ remove_stale_mpath_devs() {
 			echo -n "removing $mpdev: "
 			if ! remove_mpath_dev "$mpdev"; then
 				echo "failed"
-				[ -z "$debug" ] || return 1
+				test -z "$debug" || return 1
 			fi
 		done
 	echo "Finished examining multipaths"
