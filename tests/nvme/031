@@ -49,6 +49,8 @@ test() {
 	done
 
 	_remove_nvmet_port "${port}"
+	losetup -d "$loop_dev"
+	rm "$TMPDIR/img"
 
 	echo "Test complete"
 }
