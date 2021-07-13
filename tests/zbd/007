@@ -109,5 +109,12 @@ test_device() {
 	done
 	_put_blkzone_report
 
+	# When the logical devices is dm-crypt, the write pointer moves on
+	# its container device break data contents on the logical device. Reset
+	# zones of the logical device to wipe out the broken data.
+	for ((i=0; i < ${#test_z[@]}; i++)); do
+		blkzone reset -o "${test_z_start[i]}" -c 1 "${TEST_DEV}"
+	done
+
 	echo "Test complete"
 }
