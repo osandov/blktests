@@ -327,6 +327,7 @@ _get_dev_container_and_sector() {
 	local cont_dev
 	local -i offset
 	local -a tbl_line
+	local -i dev_idx=3 off_idx=4
 
 	if _test_dev_is_partition; then
 		offset=$(<"${TEST_DEV_PART_SYSFS}/start")
@@ -340,13 +341,19 @@ _get_dev_container_and_sector() {
 		return 1
 	fi
 	if ! _test_dev_has_dm_map linear &&
-			! _test_dev_has_dm_map flakey; then
-		echo -n "dm mapping test other than linear/flakey is"
+			! _test_dev_has_dm_map flakey &&
+			! _test_dev_has_dm_map crypt; then
+		echo -n "dm mapping test other than linear/flakey/crypt is"
 		echo "not implemented"
 		return 1
 	fi
 
-	# Parse dm table lines for dm-linear or dm-flakey target
+	if _test_dev_has_dm_map crypt; then
+		dev_idx=6
+		off_idx=7
+	fi
+
+	# Parse dm table lines for dm-linear, dm-flakey or dm-crypt target
 	while read -r -a tbl_line; do
 		local -i map_start=${tbl_line[0]}
 		local -i map_end=$((tbl_line[0] + tbl_line[1]))
@@ -355,10 +362,11 @@ _get_dev_container_and_sector() {
 			continue
 		fi
 
-		offset=${tbl_line[4]}
-		if ! cont_dev=$(_get_dev_path_by_id "${tbl_line[3]}"); then
+		offset=${tbl_line[off_idx]}
+		if ! cont_dev=$(_get_dev_path_by_id \
+					"${tbl_line[dev_idx]}"); then
 			echo -n "Cannot access to container device: "
-			echo "${tbl_line[3]}"
+			echo "${tbl_line[dev_idx]}"
 			return 1
 		fi
 
