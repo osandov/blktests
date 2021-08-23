@@ -15,7 +15,10 @@ test_io_schedulers() {
 		modprobe "$(basename "$m")" >&/dev/null
 	done
 	for mq in y n; do
-		[ $mq = n ] && ! _have_legacy_dm && continue
+		if [ $mq = n ] && ! _have_legacy_dm; then
+			unset SKIP_REASON
+			continue
+		fi
 		use_blk_mq ${mq} ${mq} || return $?
 		dev=$(get_bdev 0) || return $?
 		dm=$(basename "$(readlink -f "${dev}")") || return $?
