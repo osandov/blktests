@@ -29,7 +29,13 @@ stress_scsi_debug() {
 		scan="${scan//:/ }"
 		while [[ ! -e "$TMPDIR/stop" ]]; do
 			echo "${scan}" > "/sys/class/scsi_host/host${host}/scan"
-			echo 1 > "/sys/class/scsi_device/${target}/device/delete"
+			while [[ ! -e "$TMPDIR/stop" ]]; do
+				if [[ -d "/sys/class/scsi_device/${target}" ]]; then
+					echo 1 > "/sys/class/scsi_device/${target}/device/delete"
+					break
+				fi
+				sleep 0.01
+			done
 		done
 		) &
 	done
