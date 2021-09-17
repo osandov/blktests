@@ -11,6 +11,7 @@ count_devices() {
 	local d devs=0
 
 	for d in /sys/class/nvme-fabrics/ctl/*/*/device; do
+		[[ "$d" =~ hwmon[0-9]+|ng[0-9]+n[0-9]+ ]] && continue
 		[ -d "$d" ] && ((devs++))
 	done
 	echo "$devs"
