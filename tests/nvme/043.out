@@ -1,0 +1,18 @@
+Running nvme/043
+Testing hash hmac(sha256)
+NQN:blktests-subsystem-1 disconnected 1 controller(s)
+Testing hash hmac(sha384)
+NQN:blktests-subsystem-1 disconnected 1 controller(s)
+Testing hash hmac(sha512)
+NQN:blktests-subsystem-1 disconnected 1 controller(s)
+Testing DH group ffdhe2048
+NQN:blktests-subsystem-1 disconnected 1 controller(s)
+Testing DH group ffdhe3072
+NQN:blktests-subsystem-1 disconnected 1 controller(s)
+Testing DH group ffdhe4096
+NQN:blktests-subsystem-1 disconnected 1 controller(s)
+Testing DH group ffdhe6144
+NQN:blktests-subsystem-1 disconnected 1 controller(s)
+Testing DH group ffdhe8192
+NQN:blktests-subsystem-1 disconnected 1 controller(s)
+Test complete
