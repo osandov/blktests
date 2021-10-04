@@ -1,0 +1,62 @@
+#!/bin/bash
+# SPDX-License-Identifier: GPL-3.0+
+# Copyright 2021 Google LLC
+#
+# Trigger the SCSI error handler.
+
+. tests/scsi/rc
+. common/scsi_debug
+
+DESCRIPTION="Trigger the SCSI error handler"
+
+QUICK=1
+
+requires() {
+	_have_scsi_debug
+}
+
+config_hz() {
+	if [ -e /proc/config.gz ]; then
+		zcat /proc/config.gz
+	else
+		cat "/boot/config-$(uname -r)"
+	fi | sed -n 's/^CONFIG_HZ=//p'
+}
+
+test() {
+	local dev freq delay_s jdelay
+
+	echo "Running ${TEST_NAME}"
+
+	if ! _init_scsi_debug; then
+		return 1
+	fi
+
+	# Enable SCSI error handler logging
+	echo 63 > /sys/module/scsi_mod/parameters/scsi_logging_level
+
+	dev="${SCSI_DEBUG_DEVICES[0]}"
+	# Change the block layer timeout to max(1 / CONFIG_HZ, 0.001)
+	# seconds.
+	echo 1 > "/sys/class/block/$dev/queue/io_timeout"
+	echo "I/O timeout = $(<"/sys/class/block/$dev/queue/io_timeout")" >>"$FULL"
+        # Change the scsi_debug delay to 3 seconds.
+	delay_s=3
+        freq=$(config_hz)
+        jdelay=$((delay_s * "${freq}"))
+        echo "CONFIG_HZ=${freq} jdelay=${jdelay}" >>"$FULL"
+	echo "$jdelay" > /sys/module/scsi_debug/parameters/delay
+	if dd if="/dev/$dev" of=/dev/null bs=512 count=1 \
+	      iflag=direct >&/dev/null; then
+		echo "Reading from scsi_debug succeeded"
+	else
+		echo "Reading from scsi_debug failed"
+	fi
+
+	# Disable SCSI error handler logging
+	echo 0 > /sys/module/scsi_mod/parameters/scsi_logging_level
+
+	_exit_scsi_debug
+
+	echo "Test complete"
+}
