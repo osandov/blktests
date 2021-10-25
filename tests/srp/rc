@@ -494,7 +494,8 @@ start_lio_srpt() {
 	if modinfo ib_srpt | grep -q '^parm:[[:blank:]]*rdma_cm_port:'; then
 		opts+=("rdma_cm_port=${srp_rdma_cm_port}")
 	fi
-	insmod "/lib/modules/$(uname -r)/kernel/drivers/infiniband/ulp/srpt/ib_srpt."* "${opts[@]}" || return $?
+	unload_module ib_srpt
+	modprobe ib_srpt "${opts[@]}" || return $?
 	i=0
 	for r in "${vdev_path[@]}"; do
 		if [ -b "$(readlink -f "$r")" ]; then
@@ -551,7 +552,7 @@ stop_lio_srpt() {
 	rmdir /sys/kernel/config/target/*/* >&/dev/null
 	rmdir /sys/kernel/config/target/* >&/dev/null
 
-	for m in ib_srpt iscsi_target_mod target_core_pscsi target_core_iblock \
+	for m in ib_srpt ib_isert iscsi_target_mod target_core_pscsi target_core_iblock \
 			 target_core_file target_core_stgt target_core_user \
 			 target_core_mod
 	do
