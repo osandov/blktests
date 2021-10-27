@@ -13,7 +13,7 @@ TIMED=1
 requires() {
 	_nvme_requires
 	_have_xfs
-	_have_program fio
+	_have_fio
 	_have_modules loop
 	_require_nvme_trtype_is_fabrics
 }
