@@ -11,7 +11,7 @@ DESCRIPTION="do IO on null-blk with a host tag set"
 TIMED=1
 
 requires() {
-	_have_null_blk && _have_module_param null_blk shared_tag_bitmap
+	_have_fio && _have_null_blk && _have_module_param null_blk shared_tag_bitmap
 }
 
 test() {

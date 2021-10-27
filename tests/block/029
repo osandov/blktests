@@ -11,7 +11,7 @@ DESCRIPTION="trigger blk_mq_update_nr_hw_queues()"
 QUICK=1
 
 requires() {
-	_have_null_blk
+	_have_fio && _have_null_blk
 }
 
 modify_nr_hw_queues() {
