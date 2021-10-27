@@ -36,7 +36,7 @@ test() {
 
 	echo "Running ${TEST_NAME}"
 
-    _setup_nvmet
+	_setup_nvmet
 
 	port="$(_create_nvmet_port "${nvme_trtype}")"
 
