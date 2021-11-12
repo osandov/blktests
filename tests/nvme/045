@@ -1,0 +1,134 @@
+#!/bin/bash
+# SPDX-License-Identifier: GPL-3.0+
+# Copyright (C) 2022 Hannes Reinecke, SUSE Labs
+#
+# Test re-authentication
+
+. tests/nvme/rc
+
+DESCRIPTION="Test re-authentication"
+QUICK=1
+
+requires() {
+	_nvme_requires
+	_have_loop
+	_have_kernel_option NVME_AUTH
+	_have_kernel_option NVME_TARGET_AUTH
+	_require_nvme_trtype_is_fabrics
+	_require_nvme_cli_auth
+}
+
+
+test() {
+	local port
+	local subsys_name="blktests-subsystem-1"
+	local hostid
+	local hostnqn="nqn.2014-08.org.nvmexpress:uuid:${hostid}"
+	local file_path="${TMPDIR}/img"
+	local hostkey
+	local new_hostkey
+	local ctrlkey
+	local new_ctrlkey
+	local ctrldev
+
+	echo "Running ${TEST_NAME}"
+
+	hostid="$(uuidgen)"
+	if [ -z "$hostid" ] ; then
+		echo "uuidgen failed"
+		return 1
+	fi
+
+	hostkey="$(nvme gen-dhchap-key -n ${subsys_name} 2> /dev/null)"
+	if [ -z "$hostkey" ] ; then
+		echo "failed to generate host key"
+		return 1
+	fi
+
+	ctrlkey="$(nvme gen-dhchap-key -n ${subsys_name} 2> /dev/null)"
+	if [ -z "$ctrlkey" ] ; then
+		echo "failed to generate ctrl key"
+		return 1
+	fi
+
+	_setup_nvmet
+
+	truncate -s 512M "${file_path}"
+
+	_create_nvmet_subsystem "${subsys_name}" "${file_path}"
+	port="$(_create_nvmet_port "${nvme_trtype}")"
+	_add_nvmet_subsys_to_port "${port}" "${subsys_name}"
+	_create_nvmet_host "${subsys_name}" "${hostnqn}" "${hostkey}" "${ctrlkey}"
+
+	_set_nvmet_dhgroup "${hostnqn}" "ffdhe2048"
+
+	_nvme_connect_subsys "${nvme_trtype}" "${subsys_name}" \
+			     "${def_traddr}" "${def_trsvcid}" \
+			     "${hostnqn}" "${hostid}" \
+			     "${hostkey}" "${ctrlkey}"
+
+	udevadm settle
+
+	echo "Re-authenticate with original host key"
+
+	ctrldev=$(_find_nvme_dev "${subsys_name}")
+	if [ -z "$ctrldev" ] ; then
+		echo "nvme controller not found"
+	fi
+	hostkey_file="/sys/class/nvme/${ctrldev}/dhchap_secret"
+	echo "${hostkey}" > "${hostkey_file}"
+
+	echo "Renew host key on the controller"
+
+	new_hostkey="$(nvme gen-dhchap-key -n ${subsys_name} 2> /dev/null)"
+
+	_set_nvmet_hostkey "${hostnqn}" "${new_hostkey}"
+
+	echo "Re-authenticate with new host key"
+
+	echo "${new_hostkey}" > "${hostkey_file}"
+
+	echo "Renew ctrl key on the controller"
+
+	new_ctrlkey="$(nvme gen-dhchap-key -n ${subsys_name} 2> /dev/null)"
+
+	_set_nvmet_ctrlkey "${hostnqn}" "${new_ctrlkey}"
+
+	echo "Re-authenticate with new ctrl key"
+
+	ctrlkey_file="/sys/class/nvme/${ctrldev}/dhchap_ctrl_secret"
+	echo "${new_ctrlkey}" > "${ctrlkey_file}"
+
+	echo "Change DH group to ffdhe8192"
+
+	_set_nvmet_dhgroup "${hostnqn}" "ffdhe8192"
+
+	echo "Re-authenticate with changed DH group"
+
+	echo "${new_hostkey}" > "${hostkey_file}"
+
+	echo "Change hash to hmac(sha512)"
+
+	_set_nvmet_hash "${hostnqn}" "hmac(sha512)"
+
+	echo "Re-authenticate with changed hash"
+
+	echo "${new_hostkey}" > "${hostkey_file}"
+
+	nvmedev=$(_find_nvme_dev "${subsys_name}")
+
+	_run_fio_rand_io --size=8m --filename="/dev/${nvmedev}n1"
+
+	_nvme_disconnect_subsys "${subsys_name}"
+
+	_remove_nvmet_subsystem_from_port "${port}" "${subsys_name}"
+	_remove_nvmet_subsystem "${subsys_name}"
+
+	_remove_nvmet_port "${port}"
+
+	_remove_nvmet_host "${hostnqn}"
+
+	rm "${file_path}"
+
+	echo "Test complete"
+}
