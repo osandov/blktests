@@ -62,13 +62,13 @@ test_device() {
 			idx=$((RANDOM % ${#online_cpus[@]}))
 			_offline_cpu "${online_cpus[$idx]}"
 			offline_cpus+=("${online_cpus[$idx]}")
-			unset online_cpus["$idx"]
+			unset "online_cpus[$idx]"
 			online_cpus=("${online_cpus[@]}")
 		else
 			idx=$((RANDOM % ${#offline_cpus[@]}))
 			_online_cpu "${offline_cpus[$idx]}"
 			online_cpus+=("${offline_cpus[$idx]}")
-			unset offline_cpus["$idx"]
+			unset "offline_cpus[$idx]"
 			offline_cpus=("${offline_cpus[@]}")
 		fi
 		end_time=$(date +%s)

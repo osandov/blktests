@@ -304,7 +304,7 @@ _cleanup() {
 	for key in "${!TEST_DEV_QUEUE_SAVED[@]}"; do
 		value="${TEST_DEV_QUEUE_SAVED["$key"]}"
 		echo "$value" >"${TEST_DEV_SYSFS}/queue/${key}"
-		unset TEST_DEV_QUEUE_SAVED["$key"]
+		unset "TEST_DEV_QUEUE_SAVED[$key]"
 	done
 
 	if [[ "${RESTORE_CPUS_ONLINE:-}" ]]; then
@@ -502,8 +502,8 @@ _run_test() {
 
 		if (( FALLBACK_DEVICE )); then
 			cleanup_fallback_device
-			unset TEST_DEV_SYSFS_DIRS["${TEST_DEVS[0]}"]
-			unset TEST_DEV_PART_SYSFS_DIRS["${TEST_DEVS[0]}"]
+			unset "TEST_DEV_SYSFS_DIRS[${TEST_DEVS[0]}]"
+			unset "TEST_DEV_PART_SYSFS_DIRS[${TEST_DEVS[0]}]"
 			TEST_DEVS=()
 		fi
 
@@ -536,7 +536,7 @@ _run_group() {
 			group_device_requires
 			if [[ -v SKIP_REASON ]]; then
 				_output_notrun "${group}/*** => $(basename "$TEST_DEV")"
-				unset TEST_DEVS["$i"]
+				unset "TEST_DEVS[$i]"
 				unset SKIP_REASON
 			fi
 		done
