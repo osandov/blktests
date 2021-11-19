@@ -290,6 +290,7 @@ _remove_nvmet_subsystem() {
 	local subsys_path="${NVMET_CFS}/subsystems/${nvmet_subsystem}"
 
 	_remove_nvmet_ns "${nvmet_subsystem}" "1"
+	rm -f "${subsys_path}"/allowed_hosts/*
 	rmdir "${subsys_path}"
 }
 
