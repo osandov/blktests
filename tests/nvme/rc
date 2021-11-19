@@ -337,6 +337,7 @@ _find_nvme_dev() {
 	local subsysnqn
 	local dev
 	for dev in /sys/class/nvme/nvme*; do
+		[ -e "$dev" ] || continue
 		dev="$(basename "$dev")"
 		subsysnqn="$(cat "/sys/class/nvme/${dev}/subsysnqn")"
 		if [[ "$subsysnqn" == "$subsys" ]]; then
