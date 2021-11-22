@@ -10,6 +10,8 @@
 def_traddr="127.0.0.1"
 def_adrfam="ipv4"
 def_trsvcid="4420"
+def_hostnqn="$(cat /etc/nvme/hostnqn 2> /dev/null)"
+def_hostid="$(cat /etc/nvme/hostid 2> /dev/null)"
 nvme_trtype=${nvme_trtype:-"loop"}
 
 _nvme_requires() {
@@ -213,10 +215,26 @@ _nvme_connect_subsys() {
 	local subsysnqn="$2"
 	local traddr="${3:-$def_traddr}"
 	local trsvcid="${4:-$def_trsvcid}"
+	local hostnqn="${5:-$def_hostnqn}"
+	local hostid="${6:-$def_hostid}"
+	local hostkey="${7}"
+	local ctrlkey="${8}"
 
 	ARGS=(-t "${trtype}" -n "${subsysnqn}")
 	if [[ "${trtype}" != "loop" ]]; then
 		ARGS+=(-a "${traddr}" -s "${trsvcid}")
+	fi
+	if [[ "${hostnqn}" != "$def_hostnqn" ]]; then
+		ARGS+=(--hostnqn="${hostnqn}")
+	fi
+	if [[ "${hostid}" != "$def_hostid" ]]; then
+		ARGS+=(--hostid="${hostid}")
+	fi
+	if [[ -n "${hostkey}" ]]; then
+		ARGS+=(--dhchap-secret="${hostkey}")
+	fi
+	if [[ -n "${ctrlkey}" ]]; then
+		ARGS+=(--dhchap-ctrl-secret="${ctrlkey}")
 	fi
 	nvme connect "${ARGS[@]}"
 }
