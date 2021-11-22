@@ -143,6 +143,12 @@ _cleanup_nvmet() {
 		rmdir "${subsys}"
 	done
 
+	for host in "${NVMET_CFS}"/hosts/*; do
+		name=$(basename "${host}")
+		echo "WARNING: Test did not clean up host: ${name}"
+		rmdir "${host}"
+	done
+
 	shopt -u nullglob
 	trap SIGINT
 
