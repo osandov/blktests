@@ -60,17 +60,30 @@ test_device() {
 
 		if (( offlining )); then
 			idx=$((RANDOM % ${#online_cpus[@]}))
-			_offline_cpu "${online_cpus[$idx]}"
-			offline_cpus+=("${online_cpus[$idx]}")
-			unset "online_cpus[$idx]"
-			online_cpus=("${online_cpus[@]}")
-		else
+			if err=$(_offline_cpu "${online_cpus[$idx]}" 2>&1); then
+				offline_cpus+=("${online_cpus[$idx]}")
+				unset "online_cpus[$idx]"
+				online_cpus=("${online_cpus[@]}")
+			elif [[ $err =~ "No space left on device" ]]; then
+				# ENOSPC means CPU offline failure due to IRQ
+				# vector shortage. Keep current number of
+				# offline CPUs as maximum CPUs to offline.
+				max_offline=${#offline_cpus[@]}
+				offlining=0
+			else
+				echo "Failed to offline CPU: $err"
+				break
+			fi
+		fi
+
+		if (( !offlining )); then
 			idx=$((RANDOM % ${#offline_cpus[@]}))
 			_online_cpu "${offline_cpus[$idx]}"
 			online_cpus+=("${offline_cpus[$idx]}")
 			unset "offline_cpus[$idx]"
 			offline_cpus=("${offline_cpus[@]}")
 		fi
+
 		end_time=$(date +%s)
 		if (( end_time - start_time > timeout + 15 )); then
 			echo "fio did not finish after $timeout seconds!"
