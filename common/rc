@@ -334,6 +334,15 @@ _require_test_dev_is_partition() {
 	return 0
 }
 
+# Prints a space-separated list with the names of all I/O schedulers supported
+# by block device $1.
+_io_schedulers() {
+	local path=/sys/class/block/$1/queue/scheduler
+
+	[ -e "${path}" ] || return 1
+	sed 's/[][]//g' "${path}"
+}
+
 # Older versions of xfs_io use pwrite64 and such, so the error messages won't
 # match current versions of xfs_io. See c52086226bc6 ("filter: xfs_io output
 # has dropped "64" from error messages") in xfstests.
