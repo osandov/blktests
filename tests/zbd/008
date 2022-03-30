@@ -1,0 +1,54 @@
+#!/bin/bash
+# SPDX-License-Identifier: GPL-3.0+
+# Copyright (C) 2022 Western Digital Corporation or its affiliates.
+#
+# Check stale page cache is not left after race between BLKZONERESET and data
+# read. Regression test for commit e5113505904e ("block: Discard page cache of
+# zone reset target range").
+
+. tests/block/rc
+. common/scsi_debug
+
+DESCRIPTION="check no stale page cache after BLKZONERESET and data read race"
+TIMED=1
+
+requires() {
+	_have_scsi_debug && _have_module_param scsi_debug zbc &&
+		_have_program xfs_io
+}
+
+test() {
+	local dev dump
+	echo "Running ${TEST_NAME}"
+
+	rm -f "$FULL"
+
+	# Create virtual device with zones
+	if ! _init_scsi_debug dev_size_mb=32 \
+	     zbc=host-managed zone_nr_conv=0; then
+		return 1
+	fi
+	dev="/dev/${SCSI_DEBUG_DEVICES[0]}"
+
+	# Run read workload
+	: "${TIMEOUT:=10}"
+	_run_fio --filename="$dev" --size="32M" --rw=randread \
+		 --norandommap --name=reads --time_based &
+
+	while kill -0 $! 2>/dev/null; do
+		# Fill the device with known pattern
+		xfs_io -c "pwrite -S 0xaa -b 2M 0 32M" -d "$dev" >> "$FULL"
+
+		# Data read should return zero data pattern after zone reset
+		blkzone reset "$dev"
+		dump=$(dd if="$dev" bs=4k 2>> "$FULL" | hexdump -e '"%x"')
+		if [[ $dump != "0*" ]]; then
+			echo "$dump"
+			break
+		fi
+	done
+
+	_exit_scsi_debug
+
+	echo "Test complete"
+}
