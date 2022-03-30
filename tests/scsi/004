@@ -15,6 +15,7 @@
 . common/scsi_debug
 
 DESCRIPTION="ensure repeated TASK SET FULL results in EIO on timing out command"
+CAN_BE_ZONED=1
 
 requires() {
 	_have_scsi_debug

@@ -16,6 +16,7 @@
 
 DESCRIPTION="stress device hotplugging with running fio jobs and different schedulers"
 QUICK=1
+CAN_BE_ZONED=1
 
 requires() {
 	_have_cgroup2_controller io && _have_scsi_debug && _have_fio
