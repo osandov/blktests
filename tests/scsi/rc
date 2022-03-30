@@ -37,3 +37,7 @@ _require_test_dev_is_scsi_disk() {
 _get_test_dev_sg() {
 	echo "${TEST_DEV_SYSFS}"/device/scsi_generic/sg* | grep -Eo "sg[0-9]+"
 }
+
+_test_dev_is_sata() {
+	[[ $(<"${TEST_DEV_SYSFS}"/device/vendor) == "ATA     " ]]
+}

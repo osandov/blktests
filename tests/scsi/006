@@ -35,6 +35,10 @@ test_device() {
 	original_cache_type="$(cat "$cache_type_path")"
 	for cache_type in "${cache_types[@]}"; do
 		echo "$cache_type"
+		# SAT requires Read Cache Disable always set to zero.
+		# Skip cache types which disable read cache for SATA drives.
+		_test_dev_is_sata && [[ $cache_type == none ]] ||
+			[[ $cache_type =~ "no read" ]] && continue
 		( echo "$cache_type" > "$cache_type_path" ) |& grep -v "Invalid argument"
 		if [[ ${PIPESTATUS[0]} -eq 0 ]]; then
 			# If setting the cache type succeeded, it should now
