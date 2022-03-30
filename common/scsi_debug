@@ -9,7 +9,16 @@ _have_scsi_debug() {
 }
 
 _init_scsi_debug() {
-	if ! modprobe -r scsi_debug || ! modprobe scsi_debug "$@"; then
+	local -a args=("$@")
+
+	if (( RUN_FOR_ZONED )); then
+		if ! _have_module_param scsi_debug zbc; then
+			return
+		fi
+		args+=(zbc=host-managed zone_nr_conv=0)
+	fi
+
+	if ! modprobe -r scsi_debug || ! modprobe scsi_debug "${args[@]}"; then
 		return 1
 	fi
 
