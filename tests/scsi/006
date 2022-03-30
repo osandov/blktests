@@ -10,6 +10,7 @@
 
 DESCRIPTION="toggle SCSI cache type"
 QUICK=1
+CAN_BE_ZONED=1
 
 device_requires() {
 	_require_test_dev_is_scsi_disk
