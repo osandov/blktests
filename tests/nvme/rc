@@ -335,7 +335,7 @@ _nvmet_passthru_target_setup() {
 	local subsys_name=$1
 
 	_create_nvmet_passthru "${subsys_name}"
-	port="$(_create_nvmet_port "loop")"
+	port="$(_create_nvmet_port "${nvme_trtype}")"
 	_add_nvmet_subsys_to_port "${port}" "${subsys_name}"
 
 	echo "$port"
