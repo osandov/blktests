@@ -1,0 +1,58 @@
+#!/bin/bash
+# SPDX-License-Identifier: GPL-3.0+
+# Copyright (C) 2022 Google LLC
+
+. tests/zbd/rc
+. common/scsi_debug
+
+DESCRIPTION="test gap zone support with BTRFS"
+QUICK=1
+
+requires() {
+	_have_fio
+	_have_driver btrfs
+	_have_module_param scsi_debug zone_cap_mb
+	_have_program mkfs.btrfs
+	_have_scsi_debug
+}
+
+test() {
+	echo "Running ${TEST_NAME}"
+
+	local params=(
+		delay=0
+		dev_size_mb=1024
+		sector_size=4096
+		zbc=host-managed
+		zone_cap_mb=3
+		zone_nr_conv=0
+		zone_size_mb=4
+	)
+	_init_scsi_debug "${params[@]}" || return 1
+
+	local dev="/dev/${SCSI_DEBUG_DEVICES[0]}" fail
+
+	mkfs.btrfs -O zoned "${dev}" >>"${FULL}" 2>&1 &&
+	local mount_dir="$TMPDIR/mnt" &&
+	mkdir -p "${mount_dir}" &&
+	mount -t btrfs "${dev}" "${mount_dir}" &&
+	local fio_args=(
+		--size=1M
+		--directory="${mount_dir}"
+		--time_based
+		--runtime=10
+	) &&
+	_run_fio_verify_io "${fio_args[@]}" >>"${FULL}" 2>&1 ||
+	fail=true
+
+	umount "${mount_dir}" >>"${FULL}" 2>&1
+
+	_exit_scsi_debug
+
+	if [ -z "$fail" ]; then
+		echo "Test complete"
+	else
+		echo "Test failed"
+		return 1
+	fi
+}
