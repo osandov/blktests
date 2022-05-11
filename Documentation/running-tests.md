@@ -103,12 +103,12 @@ RUN_ZONED_TESTS=1
 Most of these tests will use the rdma_rxe (soft-RoCE) driver by default. The siw (soft-iWARP) driver is also supported.
 ```sh
 To use the rdma_rxe driver:
-nvme-trtype=rdma ./check nvme/
+nvme_trtype=rdma ./check nvme/
 ./check nvmeof-mp/
 ./check srp/
 
 To use the siw driver:
-use_siw=1 nvme-trtype=rdma ./check nvme/
+use_siw=1 nvme_trtype=rdma ./check nvme/
 use_siw=1 ./check nvmeof-mp/
 use_siw=1 ./check srp/
 ```
