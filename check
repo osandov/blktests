@@ -129,6 +129,12 @@ _find_tests() {
 	fi
 }
 
+# Return the dmesg log since the start of this test.
+_dmesg_since_test_start()
+{
+	dmesg | grep -A 9999 "$dmesg_marker"
+}
+
 _check_dmesg() {
 	local dmesg_marker="$1"
 	local seqres="${RESULTS_DIR}/${TEST_NAME}"
@@ -137,7 +143,7 @@ _check_dmesg() {
 		return 0
 	fi
 
-	dmesg | bash -c "$DMESG_FILTER" | grep -A 9999 "$dmesg_marker" >"${seqres}.dmesg"
+	_dmesg_since_test_start | bash -c "$DMESG_FILTER" >"${seqres}.dmesg"
 	grep -q -e "kernel BUG at" \
 	     -e "WARNING:" \
 	     -e "BUG:" \
