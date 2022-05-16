@@ -375,3 +375,47 @@ _discovery_genctr() {
 	_nvme_discover "${nvme_trtype}" |
 		sed -n -e 's/^.*Generation counter \([0-9]\+\).*$/\1/p'
 }
+
+declare -A NS_DEV_FAULT_INJECT_SAVE
+declare -A CTRL_DEV_FAULT_INJECT_SAVE
+
+_nvme_err_inject_setup()
+{
+        local a
+
+        for a in /sys/kernel/debug/"$1"/fault_inject/*; do
+                NS_DEV_FAULT_INJECT_SAVE[${a}]=$(<"${a}")
+        done
+
+        for a in /sys/kernel/debug/"$2"/fault_inject/*; do
+                CTRL_DEV_FAULT_INJECT_SAVE[${a}]=$(<"${a}")
+        done
+}
+
+_nvme_err_inject_cleanup()
+{
+        local a
+
+        for a in /sys/kernel/debug/"$1"/fault_inject/*; do
+                echo "${NS_DEV_FAULT_INJECT_SAVE[${a}]}" > "${a}"
+        done
+
+        for a in /sys/kernel/debug/"$2"/fault_inject/*; do
+                echo "${CTRL_DEV_FAULT_INJECT_SAVE[${a}]}" > "${a}"
+        done
+}
+
+_nvme_enable_err_inject()
+{
+        echo "$2" > /sys/kernel/debug/"$1"/fault_inject/verbose
+        echo "$3" > /sys/kernel/debug/"$1"/fault_inject/probability
+        echo "$4" > /sys/kernel/debug/"$1"/fault_inject/dont_retry
+        echo "$5" > /sys/kernel/debug/"$1"/fault_inject/status
+        echo "$6" > /sys/kernel/debug/"$1"/fault_inject/times
+}
+
+_nvme_disable_err_inject()
+{
+        echo 0 > /sys/kernel/debug/"$1"/fault_inject/probability
+        echo 0 > /sys/kernel/debug/"$1"/fault_inject/times
+}
