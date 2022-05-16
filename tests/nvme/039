@@ -1,0 +1,153 @@
+#!/bin/bash
+# SPDX-License-Identifier: GPL-3.0+
+# Copyright (C) 2022 Oracle and/or its affiliates
+#
+# Test nvme error logging by injecting errors. Kernel must have FAULT_INJECTION
+# and FAULT_INJECTION_DEBUG_FS configured to use error injector. Tests can be
+# run with or without NVME_VERBOSE_ERRORS configured.
+#
+# Test for commit bd83fe6f2cd2 ("nvme: add verbose error logging").
+
+. tests/nvme/rc
+DESCRIPTION="test error logging"
+QUICK=1
+
+requires() {
+	_nvme_requires
+	_have_kernel_option FAULT_INJECTION && \
+	    _have_kernel_option FAULT_INJECTION_DEBUG_FS
+}
+
+inject_unrec_read_on_read()
+{
+	# Inject a 'Unrecovered Read Error' (0x281) status error on a READ
+	_nvme_enable_err_inject "$1" 0 100 1 0x281 1
+
+	dd if=/dev/"$1" of=/dev/null bs=512 count=1 iflag=direct \
+	    2> /dev/null 1>&2
+
+	_nvme_disable_err_inject "$1"
+
+	if ${nvme_verbose_errors}; then
+		dmesg -t | tail -2 | grep "Unrecovered Read Error (" | \
+		    sed 's/nvme.*://g'
+	else
+		dmesg -t | tail -2 | grep "Cmd(" | sed 's/I\/O Cmd/Read/g' | \
+		    sed 's/I\/O Error/Unrecovered Read Error/g' | \
+		    sed 's/nvme.*://g'
+	fi
+}
+
+inject_invalid_status_on_read()
+{
+	# Inject an invalid status (0x375) on a READ
+	_nvme_enable_err_inject "$1" 0 100 1 0x375 1
+
+	dd if=/dev/"$1" of=/dev/null bs=512 count=1 iflag=direct \
+	    2> /dev/null 1>&2
+
+	_nvme_disable_err_inject "$1"
+
+	if ${nvme_verbose_errors}; then
+		dmesg -t | tail -2 | grep "Unknown (" | \
+		    sed 's/nvme.*://g'
+	else
+		dmesg -t | tail -2 | grep "Cmd(" | sed 's/I\/O Cmd/Read/g' | \
+		    sed 's/I\/O Error/Unknown/g' | \
+		    sed 's/nvme.*://g'
+	fi
+}
+
+inject_write_fault_on_write()
+{
+	# Inject a 'Write Fault' 0x280 status error on a WRITE
+	_nvme_enable_err_inject "$1" 0 100 1 0x280 1
+
+	dd if=/dev/zero of=/dev/"$1" bs=512 count=1 oflag=direct \
+	    2> /dev/null 1>&2
+
+	_nvme_disable_err_inject "$1"
+
+	if ${nvme_verbose_errors}; then
+		dmesg -t | tail -2 | grep "Write Fault (" | \
+		    sed 's/nvme.*://g'
+	else
+		dmesg -t | tail -2 | grep "Cmd(" | sed 's/I\/O Cmd/Write/g' | \
+		    sed 's/I\/O Error/Write Fault/g' | \
+		    sed 's/nvme.*://g'
+	fi
+}
+
+inject_access_denied_on_identify()
+{
+	# Inject a 'Access Denied' (0x286) status error on an
+	# Identify admin command
+	_nvme_enable_err_inject "$1" 0 100 1 0x286 1
+
+	nvme admin-passthru /dev/"$1" --opcode=0x06 --data-len=4096 \
+	    --cdw10=1 -r 2> /dev/null 1>&2
+
+	_nvme_disable_err_inject "$1"
+
+	if ${nvme_verbose_errors}; then
+		dmesg -t | tail -1 | grep "Access Denied (" | \
+		    sed 's/nvme.*://g'
+	else
+		dmesg -t | tail -1 | grep "Admin Cmd(" | \
+		    sed 's/Admin Cmd/Identify/g' | \
+		    sed 's/I\/O Error/Access Denied/g' | \
+		    sed 's/nvme.*://g'
+	fi
+}
+
+inject_invalid_admin_cmd()
+{
+	# Inject a 'Invalid Command Opcode' (0x1) on an invalid command (0x96)
+	 _nvme_enable_err_inject "$1" 0 100 1 0x1 1
+
+	nvme admin-passthru /dev/"$1" --opcode=0x96 --data-len=4096 \
+	    --cdw10=1 -r 2> /dev/null 1>&2
+
+	_nvme_disable_err_inject "$1"
+
+	if ${nvme_verbose_errors}; then
+		dmesg -t | tail -1 | grep "Invalid Command Opcode (" | \
+		    sed 's/nvme.*://g'
+	else
+		dmesg -t | tail -1 | grep "Admin Cmd(" | \
+		    sed 's/Admin Cmd/Unknown/g' | \
+		    sed 's/I\/O Error/Invalid Command Opcode/g' | \
+		    sed 's/nvme.*://g'
+	fi
+}
+
+test_device() {
+	local nvme_verbose_errors
+	local ns_dev
+	local ctrl_dev
+
+	echo "Running ${TEST_NAME}"
+
+	if _have_kernel_option NVME_VERBOSE_ERRORS; then
+		nvme_verbose_errors=true
+	else
+		unset SKIP_REASON
+		nvme_verbose_errors=false
+	fi
+
+	ns_dev=${TEST_DEV##*/}
+	ctrl_dev=${ns_dev%n*}
+
+	_nvme_err_inject_setup "${ns_dev}" "${ctrl_dev}"
+
+	inject_unrec_read_on_read "${ns_dev}"
+	inject_invalid_status_on_read "${ns_dev}"
+	inject_write_fault_on_write "${ns_dev}"
+
+	inject_access_denied_on_identify "${ctrl_dev}"
+	inject_invalid_admin_cmd "${ctrl_dev}"
+
+	_nvme_err_inject_cleanup "${ns_dev}" "${ctrl_dev}"
+
+	echo "Test complete"
+}
