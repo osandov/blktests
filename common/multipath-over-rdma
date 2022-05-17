@@ -655,12 +655,6 @@ setup_test() {
 		fi
 	)
 
-	if [ -d /sys/kernel/debug/dynamic_debug ]; then
-		for m in ; do
-			echo "module $m +pmf" >/sys/kernel/debug/dynamic_debug/control
-		done
-	fi
-
 	setup_rdma || return $?
 	start_target || return $?
 	echo "Test setup finished" >>"$FULL"
