@@ -12,6 +12,8 @@ test_disconnect_repeatedly() {
 
 	use_blk_mq y y || return $?
 	dev=$(get_bdev 0) || return $?
+	# Hold $dev
+	exec 3< "$dev"
 	simulate_network_failure_loop "$dev" "$TIMEOUT" &
 	run_fio --verify=md5 --rw=randwrite --bs=4K --loops=10000 \
 		--ioengine=libaio --iodepth=64 --iodepth_batch=32 \
@@ -22,6 +24,8 @@ test_disconnect_repeatedly() {
 		>>"$FULL"
 	fio_status=$?
 	wait
+	# Release $dev
+	exec 3<&-
 	log_in
 	return $fio_status
 }
