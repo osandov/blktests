@@ -18,17 +18,20 @@ count_devices() {
 }
 
 wait_for_devices() {
-	local expected=1 i devices
+	local expected=0 i devices
+
+	for i in $(rdma_network_interfaces); do
+		((expected++))
+	done
 
 	use_blk_mq y || return $?
 	for ((i=0;i<100;i++)); do
 		devices=$(count_devices)
-		[ "$devices" -ge $expected ] && break
+		[ "$devices" -ge "$expected" ] && break
 		sleep .1
 	done
 	echo "count_devices(): $devices <> $expected" >>"$FULL"
-	echo "count_devices(): $devices <> $expected"
-	[ "$devices" -ge $expected ]
+	[ "$devices" -ge "$expected" ]
 }
 
 test() {
