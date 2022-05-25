@@ -4,7 +4,9 @@
 
 blktests is a test framework for the Linux kernel block layer and storage
 stack. It is inspired by the [xfstests](https://git.kernel.org/pub/scm/fs/xfs/xfstests-dev.git/)
-filesystem testing framework.
+filesystem testing framework. It was originally written by Omar Sandoval and
+[announced in
+2017](https://lore.kernel.org/linux-block/20170512184905.GA15267@vader.DHCP.thefacebook.com/).
 
 ## Getting Started
 

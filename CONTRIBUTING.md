@@ -2,8 +2,8 @@
 
 You can contribute to blktests by opening a pull request to the [blktests
 GitHub repository](https://github.com/osandov/blktests) or by sending patches
-to the <linux-block@vger.kernel.org> mailing list and Omar Sandoval
-<osandov@fb.com>. If sending patches, please generate the patch with `git
+to the <linux-block@vger.kernel.org> mailing list and Shin'ichiro Kawasaki
+<shinichiro.kawasaki@wdc.com>. If sending patches, please generate the patch with `git
 format-patch --subject-prefix="PATCH blktests"`. Consider configuring git to do
 this for you with `git config --local format.subjectPrefix "PATCH blktests"`.
 
