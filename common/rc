@@ -74,17 +74,22 @@ _have_module_param() {
 }
 
 _have_module_param_value() {
+	local modname="${1/-/_}"
+	local param="$2"
+	local expected_value="$3"
 	local value
 
-	modprobe "$1"
+	if ! _have_driver "$modname"; then
+		return 1;
+	fi
 
-	if ! _have_module_param "$1" "$2"; then
+	if ! _have_module_param "$modname" "$param"; then
 		return 1
 	fi
 
-	value=$(cat "/sys/module/$1/parameters/$2")
-	if [[ "${value}" != "$3" ]]; then
-		SKIP_REASON="$1 module parameter $2 must be set to $3"
+	value=$(cat "/sys/module/$modname/parameters/$param")
+	if [[ "${value}" != "$expected_value" ]]; then
+		SKIP_REASON="$modname module parameter $param must be set to $expected_value"
 		return 1
 	fi
 
