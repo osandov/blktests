@@ -14,7 +14,7 @@ requires() {
 	_nvme_requires
 	_have_xfs
 	_have_fio
-	_have_modules loop
+	_have_loop
 	_require_nvme_trtype_is_fabrics
 }
 

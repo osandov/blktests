@@ -12,7 +12,7 @@ QUICK=1
 
 requires() {
 	_nvme_requires
-	_have_modules loop
+	_have_loop
 	_require_nvme_trtype_is_fabrics
 	_have_writeable_kmsg
 }

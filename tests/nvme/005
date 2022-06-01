@@ -12,8 +12,7 @@ QUICK=1
 
 requires() {
 	_nvme_requires
-	_have_modules loop && \
-		_have_module_param_value nvme_core multipath Y
+	_have_loop && _have_module_param_value nvme_core multipath Y
 	_require_nvme_trtype_is_fabrics
 }
 
