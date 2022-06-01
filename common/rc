@@ -128,7 +128,7 @@ _have_src_program() {
 }
 
 _have_loop() {
-	_have_modules loop && _have_program losetup
+	_have_driver loop && _have_program losetup
 }
 
 _have_blktrace() {
