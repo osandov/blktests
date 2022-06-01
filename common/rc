@@ -28,6 +28,18 @@ _have_root() {
 	return 0
 }
 
+_have_driver()
+{
+	local modname="${1/-/_}"
+
+	if [ ! -d "/sys/module/${modname}" ] && ! modprobe -q "${modname}"; then
+		SKIP_REASON="driver ${modname} is not available"
+		return 1
+	fi
+
+	return 0
+}
+
 _have_modules() {
 	local missing=()
 	local module
