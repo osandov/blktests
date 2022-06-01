@@ -7,11 +7,11 @@
 . common/rc
 
 group_requires() {
-	_have_root && _have_nbd && modprobe nbd
+	_have_root && _have_nbd
 }
 
 _have_nbd() {
-	if ! _have_modules nbd; then
+	if ! _have_driver nbd; then
 		return 1
 	fi
 	if ! _have_program nbd-server; then
