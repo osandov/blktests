@@ -14,6 +14,7 @@ requires() {
 	_nvme_requires
 	_have_modules loop
 	_require_nvme_trtype_is_fabrics
+	_have_writeable_kmsg
 }
 
 test() {
@@ -35,11 +36,11 @@ test() {
 	# This is ugly but checking for the absence of error messages is ...
 	sleep 10
 
-	if dmesg | grep -q "failed nvme_keep_alive_end_io error="; then
+	if _dmesg_since_test_start | grep -q "failed nvme_keep_alive_end_io error="; then
 		echo "Fail"
 	fi
 
-	if dmesg | grep -q "nvmet: unsupported cmd 24"; then
+	if _dmesg_since_test_start | grep -q "nvmet: unsupported cmd 24"; then
 		echo "Fail"
 	fi
 
