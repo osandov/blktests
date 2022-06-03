@@ -6,6 +6,7 @@
 
 . tests/block/rc
 . common/iopoll
+. common/null_blk
 
 DESCRIPTION="test classic and hybrid IO polling"
 TIMED=1
@@ -17,6 +18,17 @@ requires() {
 device_requires() {
 	_require_test_dev_supports_io_poll &&
 		_require_test_dev_supports_io_poll_delay
+}
+
+fallback_device() {
+	if ! _configure_null_blk nullb1 power=1; then
+		return 1
+	fi
+	echo /dev/nullb1
+}
+
+cleanup_fallback_device() {
+	_exit_null_blk
 }
 
 run_fio_job() {
