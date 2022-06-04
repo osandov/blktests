@@ -54,8 +54,6 @@ test_device() {
 	_setup_nvmet
 	port=$(_nvmet_passthru_target_setup "${subsys}")
 
-	_nvme_discover "${nvme_trtype}" | _filter_discovery
-
 	nsdev=$(_nvmet_passthru_target_connect "${nvme_trtype}" "${subsys}")
 
 	compare_dev_info "${nsdev}"
