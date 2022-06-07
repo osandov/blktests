@@ -17,13 +17,13 @@ requires() {
 }
 
 init_times() {
-	init_read_ms="$(awk '{ print $4 }' /sys/block/nullb0/stat)"
-	init_write_ms="$(awk '{ print $8 }' /sys/block/nullb0/stat)"
+	init_read_ms="$(awk '{ print $4 }' /sys/block/nullb1/stat)"
+	init_write_ms="$(awk '{ print $8 }' /sys/block/nullb1/stat)"
 }
 
 show_times() {
-	read_ms="$(awk '{ print $4 }' /sys/block/nullb0/stat)"
-	write_ms="$(awk '{ print $8 }' /sys/block/nullb0/stat)"
+	read_ms="$(awk '{ print $4 }' /sys/block/nullb1/stat)"
+	write_ms="$(awk '{ print $8 }' /sys/block/nullb1/stat)"
 
 	# Print rounded to the nearest second
 	printf 'read %d s\n' $(((read_ms - init_read_ms + 500) / 1000))
@@ -37,7 +37,8 @@ test() {
 
 	# The maximum value for CONFIG_HZ is 1000. I.e., a tick is one
 	# millisecond. So, make each I/O take half a millisecond.
-	if ! _init_null_blk irqmode=2 completion_nsec=500000; then
+	if ! _configure_null_blk nullb1 irqmode=2 completion_nsec=500000 \
+			power=1; then
 		return 1
 	fi
 
@@ -46,16 +47,16 @@ test() {
 
 	# 1500 * 0.5 ms is 0.75 seconds, allowing for some overhead so
 	# that it rounds to one second.
-	dd if=/dev/nullb0 of=/dev/null bs=4096 iflag=direct count=1500 status=none
+	dd if=/dev/nullb1 of=/dev/null bs=4096 iflag=direct count=1500 status=none
 	show_times
 
-	dd if=/dev/zero of=/dev/nullb0 bs=4096 oflag=direct count=1500 status=none
+	dd if=/dev/zero of=/dev/nullb1 bs=4096 oflag=direct count=1500 status=none
 	show_times
 
 	# 1800 * 0.5 ms is 0.9 seconds.
-	dd if=/dev/nullb0 of=/dev/null bs=4096 iflag=direct count=1500 status=none &
-	dd if=/dev/zero of=/dev/nullb0 bs=4096 oflag=direct count=1800 status=none &
-	dd if=/dev/zero of=/dev/nullb0 bs=4096 oflag=direct count=1800 status=none &
+	dd if=/dev/nullb1 of=/dev/null bs=4096 iflag=direct count=1500 status=none &
+	dd if=/dev/zero of=/dev/nullb1 bs=4096 oflag=direct count=1800 status=none &
+	dd if=/dev/zero of=/dev/nullb1 bs=4096 oflag=direct count=1800 status=none &
 	wait
 	show_times
 
