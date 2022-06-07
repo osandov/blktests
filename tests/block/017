@@ -19,23 +19,24 @@ requires() {
 
 show_inflight() {
 	awk '{ printf "sysfs inflight reads %d\nsysfs inflight writes %d\n", $1, $2 }' \
-		/sys/block/nullb0/inflight
-	awk '{ print "sysfs stat " $9 }' /sys/block/nullb0/stat
-	awk '$3 == "nullb0" { print "diskstats " $12 }' /proc/diskstats
+		/sys/block/nullb1/inflight
+	awk '{ print "sysfs stat " $9 }' /sys/block/nullb1/stat
+	awk '$3 == "nullb1" { print "diskstats " $12 }' /proc/diskstats
 }
 
 test() {
 	echo "Running ${TEST_NAME}"
 
-	if ! _init_null_blk irqmode=2 completion_nsec=500000000; then
+	if ! _configure_null_blk nullb1 irqmode=2 completion_nsec=500000000 \
+			power=1; then
 		return 1
 	fi
 
-	dd if=/dev/nullb0 of=/dev/null bs=4096 iflag=direct count=1 status=none &
+	dd if=/dev/nullb1 of=/dev/null bs=4096 iflag=direct count=1 status=none &
 	sleep 0.1
 	show_inflight
 
-	dd if=/dev/zero of=/dev/nullb0 bs=4096 oflag=direct count=1 status=none &
+	dd if=/dev/zero of=/dev/nullb1 bs=4096 oflag=direct count=1 status=none &
 	sleep 0.1
 	show_inflight
 
