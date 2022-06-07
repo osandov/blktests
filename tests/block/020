@@ -20,14 +20,14 @@ requires() {
 test() {
 	echo "Running ${TEST_NAME}"
 
-	if ! _init_null_blk irqmode=2 completion_nsec=2000000 \
-	     submit_queues=4 hw_queue_depth=1; then
+	if ! _configure_null_blk nullb1 irqmode=2 completion_nsec=2000000 \
+	     submit_queues=4 hw_queue_depth=1 power=1; then
 		return 1
 	fi
 
 	local scheds
 	# shellcheck disable=SC2207
-	scheds=($(sed 's/[][]//g' /sys/block/nullb0/queue/scheduler))
+	scheds=($(sed 's/[][]//g' /sys/block/nullb1/queue/scheduler))
 
 	local max_iodepth=$(($(cat /proc/sys/fs/aio-max-nr) / $(nproc)))
 	local iodepth=1024
@@ -36,10 +36,10 @@ test() {
 	fi
 	for sched in "${scheds[@]}"; do
 		echo "Testing $sched" >> "$FULL"
-		echo "$sched" > /sys/block/nullb0/queue/scheduler
+		echo "$sched" > /sys/block/nullb1/queue/scheduler
 		_fio_perf --bs=4k --ioengine=libaio --iodepth=$iodepth \
 			--numjobs="$(nproc)" --rw=randread --name=async \
-			--filename=/dev/nullb0 --size=1g --direct=1 \
+			--filename=/dev/nullb1 --size=1g --direct=1 \
 			--runtime=10
 	done
 
