@@ -24,18 +24,18 @@ test() {
 	_divide_timeout 2
 	FIO_PERF_FIELDS=("read iops")
 
-	if ! _init_null_blk submit_queues=2 blocking=1; then
+	if ! _configure_null_blk nullb1 submit_queues=2 blocking=1 power=1; then
 		return 1
 	fi
 
 	# run sync test
 	_fio_perf --bs=4k --ioengine=sync --rw=randread --norandommap --name=sync \
-		--filename=/dev/nullb0 --size=5g --direct=1
+		--filename=/dev/nullb1 --size=5g --direct=1
 
 	# run async test
 	_fio_perf --bs=4k --ioengine=libaio --iodepth=8 --numjobs="$(nproc)" \
 		--rw=randread --norandommap --name=async \
-		--filename=/dev/nullb0 --size=5g --direct=1
+		--filename=/dev/nullb1 --size=5g --direct=1
 
 	_exit_null_blk
 
