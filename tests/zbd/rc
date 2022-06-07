@@ -13,7 +13,7 @@
 
 group_requires() {
 	_have_root && _have_program blkzone && _have_program dd &&
-		_have_kernel_option BLK_DEV_ZONED && _have_modules null_blk &&
+		_have_kernel_option BLK_DEV_ZONED && _have_null_blk &&
 		_have_module_param null_blk zoned
 }
 
@@ -25,10 +25,11 @@ group_device_requires() {
 }
 
 _fallback_null_blk_zoned() {
-	if ! _init_null_blk zone_size=4 gb=1 zoned=1 ; then
+	if ! _configure_null_blk nullb1 zone_size=4 size=1024 zoned=1 \
+			power=1; then
 		return 1
 	fi
-	echo /dev/nullb0
+	echo /dev/nullb1
 }
 
 #
