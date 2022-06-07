@@ -21,25 +21,24 @@ modify_nr_hw_queues() {
 	num_cpus=$(nproc)
 	while [ "$(_uptime_s)" -lt "$deadline" ]; do
 		sleep .1
-		echo 1 > /sys/kernel/config/nullb/nullb0/submit_queues
+		echo 1 > /sys/kernel/config/nullb/nullb1/submit_queues
 		sleep .1
-		echo "$num_cpus" > /sys/kernel/config/nullb/nullb0/submit_queues
+		echo "$num_cpus" > /sys/kernel/config/nullb/nullb1/submit_queues
 	done
 }
 
 test() {
-	local sq=/sys/kernel/config/nullb/nullb0/submit_queues
+	local sq=/sys/kernel/config/nullb/nullb1/submit_queues
 
 	: "${TIMEOUT:=30}"
-	_init_null_blk nr_devices=0 &&
-	_configure_null_blk nullb0 completion_nsec=0 blocksize=512 \
+	_configure_null_blk nullb1 completion_nsec=0 blocksize=512 \
 			    size=16 memory_backed=1 power=1 &&
 	if { echo 1 >$sq; } 2>/dev/null; then
 		modify_nr_hw_queues &
 		fio --rw=randwrite --bs=4K --loops=$((10**6)) \
 		    --iodepth=64 --group_reporting --sync=1 --direct=1 \
-		    --ioengine=libaio --filename="/dev/nullb0" \
-		    --runtime="${TIMEOUT}" --name=nullb0 \
+		    --ioengine=libaio --filename="/dev/nullb1" \
+		    --runtime="${TIMEOUT}" --name=nullb1 \
 		    --output="${RESULTS_DIR}/block/fio-output-029.txt" \
 		    >>"$FULL"
 		wait
