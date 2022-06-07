@@ -20,7 +20,7 @@ requires() {
 test() {
 	echo "Running ${TEST_NAME}"
 
-	if ! _init_null_blk queue_mode=2 irqmode=2 completion_nsec=2000000 \
+	if ! _init_null_blk irqmode=2 completion_nsec=2000000 \
 	     submit_queues=4 hw_queue_depth=1; then
 		return 1
 	fi

@@ -18,7 +18,7 @@ test() {
 	local fio_status bs=512
 
 	: "${TIMEOUT:=30}"
-	if ! _init_null_blk nr_devices=0 queue_mode=2 shared_tag_bitmap=1; then
+	if ! _init_null_blk nr_devices=0 shared_tag_bitmap=1; then
 		echo "Loading null_blk failed"
 		return 1
 	fi

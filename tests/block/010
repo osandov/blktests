@@ -49,7 +49,7 @@ test() {
 
 	_divide_timeout 2
 
-	if ! _init_null_blk queue_mode=2 submit_queues=16 nr_devices=32; then
+	if ! _init_null_blk submit_queues=16 nr_devices=32; then
 		return 1
 	fi
 
@@ -58,7 +58,7 @@ test() {
 	run_fio_job
 
 	_exit_null_blk
-	if ! _init_null_blk queue_mode=2 submit_queues=16 nr_devices=32 shared_tags=1; then
+	if ! _init_null_blk submit_queues=16 nr_devices=32 shared_tags=1; then
 		return 1
 	fi
 

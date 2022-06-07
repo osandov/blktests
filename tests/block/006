@@ -24,7 +24,7 @@ test() {
 	_divide_timeout 2
 	FIO_PERF_FIELDS=("read iops")
 
-	if ! _init_null_blk queue_mode=2 submit_queues=2 blocking=1; then
+	if ! _init_null_blk submit_queues=2 blocking=1; then
 		return 1
 	fi
 

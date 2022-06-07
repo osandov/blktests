@@ -20,7 +20,7 @@ test() {
 
 	# The format is "<interval>,<probability>,<space>,<times>". Here, we
 	# requeue 10% of the time.
-	if ! _init_null_blk queue_mode=2 requeue='1,10,0,-1'; then
+	if ! _init_null_blk requeue='1,10,0,-1'; then
 		return 1
 	fi
 

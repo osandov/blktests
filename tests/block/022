@@ -28,7 +28,7 @@ test() {
 	echo "Running ${TEST_NAME}"
 	: "${TIMEOUT:=30}"
 
-	if ! _init_null_blk shared_tags=1 nr_devices=0 queue_mode=2; then
+	if ! _init_null_blk shared_tags=1 nr_devices=0; then
 		return 1
 	fi
 

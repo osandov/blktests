@@ -22,7 +22,7 @@ test() {
 	: "${TIMEOUT:=30}"
 	# Legend: init_hctx=<interval>,<probability>,<space>,<times>
 	# Set <space> to $(nproc) + 1 to make loading of null_blk succeed.
-	if ! _init_null_blk nr_devices=0 queue_mode=2 \
+	if ! _init_null_blk nr_devices=0 \
 	     "init_hctx=$(nproc),100,$(($(nproc) + 1)),-1"; then
 		echo "Loading null_blk failed"
 		return 1

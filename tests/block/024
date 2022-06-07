@@ -37,8 +37,7 @@ test() {
 
 	# The maximum value for CONFIG_HZ is 1000. I.e., a tick is one
 	# millisecond. So, make each I/O take half a millisecond.
-	if ! _init_null_blk queue_mode=2 irqmode=2 \
-	     completion_nsec=500000; then
+	if ! _init_null_blk irqmode=2 completion_nsec=500000; then
 		return 1
 	fi
 

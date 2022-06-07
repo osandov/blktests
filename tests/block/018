@@ -33,8 +33,7 @@ test() {
 
 	echo "Running ${TEST_NAME}"
 
-	if ! _init_null_blk queue_mode=2 irqmode=2 \
-	     completion_nsec=1000000000; then
+	if ! _init_null_blk irqmode=2 completion_nsec=1000000000; then
 		return 1
 	fi
 

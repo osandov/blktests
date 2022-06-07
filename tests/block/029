@@ -31,7 +31,7 @@ test() {
 	local sq=/sys/kernel/config/nullb/nullb0/submit_queues
 
 	: "${TIMEOUT:=30}"
-	_init_null_blk nr_devices=0 queue_mode=2 &&
+	_init_null_blk nr_devices=0 &&
 	_configure_null_blk nullb0 completion_nsec=0 blocksize=512 \
 			    size=16 memory_backed=1 power=1 &&
 	if { echo 1 >$sq; } 2>/dev/null; then
