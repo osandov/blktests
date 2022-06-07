@@ -4,8 +4,10 @@
 #
 # null_blk helper functions.
 
+. common/shellcheck
+
 _have_null_blk() {
-	_have_modules null_blk
+	_have_driver null_blk
 }
 
 _remove_null_blk_devices() {
@@ -22,6 +24,7 @@ _init_null_blk() {
 	if (( RUN_FOR_ZONED )); then zoned="zoned=1"; fi
 
 	if ! modprobe -r null_blk || ! modprobe null_blk "$@" "${zoned}" ; then
+		SKIP_REASON="requires modular null_blk"
 		return 1
 	fi
 
@@ -32,8 +35,12 @@ _init_null_blk() {
 # Configure one null_blk instance with name $1 and parameters $2..${$#}.
 _configure_null_blk() {
 	local nullb=/sys/kernel/config/nullb/$1 param val
-
 	shift
+
+	if [[ ! -d /sys/module/null_blk ]]; then
+		modprobe -q null_blk
+	fi
+
 	mkdir "$nullb" || return $?
 	while [[ $# -gt 0 ]]; do
 		param="${1%%=*}"
@@ -46,5 +53,5 @@ _configure_null_blk() {
 _exit_null_blk() {
 	_remove_null_blk_devices
 	udevadm settle
-	modprobe -r null_blk
+	modprobe -r -q null_blk
 }
