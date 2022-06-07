@@ -21,10 +21,11 @@ test() {
 
 	local queue_mode
 	for queue_mode in 0 2; do
-		if _init_null_blk gb=1 queue_mode="$queue_mode"; then
+		if _configure_null_blk nullb1 size=1024 \
+				queue_mode="$queue_mode" power=1; then
 			echo "Queue mode $queue_mode"
-			dd if=/dev/nullb0 of=/dev/null iflag=direct bs=64k status=none
-			dd if=/dev/null of=/dev/nullb0 oflag=direct bs=64k status=none
+			dd if=/dev/nullb1 of=/dev/null iflag=direct bs=64k status=none
+			dd if=/dev/null of=/dev/nullb1 oflag=direct bs=64k status=none
 			_exit_null_blk
 		fi
 	done
