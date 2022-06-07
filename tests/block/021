@@ -20,7 +20,7 @@ requires() {
 test() {
 	echo "Running ${TEST_NAME}"
 
-	if ! _init_null_blk; then
+	if ! _configure_null_blk nullb1 power=1; then
 		return 1
 	fi
 
@@ -28,14 +28,14 @@ test() {
 	local nr
 	local scheds
 	# shellcheck disable=SC2207
-	scheds=($(sed 's/[][]//g' /sys/block/nullb0/queue/scheduler))
+	scheds=($(sed 's/[][]//g' /sys/block/nullb1/queue/scheduler))
 
 	for sched in "${scheds[@]}"; do
 		echo "Testing $sched" >> "$FULL"
-		echo "$sched" > /sys/block/nullb0/queue/scheduler
-		max_nr="$(cat /sys/block/nullb0/queue/nr_requests)"
+		echo "$sched" > /sys/block/nullb1/queue/scheduler
+		max_nr="$(cat /sys/block/nullb1/queue/nr_requests)"
 		for ((nr = 4; nr <= max_nr; nr++)); do
-			echo "$nr" > /sys/block/nullb0/queue/nr_requests
+			echo "$nr" > /sys/block/nullb1/queue/nr_requests
 		done
 	done
 
