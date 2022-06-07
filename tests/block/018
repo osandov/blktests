@@ -15,13 +15,13 @@ requires() {
 }
 
 init_times() {
-	init_read_ms="$(awk '{ print $4 }' /sys/block/nullb0/stat)"
-	init_write_ms="$(awk '{ print $8 }' /sys/block/nullb0/stat)"
+	init_read_ms="$(awk '{ print $4 }' /sys/block/nullb1/stat)"
+	init_write_ms="$(awk '{ print $8 }' /sys/block/nullb1/stat)"
 }
 
 show_times() {
-	read_ms="$(awk '{ print $4 }' /sys/block/nullb0/stat)"
-	write_ms="$(awk '{ print $8 }' /sys/block/nullb0/stat)"
+	read_ms="$(awk '{ print $4 }' /sys/block/nullb1/stat)"
+	write_ms="$(awk '{ print $8 }' /sys/block/nullb1/stat)"
 
 	# Print rounded to the nearest second
 	printf 'read %d s\n' $(((read_ms - init_read_ms + 500) / 1000))
@@ -33,22 +33,23 @@ test() {
 
 	echo "Running ${TEST_NAME}"
 
-	if ! _init_null_blk irqmode=2 completion_nsec=1000000000; then
+	if ! _configure_null_blk nullb1 irqmode=2 completion_nsec=1000000000 \
+			power=1; then
 		return 1
 	fi
 
 	init_times
 	show_times
 
-	dd if=/dev/nullb0 of=/dev/null bs=4096 iflag=direct count=1 status=none
+	dd if=/dev/nullb1 of=/dev/null bs=4096 iflag=direct count=1 status=none
 	show_times
 
-	dd if=/dev/zero of=/dev/nullb0 bs=4096 oflag=direct count=1 status=none
+	dd if=/dev/zero of=/dev/nullb1 bs=4096 oflag=direct count=1 status=none
 	show_times
 
-	dd if=/dev/nullb0 of=/dev/null bs=4096 iflag=direct count=1 status=none &
-	dd if=/dev/zero of=/dev/nullb0 bs=4096 oflag=direct count=1 status=none &
-	dd if=/dev/zero of=/dev/nullb0 bs=4096 oflag=direct count=1 status=none &
+	dd if=/dev/nullb1 of=/dev/null bs=4096 iflag=direct count=1 status=none &
+	dd if=/dev/zero of=/dev/nullb1 bs=4096 oflag=direct count=1 status=none &
+	dd if=/dev/zero of=/dev/nullb1 bs=4096 oflag=direct count=1 status=none &
 	wait
 	show_times
 
