@@ -13,7 +13,7 @@ DESCRIPTION="test error logging"
 QUICK=1
 
 requires() {
-	_nvme_requires
+	_have_program nvme
 	_have_kernel_option FAULT_INJECTION && \
 	    _have_kernel_option FAULT_INJECTION_DEBUG_FS
 }
