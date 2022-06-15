@@ -1,0 +1,46 @@
+#!/bin/bash
+# SPDX-License-Identifier: GPL-3.0+
+# Copyright (C) 2022 Google LLC.
+# Author: misch@google.com (Michael Schaller)
+#
+# Test if partitioning and file system creation on a raw disk image works.
+#
+# The raw disk image is associated to a loop device. The disk image only
+# contains a GPT (GUID Partition Table) and ESP (EFI System Partition).
+#
+# Regression test for commit b9684a71fca7 ("block, loop: support partitions
+# without scanning").
+
+. tests/loop/rc
+
+DESCRIPTION="setup GPT and ESP on a raw disk image"
+QUICK=1
+
+requires() {
+	_have_program parted
+	_have_program mkfs.vfat
+}
+
+test() {
+	echo "Running ${TEST_NAME}"
+
+	local image_file="$TMPDIR/img"
+	truncate -s 16M "${image_file}"
+
+	local loop_device
+	loop_device="$(losetup --find --show "${image_file}")"
+
+	parted -s "${loop_device}" mklabel gpt
+	parted -s "${loop_device}" mkpart primary "fat32" 1MiB 100%
+	parted -s "${loop_device}" set 1 boot on
+
+	# This fails with "unable to open /dev/loop#p1: No such file or
+	# directory" without commit b9684a71fca7.
+	mkfs.vfat  "${loop_device}p1" > /dev/null
+
+	# Cleanup.
+	losetup --detach "${loop_device}"
+	rm "${image_file}"
+
+	echo "Test complete"
+}
