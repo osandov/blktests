@@ -152,11 +152,13 @@ _have_configfs() {
 _have_kernel_option() {
 	local f opt=$1
 
-	SKIP_REASON="kernel $(uname -r) config not found"
+	if [[ ! -f /proc/config.gz && ! -f /boot/config-$(uname -r) ]]; then
+		SKIP_REASON="kernel $(uname -r) config not found"
+		return 1
+	fi
 	for f in /proc/config.gz /boot/config-$(uname -r); do
 		[ -e "$f" ] || continue
 		if zgrep -q "^CONFIG_${opt}=[my]$" "$f"; then
-			unset SKIP_REASON
 			return 0
 		else
 			SKIP_REASON="kernel option $opt has not been enabled"
