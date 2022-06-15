@@ -26,11 +26,8 @@ test() {
 
 	local max_nr
 	local nr
-	local scheds
-	# shellcheck disable=SC2207
-	scheds=($(sed 's/[][]//g' /sys/block/nullb1/queue/scheduler))
 
-	for sched in "${scheds[@]}"; do
+	for sched in $(_io_schedulers nullb1); do
 		echo "Testing $sched" >> "$FULL"
 		echo "$sched" > /sys/block/nullb1/queue/scheduler
 		max_nr="$(cat /sys/block/nullb1/queue/nr_requests)"

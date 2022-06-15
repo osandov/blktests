@@ -24,11 +24,7 @@ test() {
 		return 1
 	fi
 
-	local scheds
-	# shellcheck disable=SC2207
-	scheds=($(sed 's/[][]//g' /sys/block/nullb0/queue/scheduler))
-
-	for sched in "${scheds[@]}"; do
+	for sched in $(_io_schedulers nullb0); do
 		echo "Testing $sched" >> "$FULL"
 		echo "$sched" > /sys/block/nullb0/queue/scheduler
 		dd if=/dev/nullb0 of=/dev/null bs=4K count=$((512 * 1024)) \

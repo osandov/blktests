@@ -22,11 +22,7 @@ test() {
 		return 1
 	fi
 
-	local scheds
-	# shellcheck disable=SC2207
-	scheds=($(sed 's/[][]//g' /sys/block/nullb0/queue/scheduler))
-
-	for sched in "${scheds[@]}"; do
+	for sched in $(_io_schedulers nullb0); do
 		echo "Testing $sched" >> "$FULL"
 		echo "$sched" > /sys/block/nullb0/queue/scheduler
 		# Do a bunch of I/Os which will timeout and then complete. The

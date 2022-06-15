@@ -18,7 +18,7 @@ test_io_schedulers() {
 		use_blk_mq ${mq} || return $?
 		dev=$(get_bdev 0) || return $?
 		dm=$(basename "$(readlink -f "${dev}")") || return $?
-		scheds="$(get_scheduler_list "$dm")" || return $?
+		scheds="$(_io_schedulers "$dm")" || return $?
 		for sched in $scheds; do
 			set_scheduler "$dm" "$sched" \
 				      >>"$FULL" 2>&1 || continue
