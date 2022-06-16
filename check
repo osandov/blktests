@@ -440,6 +440,10 @@ _run_test() {
 	RUN_FOR_ZONED=0
 	FALLBACK_DEVICE=0
 
+	# Ensure job control monitor mode is off in the sub-shell for test case
+	# runs to suppress job status output.
+	set +m
+
 	# shellcheck disable=SC1090
 	. "tests/${TEST_NAME}"
 
