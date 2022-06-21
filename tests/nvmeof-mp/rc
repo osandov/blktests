@@ -20,8 +20,7 @@ group_requires() {
 	# option with multipathing enabled in the nvme_core kernel module.
 	if _check_kernel_option NVME_MULTIPATH && \
 		_have_module_param_value nvme_core multipath Y; then
-		SKIP_REASON="CONFIG_NVME_MULTIPATH has been set in .config \
-and multipathing has been enabled in the nvme_core kernel module"
+		SKIP_REASONS+=("CONFIG_NVME_MULTIPATH has been set in .config and multipathing has been enabled in the nvme_core kernel module")
 		return
 	fi
 
@@ -56,14 +55,14 @@ and multipathing has been enabled in the nvme_core kernel module"
 	# shellcheck disable=SC2043
 	for name in multipathd; do
 		if pidof "$name" >/dev/null; then
-			SKIP_REASON="$name must be stopped before the nvmeof-mp tests are run"
+			SKIP_REASONS+=("$name must be stopped before the nvmeof-mp tests are run")
 			return
 		fi
 	done
 	if [ -e /etc/multipath.conf ] &&
 	    ! diff -q /etc/multipath.conf tests/nvmeof-mp/multipath.conf >&/dev/null
 	then
-		SKIP_REASON="/etc/multipath.conf already exists"
+		SKIP_REASONS+=("/etc/multipath.conf already exists")
 		return
 	fi
 }

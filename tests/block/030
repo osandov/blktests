@@ -45,7 +45,7 @@ test() {
 			{ nproc > $sq; } >>"$FULL" 2>&1
 		done
 	else
-		SKIP_REASON="Skipping test because $sq cannot be modified"
+		SKIP_REASONS+=("Skipping test because $sq cannot be modified")
 	fi
 	rmdir /sys/kernel/config/nullb/nullb0
 	_exit_null_blk

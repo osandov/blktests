@@ -9,7 +9,7 @@
 DESCRIPTION="skip in requires()"
 
 requires() {
-	SKIP_REASON="(╯°□°)╯︵ ┻━┻"
+	SKIP_REASONS+=("(╯°□°)╯︵ ┻━┻")
 }
 
 test() {

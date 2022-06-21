@@ -21,7 +21,7 @@ fi
 _have_legacy_dm() {
 	_have_kernel_config_file || return
 	if ! _check_kernel_option DM_MQ_DEFAULT; then
-		SKIP_REASON="legacy device mapper support is missing"
+		SKIP_REASONS+=("legacy device mapper support is missing")
 		return 1
 	fi
 }
@@ -53,7 +53,7 @@ _multipathd_version_ge() {
 	if version_le "$min_ver" "$mp_ver"; then
 		return 0
 	fi
-	SKIP_REASON="Need multipathd version $min_ver; found multipathd version $mp_ver."
+	SKIP_REASONS+=("Need multipathd version $min_ver; found multipathd version $mp_ver.")
 	return 1
 }
 

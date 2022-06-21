@@ -64,18 +64,18 @@ if [[ ! -e tests/${group} ]]; then
 
 # TODO: if this test group has any extra requirements, it should define a
 # group_requires() function. If tests in this group cannot be run,
-# group_requires() should set the \$SKIP_REASON variable.
+# group_requires() should set the \$SKIP_REASONS variable.
 #
 # Usually, group_requires() just needs to check that any necessary programs and
 # kernel features are available using the _have_foo helpers. If
-# group_requires() sets \$SKIP_REASON, all tests in this group will be skipped.
+# group_requires() sets \$SKIP_REASONS, all tests in this group will be skipped.
 group_requires() {
 	_have_root
 }
 
 # TODO: if this test group has extra requirements for what devices it can be
 # run on, it should define a group_device_requires() function. If tests in this
-# group cannot be run on the test device, it should set the \$SKIP_REASON
+# group cannot be run on the test device, it should set the \$SKIP_REASONS
 # variable. \$TEST_DEV is the full path of the block device (e.g., /dev/nvme0n1
 # or /dev/sda1), and \$TEST_DEV_SYSFS is the sysfs path of the disk (not the
 # partition, e.g., /sys/block/nvme0n1 or /sys/block/sda). If the target device
@@ -85,7 +85,7 @@ group_requires() {
 #
 # Usually, group_device_requires() just needs to check that the test device is
 # the right type of hardware or supports any necessary features using the
-# _require_test_dev_foo helpers. If group_device_requires() sets \$SKIP_REASON,
+# _require_test_dev_foo helpers. If group_device_requires() sets \$SKIP_REASONS,
 # all tests in this group will be skipped on that device.
 # group_device_requires() {
 # 	_require_test_dev_is_foo && _require_test_dev_supports_bar
@@ -149,17 +149,17 @@ DESCRIPTION=""
 # CAN_BE_ZONED=1
 
 # TODO: if this test has any extra requirements, it should define a requires()
-# function. If the test cannot be run, requires() should set the \$SKIP_REASON
+# function. If the test cannot be run, requires() should set the \$SKIP_REASONS
 # variable. Usually, requires() just needs to check that any necessary programs
 # and kernel features are available using the _have_foo helpers. If requires()
-# sets \$SKIP_REASON, the test is skipped.
+# sets \$SKIP_REASONS, the test is skipped.
 # requires() {
 # 	_have_foo
 # }
 
 # TODO: if this test has extra requirements for what devices it can be run on,
 # it should define a device_requires() function. If this test cannot be run on
-# the test device, it should set \$SKIP_REASON. \$TEST_DEV is the full path of
+# the test device, it should set \$SKIP_REASONS. \$TEST_DEV is the full path of
 # the block device (e.g., /dev/nvme0n1 or /dev/sda1), and \$TEST_DEV_SYSFS is
 # the sysfs path of the disk (not the partition, e.g., /sys/block/nvme0n1 or
 # /sys/block/sda). If the target device is a partition device,
@@ -169,7 +169,7 @@ DESCRIPTION=""
 #
 # Usually, device_requires() just needs to check that the test device is the
 # right type of hardware or supports any necessary features using the
-# _require_test_dev_foo helpers. If device_requires() sets \$SKIP_REASON, the
+# _require_test_dev_foo helpers. If device_requires() sets \$SKIP_REASONS, the
 # test will be skipped on that device.
 # device_requires() {
 # 	_require_test_dev_is_foo && _require_test_dev_supports_bar
@@ -185,7 +185,7 @@ DESCRIPTION=""
 # failure. You should prefer letting the test fail because of broken output
 # over, say, checking the exit status of every command you run.
 #
-# If the test cannot be run, this function may set the \$SKIP_REASON variable
+# If the test cannot be run, this function may set the \$SKIP_REASONS variable
 # and return. In that case, the return value and output are ignored, and the
 # test is considered skipped. This should only be done when the requirements
 # can only be detected with a non-trivial amount of setup; use

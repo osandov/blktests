@@ -24,7 +24,7 @@ _init_null_blk() {
 	if (( RUN_FOR_ZONED )); then zoned="zoned=1"; fi
 
 	if ! modprobe -r null_blk || ! modprobe null_blk "$@" "${zoned}" ; then
-		SKIP_REASON="requires modular null_blk"
+		SKIP_REASONS+=("requires modular null_blk")
 		return 1
 	fi
 

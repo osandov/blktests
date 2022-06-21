@@ -9,5 +9,5 @@
 DESCRIPTION="skip in test_device()"
 
 test_device() {
-	SKIP_REASON="(╯°□°)╯︵ ┻━┻"
+	SKIP_REASONS+=("(╯°□°)╯︵ ┻━┻")
 }

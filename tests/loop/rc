@@ -13,7 +13,7 @@ group_requires() {
 _have_loop_set_block_size() {
 	src/loblksize "$(losetup -f)" 512 &>/dev/null
 	if [[ $? -eq 2 ]]; then
-		SKIP_REASON="kernel does not support LOOP_SET_BLOCK_SIZE"
+		SKIP_REASONS+=("kernel does not support LOOP_SET_BLOCK_SIZE")
 		return 1
 	fi
 	return 0

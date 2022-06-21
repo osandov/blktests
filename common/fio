@@ -11,7 +11,7 @@ _have_fio() {
 		return 1
 	fi
 	if ! fio --parse-only --terse-version=4 >/dev/null 2>&1; then
-		SKIP_REASON="Fio version too old (does not support --terse-version=4)"
+		SKIP_REASONS+=("Fio version too old (does not support --terse-version=4)")
 		return 1
 	fi
 	return 0
@@ -20,7 +20,7 @@ _have_fio() {
 _have_fio_zbd_zonemode() {
 	_have_fio || return $?
 	if ! fio --cmdhelp=zonemode 2>&1 | grep -q zbd; then
-		SKIP_REASON="Fio version too old (does not support --zonemode=zbd)"
+		SKIP_REASONS+=("Fio version too old (does not support --zonemode=zbd)")
 		return 1
 	fi
 	return 0
