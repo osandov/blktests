@@ -24,6 +24,9 @@ and multipathing has been enabled in the nvme_core kernel module"
 		return
 	fi
 
+	# Avoid test skip due to SKIP_REASON set by _have_kernel_option().
+	unset SKIP_REASON
+
 	_have_configfs || return
 	required_modules=(
 		dm_multipath
