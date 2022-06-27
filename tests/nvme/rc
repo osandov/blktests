@@ -38,6 +38,25 @@ _nvme_requires() {
 		SKIP_REASON="unsupported nvme_trtype=${nvme_trtype}"
 		return 1
 	esac
+
+	if [[ -n ${nvme_adrfam} ]]; then
+		case ${nvme_adrfam} in
+		ipv6)
+			def_traddr="::1"
+			def_adrfam="ipv6"
+			;;
+		ipv4)
+			;; # was already set
+		*)
+			# ignore for non ip transports
+			if [[ "${nvme_trtype}" == "tcp" ||
+			      "${nvme_trtype}" == "rdma" ]]; then
+				SKIP_REASON="unsupported nvme_adrfam=${nvme_adrfam}"
+				return 1
+			fi
+		esac
+	fi
+
 	return 0
 }
 
@@ -148,9 +167,16 @@ _setup_nvmet() {
 		start_soft_rdma
 		for i in $(rdma_network_interfaces)
 		do
-			ipv4_addr=$(get_ipv4_addr "$i")
-			if [ -n "${ipv4_addr}" ]; then
-				def_traddr=${ipv4_addr}
+			if [[ "${nvme_adrfam}" == "ipv6" ]]; then
+				ipv6_addr=$(get_ipv6_ll_addr "$i")
+				if [[ -n "${ipv6_addr}" ]]; then
+					def_traddr=${ipv6_addr}
+				fi
+			else
+				ipv4_addr=$(get_ipv4_addr "$i")
+				if [[ -n "${ipv4_addr}" ]]; then
+					def_traddr=${ipv4_addr}
+				fi
 			fi
 		done
 	fi

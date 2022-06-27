@@ -75,6 +75,16 @@ get_ipv6_addr() {
 		sed -n 's/.*[[:blank:]]inet6[[:blank:]]*\([^[:blank:]/]*\).*/\1/p'
 }
 
+# grab only the link local address
+get_ipv6_ll_addr() {
+	if [[ ! -e "/sys/class/net/$1" ]]; then
+		echo "get_ipv6_addr(): $1 is not a network interface" 1>&2
+	fi
+	ll_addr=$(ip -6 -o addr show dev "$1" | grep "scope link" |
+		sed -n 's/.*[[:blank:]]inet6[[:blank:]]*\([^[:blank:]/]*\).*/\1/p')
+	echo "$ll_addr%$1"
+}
+
 # Whether or not $1 is a number.
 is_number() {
 	[ "$1" -eq "0$1" ] 2>/dev/null
