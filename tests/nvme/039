@@ -128,10 +128,9 @@ test_device() {
 
 	echo "Running ${TEST_NAME}"
 
-	if _have_kernel_option NVME_VERBOSE_ERRORS; then
+	if _check_kernel_option NVME_VERBOSE_ERRORS; then
 		nvme_verbose_errors=true
 	else
-		unset SKIP_REASON
 		nvme_verbose_errors=false
 	fi
 

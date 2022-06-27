@@ -14,18 +14,16 @@ ini_timeout=1
 group_requires() {
 	local m name p required_modules
 
+	_have_kernel_config_file || return
 	# Since the nvmeof-mp tests are based on the dm-mpath driver, these
 	# tests are incompatible with the NVME_MULTIPATH kernel configuration
 	# option with multipathing enabled in the nvme_core kernel module.
-	if _have_kernel_option NVME_MULTIPATH && \
+	if _check_kernel_option NVME_MULTIPATH && \
 		_have_module_param_value nvme_core multipath Y; then
 		SKIP_REASON="CONFIG_NVME_MULTIPATH has been set in .config \
 and multipathing has been enabled in the nvme_core kernel module"
 		return
 	fi
-
-	# Avoid test skip due to SKIP_REASON set by _have_kernel_option().
-	unset SKIP_REASON
 
 	_have_configfs || return
 	required_modules=(

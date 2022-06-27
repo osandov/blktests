@@ -19,7 +19,8 @@ if [ $ramdisk_size -gt $max_ramdisk_size ]; then
 fi
 
 _have_legacy_dm() {
-	if ! _have_kernel_option DM_MQ_DEFAULT; then
+	_have_kernel_config_file || return
+	if ! _check_kernel_option DM_MQ_DEFAULT; then
 		SKIP_REASON="legacy device mapper support is missing"
 		return 1
 	fi
