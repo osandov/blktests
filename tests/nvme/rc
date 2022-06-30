@@ -447,3 +447,11 @@ _nvme_disable_err_inject()
         echo 0 > /sys/kernel/debug/"$1"/fault_inject/probability
         echo 0 > /sys/kernel/debug/"$1"/fault_inject/times
 }
+
+_nvme_reset_ctrl() {
+	echo 1 > /sys/class/nvme/"$1"/reset_controller
+}
+
+_nvme_delete_ctrl() {
+	echo 1 > /sys/class/nvme/"$1"/delete_controller
+}

@@ -1,0 +1,56 @@
+#!/bin/bash
+# SPDX-License-Identifier: GPL-3.0+
+# Copyright (C) 2022 Sagi Grimberg <sagi@grimberg.me>
+#
+# Test nvme fabrics controller reset/disconnect/reconnect operation during I/O
+# This test is somewhat similar to test 032 but for fabrics controllers.
+
+. tests/nvme/rc
+
+DESCRIPTION="test nvme fabrics controller reset/disconnect operation during I/O"
+
+requires() {
+	_nvme_requires
+	_have_loop
+	_have_fio
+	_require_nvme_trtype_is_fabrics
+}
+
+test() {
+	local subsys="blktests-subsystem-1"
+	local port
+	local loop_dev
+	local nvmedev
+
+	echo "Running ${TEST_NAME}"
+
+	_setup_nvmet
+	truncate -s 1G "$TMPDIR/img"
+	loop_dev="$(losetup -f --show "$TMPDIR/img")"
+
+	port="$(_create_nvmet_port "${nvme_trtype}")"
+	_create_nvmet_subsystem "${subsys}" "${loop_dev}"
+	_add_nvmet_subsys_to_port "${port}" "${subsys}"
+	_nvme_connect_subsys "${nvme_trtype}" "${subsys}"
+	udevadm settle
+	nvmedev=$(_find_nvme_dev "${subsys}")
+
+	# start fio job
+	echo "starting background fio"
+	_run_fio_rand_io --filename="${nvmedev}n1" --size=1g \
+		--group_reporting --ramp_time=5  &> /dev/null &
+	sleep 5
+
+	# do reset/remove operation
+	echo "resetting controller"
+	_nvme_reset_ctrl "${nvmedev}"
+	sleep 1
+	echo "deleting controller"
+	_nvme_delete_ctrl "${nvmedev}"
+
+	_remove_nvmet_subsystem_from_port "${port}" "${subsys}"
+	_remove_nvmet_subsystem "${subsys}"
+	_remove_nvmet_port "${port}"
+
+	echo "Test complete"
+}
