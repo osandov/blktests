@@ -409,6 +409,7 @@ start_soft_rdma() {
 				[ -e "$i" ] || continue
 				[ "$i" = "lo" ] && continue
 				[ "$(<"$i/addr_len")" = 6 ] || continue
+				[ "$(<"$i/carrier")" = 1 ] || continue
 				has_soft_rdma "$i" && continue
 				rdma link add "${i}_$type" type $type netdev "$i" ||
 				echo "Failed to bind the $type driver to $i"
