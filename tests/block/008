@@ -34,6 +34,7 @@ test_device() {
 	local offline_cpus=()
 	local offlining=1
 	local max_offline=${#HOTPLUGGABLE_CPUS[@]}
+	local o=$TMPDIR/offline_cpu_out
 	if [[ ${#HOTPLUGGABLE_CPUS[@]} -eq ${#ALL_CPUS[@]} ]]; then
 		(( max_offline-- ))
 	fi
@@ -60,18 +61,18 @@ test_device() {
 
 		if (( offlining )); then
 			idx=$((RANDOM % ${#online_cpus[@]}))
-			if err=$(_offline_cpu "${online_cpus[$idx]}" 2>&1); then
+			if _offline_cpu "${online_cpus[$idx]}" > "$o" 2>&1; then
 				offline_cpus+=("${online_cpus[$idx]}")
 				unset "online_cpus[$idx]"
 				online_cpus=("${online_cpus[@]}")
-			elif [[ $err =~ "No space left on device" ]]; then
+			elif [[ $(<"$o") =~ "No space left on device" ]]; then
 				# ENOSPC means CPU offline failure due to IRQ
 				# vector shortage. Keep current number of
 				# offline CPUs as maximum CPUs to offline.
 				max_offline=${#offline_cpus[@]}
 				offlining=0
 			else
-				echo "Failed to offline CPU: $err"
+				echo "Failed to offline CPU: $(<"$o")"
 				break
 			fi
 		fi
