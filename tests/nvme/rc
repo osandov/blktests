@@ -303,6 +303,9 @@ _create_nvmet_passthru() {
 
 	_test_dev_nvme_ctrl > "${passthru_path}/device_path"
 	echo 1 > "${passthru_path}/enable"
+	if [[ -f "${passthru_path}/clear_ids" ]]; then
+		echo 1 > "${passthru_path}/clear_ids"
+	fi
 }
 
 _remove_nvmet_passhtru() {
