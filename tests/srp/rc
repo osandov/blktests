@@ -32,7 +32,7 @@ group_requires() {
 
 	_have_configfs || return
 	if is_lio_configured; then
-		SKIP_REASON="LIO must be unloaded before the SRP tests are run"
+		SKIP_REASONS+=("LIO must be unloaded before the SRP tests are run")
 		return
 	fi
 	required_modules=(
@@ -74,14 +74,14 @@ group_requires() {
 
 	for name in srp_daemon multipathd; do
 		if pidof "$name" >/dev/null; then
-			SKIP_REASON="$name must be stopped before the SRP tests are run"
+			SKIP_REASONS+=("$name must be stopped before the SRP tests are run")
 			return
 		fi
 	done
 	if [ -e /etc/multipath.conf ] &&
 	    ! diff -q /etc/multipath.conf tests/srp/multipath.conf >&/dev/null
 	then
-		SKIP_REASON="/etc/multipath.conf already exists"
+		SKIP_REASONS+=("/etc/multipath.conf already exists")
 		return
 	fi
 }

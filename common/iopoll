@@ -11,7 +11,7 @@ _have_fio_with_poll() {
 		return 1
 	fi
 	if ! fio --parse-only --name=test --ioengine=pvsync2 --hipri=1 1>/dev/null 2>&1; then
-		SKIP_REASON="Fio does not support polling"
+		SKIP_REASONS+=("Fio does not support polling")
 		return 1
 	fi
 	return 0
@@ -20,11 +20,11 @@ _have_fio_with_poll() {
 _require_test_dev_supports_io_poll() {
 	local old_io_poll
 	if ! old_io_poll="$(cat "${TEST_DEV_SYSFS}/queue/io_poll" 2>/dev/null)"; then
-		SKIP_REASON="kernel does not support polling"
+		SKIP_REASONS+=("kernel does not support polling")
 		return 1
 	fi
 	if ! echo "$old_io_poll" >"${TEST_DEV_SYSFS}/queue/io_poll" 2>/dev/null; then
-		SKIP_REASON="$TEST_DEV does not support polling"
+		SKIP_REASONS+=("$TEST_DEV does not support polling")
 		return 1
 	fi
 	return 0
@@ -33,11 +33,11 @@ _require_test_dev_supports_io_poll() {
 _require_test_dev_supports_io_poll_delay() {
 	local old_io_poll_delay
 	if ! old_io_poll_delay="$(cat "${TEST_DEV_SYSFS}/queue/io_poll_delay" 2>/dev/null)"; then
-		SKIP_REASON="kernel does not support hybrid polling"
+		SKIP_REASONS+=("kernel does not support hybrid polling")
 		return 1
 	fi
 	if ! echo "$old_io_poll_delay" >"${TEST_DEV_SYSFS}/queue/io_poll_delay" 2>/dev/null; then
-		SKIP_REASON="$TEST_DEV does not support hybrid polling"
+		SKIP_REASONS+=("$TEST_DEV does not support hybrid polling")
 		return 1
 	fi
 	return 0

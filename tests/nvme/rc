@@ -35,7 +35,7 @@ _nvme_requires() {
 		_have_driver rdma_rxe || _have_driver siw
 		;;
 	*)
-		SKIP_REASON="unsupported nvme_trtype=${nvme_trtype}"
+		SKIP_REASONS+=("unsupported nvme_trtype=${nvme_trtype}")
 		return 1
 	esac
 
@@ -51,7 +51,7 @@ _nvme_requires() {
 			# ignore for non ip transports
 			if [[ "${nvme_trtype}" == "tcp" ||
 			      "${nvme_trtype}" == "rdma" ]]; then
-				SKIP_REASON="unsupported nvme_adrfam=${nvme_adrfam}"
+				SKIP_REASONS+=("unsupported nvme_adrfam=${nvme_adrfam}")
 				return 1
 			fi
 		esac
@@ -72,7 +72,7 @@ NVMET_CFS="/sys/kernel/config/nvmet/"
 
 _require_test_dev_is_nvme() {
 	if ! readlink -f "$TEST_DEV_SYSFS/device" | grep -q nvme; then
-		SKIP_REASON="$TEST_DEV is not a NVMe device"
+		SKIP_REASONS+=("$TEST_DEV is not a NVMe device")
 		return 1
 	fi
 	return 0
@@ -80,7 +80,7 @@ _require_test_dev_is_nvme() {
 
 _require_nvme_trtype_is_loop() {
 	if [[ "${nvme_trtype}" != "loop" ]]; then
-		SKIP_REASON="nvme_trtype=${nvme_trtype} is not supported in this test"
+		SKIP_REASONS+=("nvme_trtype=${nvme_trtype} is not supported in this test")
 		return 1
 	fi
 	return 0
@@ -88,7 +88,7 @@ _require_nvme_trtype_is_loop() {
 
 _require_nvme_trtype_is_fabrics() {
 	if [[ "${nvme_trtype}" == "pci" ]]; then
-		SKIP_REASON="nvme_trtype=${nvme_trtype} is not supported in this test"
+		SKIP_REASONS+=("nvme_trtype=${nvme_trtype} is not supported in this test")
 		return 1
 	fi
 	return 0

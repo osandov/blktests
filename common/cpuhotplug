@@ -24,7 +24,7 @@ _have_cpu_hotplug() {
 	done
 
 	if [[ ${#ALL_CPUS[@]} -eq 1 || ${#HOTPLUGGABLE_CPUS[@]} -eq 0 ]]; then
-		SKIP_REASON="CPU hotplugging is not supported"
+		SKIP_REASONS+=("CPU hotplugging is not supported")
 		return 1
 	fi
 	return 0

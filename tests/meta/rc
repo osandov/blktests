@@ -8,13 +8,13 @@
 
 group_requires() {
 	if [[ "${META_REQUIRES_SKIP:-}" ]]; then
-		SKIP_REASON="META_REQUIRES_SKIP was set"
+		SKIP_REASONS+=("META_REQUIRES_SKIP was set")
 	fi
 }
 
 group_device_requires() {
 	if [[ "${META_DEVICE_REQUIRES_SKIP:-}" ]]; then
-		SKIP_REASON="META_DEVICE_REQUIRES_SKIP was set"
+		SKIP_REASONS+=("META_DEVICE_REQUIRES_SKIP was set")
 	fi
 }
 

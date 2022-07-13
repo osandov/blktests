@@ -19,7 +19,7 @@ group_requires() {
 
 group_device_requires() {
 	if ! _test_dev_is_zoned; then
-		SKIP_REASON="${TEST_DEV} is not a zoned block device"
+		SKIP_REASONS+=("${TEST_DEV} is not a zoned block device")
 		return
 	fi
 }
@@ -287,7 +287,7 @@ _test_dev_is_dm() {
 
 _require_test_dev_is_logical() {
 	if ! _test_dev_is_partition && ! _test_dev_is_dm; then
-		SKIP_REASON="$TEST_DEV is not a logical device"
+		SKIP_REASONS+=("$TEST_DEV is not a logical device")
 		return 1
 	fi
 	return 0

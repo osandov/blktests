@@ -9,7 +9,7 @@
 DESCRIPTION="skip test_device() in requires()"
 
 requires() {
-	SKIP_REASON="(╯°□°)╯︵ ┻━┻"
+	SKIP_REASONS+=("(╯°□°)╯︵ ┻━┻")
 }
 
 test_device() {

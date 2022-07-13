@@ -22,7 +22,7 @@ _divide_timeout() {
 
 _have_root() {
 	if [[ $EUID -ne 0 ]]; then
-		SKIP_REASON="not running as root"
+		SKIP_REASONS+=("not running as root")
 		return 1
 	fi
 	return 0
@@ -33,7 +33,7 @@ _have_driver()
 	local modname="${1/-/_}"
 
 	if [ ! -d "/sys/module/${modname}" ] && ! modprobe -q "${modname}"; then
-		SKIP_REASON="driver ${modname} is not available"
+		SKIP_REASONS+=("driver ${modname} is not available")
 		return 1
 	fi
 
@@ -50,10 +50,10 @@ _have_modules() {
 		fi
 	done
 	if [[ ${#missing} -gt 1 ]]; then
-		SKIP_REASON="the following modules are not available: ${missing[*]}"
+		SKIP_REASONS+=("the following modules are not available: ${missing[*]}")
 		return 1
 	elif [[ ${#missing} -eq 1 ]]; then
-		SKIP_REASON="${missing[0]} module is not available"
+		SKIP_REASONS+=("${missing[0]} module is not available")
 		return 1
 	fi
 	return 0
@@ -67,7 +67,7 @@ _have_module_param() {
 	fi
 
 	if ! modinfo -F parm -0 "$1" | grep -q -z "^$2:"; then
-		SKIP_REASON="$1 module does not have parameter $2"
+		SKIP_REASONS+=("$1 module does not have parameter $2")
 		return 1
 	fi
 	return 0
@@ -89,7 +89,7 @@ _have_module_param_value() {
 
 	value=$(cat "/sys/module/$modname/parameters/$param")
 	if [[ "${value}" != "$expected_value" ]]; then
-		SKIP_REASON="$modname module parameter $param must be set to $expected_value"
+		SKIP_REASONS+=("$modname module parameter $param must be set to $expected_value")
 		return 1
 	fi
 
@@ -100,7 +100,7 @@ _have_program() {
 	if command -v "$1" >/dev/null 2>&1; then
 		return 0
 	fi
-	SKIP_REASON="$1 is not available"
+	SKIP_REASONS+=("$1 is not available")
 	return 1
 }
 
@@ -109,11 +109,11 @@ _have_iproute2() {
 	local snapshot
 
 	if ! snapshot=$(ip -V | sed 's/ip utility, iproute2-ss//'); then
-		SKIP_REASON="ip utility not found"
+		SKIP_REASONS+=("ip utility not found")
 		return 1
 	fi
 	if [[ "$snapshot" =~ ^[0-9]+$ && "$snapshot" -lt "$1" ]]; then
-		SKIP_REASON="ip utility too old"
+		SKIP_REASONS+=("ip utility too old")
 		return 1
 	fi
 	return 0
@@ -121,7 +121,7 @@ _have_iproute2() {
 
 _have_src_program() {
 	if [[ ! -x "$SRCDIR/$1" ]]; then
-		SKIP_REASON="$1 was not built; run \`make\`"
+		SKIP_REASONS+=("$1 was not built; run \`make\`")
 		return 1
 	fi
 	return 0
@@ -135,7 +135,7 @@ _have_blktrace() {
 	# CONFIG_BLK_DEV_IO_TRACE might still be disabled, but this is easier
 	# to check. We can fix it if someone complains.
 	if [[ ! -d /sys/kernel/debug/block ]]; then
-		SKIP_REASON="CONFIG_DEBUG_FS is not enabled"
+		SKIP_REASONS+=("CONFIG_DEBUG_FS is not enabled")
 		return 1
 	fi
 	_have_program blktrace
@@ -143,7 +143,7 @@ _have_blktrace() {
 
 _have_configfs() {
 	if ! findmnt -t configfs /sys/kernel/config >/dev/null; then
-		SKIP_REASON="configfs is not mounted at /sys/kernel/config"
+		SKIP_REASONS+=("configfs is not mounted at /sys/kernel/config")
 		return 1
 	fi
 	return 0
@@ -152,7 +152,7 @@ _have_configfs() {
 # Check if the specified kernel config files are available.
 _have_kernel_config_file() {
 	if [[ ! -f /proc/config.gz && ! -f /boot/config-$(uname -r) ]]; then
-		SKIP_REASON="kernel $(uname -r) config not found"
+		SKIP_REASONS+=("kernel $(uname -r) config not found")
 		return 1
 	fi
 
@@ -180,7 +180,7 @@ _have_kernel_option() {
 
 	_have_kernel_config_file || return
 	if ! _check_kernel_option "$opt"; then
-		SKIP_REASON="kernel option $opt has not been enabled"
+		SKIP_REASONS+=("kernel option $opt has not been enabled")
 		return 1
 	fi
 
@@ -195,7 +195,7 @@ _have_kver() {
 	IFS='.' read -r a b c < <(uname -r | sed 's/-.*//')
 	if [ $((a * 65536 + b * 256 + c)) -lt $((d * 65536 + e * 256 + f)) ];
 	then
-		SKIP_REASON="Kernel version too old"
+		SKIP_REASONS+=("Kernel version too old")
 		return 1
 	fi
 }
@@ -203,7 +203,7 @@ _have_kver() {
 _have_tracefs() {
 	stat /sys/kernel/debug/tracing/trace > /dev/null 2>&1
 	if ! findmnt -t tracefs /sys/kernel/debug/tracing >/dev/null; then
-		SKIP_REASON="tracefs is not mounted at /sys/kernel/debug/tracing"
+		SKIP_REASONS+=("tracefs is not mounted at /sys/kernel/debug/tracing")
 		return 1
 	fi
 	return 0
@@ -213,7 +213,7 @@ _have_tracepoint() {
 	local event=$1
 
 	if [[ ! -d /sys/kernel/debug/tracing/events/${event} ]]; then
-		SKIP_REASON="tracepoint ${event} does not exist"
+		SKIP_REASONS+=("tracepoint ${event} does not exist")
 		return 1
 	fi
 	return 0
@@ -222,7 +222,7 @@ _have_tracepoint() {
 _have_fs() {
 	modprobe "$1" >/dev/null 2>&1
 	if [[ ! -d "/sys/fs/$1" ]]; then
-		SKIP_REASON="kernel does not support filesystem $1"
+		SKIP_REASONS+=("kernel does not support filesystem $1")
 		return 1
 	fi
 }
@@ -231,7 +231,7 @@ _require_min_cpus() {
 	if [[ $(nproc) -ge $1 ]]; then
 		return 0
 	fi
-	SKIP_REASON="minimum $1 cpus required"
+	SKIP_REASONS+=("minimum $1 cpus required")
 	return 1
 }
 
@@ -241,7 +241,7 @@ _test_dev_is_rotational() {
 
 _require_test_dev_is_rotational() {
 	if ! _test_dev_is_rotational; then
-		SKIP_REASON="$TEST_DEV is not rotational"
+		SKIP_REASONS+=("$TEST_DEV is not rotational")
 		return 1
 	fi
 	return 0
@@ -253,7 +253,7 @@ _test_dev_can_discard() {
 
 _require_test_dev_can_discard() {
 	if ! _test_dev_can_discard; then
-		SKIP_REASON="$TEST_DEV does not support discard"
+		SKIP_REASONS+=("$TEST_DEV does not support discard")
 		return 1
 	fi
 	return 0
@@ -291,7 +291,7 @@ _require_test_dev_is_pci() {
 			fi
 		fi
 
-		SKIP_REASON="$TEST_DEV is not a PCI device"
+		SKIP_REASONS+=("$TEST_DEV is not a PCI device")
 		return 1
 	fi
 	return 0
@@ -316,7 +316,7 @@ _require_test_dev_in_hotplug_slot() {
 	local slt_cap
 	slt_cap="$(setpci -s "${parent}" CAP_EXP+14.w)"
 	if [[ $((0x${slt_cap} & 0x60)) -ne $((0x60)) ]]; then
-		SKIP_REASON="$TEST_DEV is not in a hot pluggable slot"
+		SKIP_REASONS+=("$TEST_DEV is not in a hot pluggable slot")
 		return 1
 	fi
 	return 0
@@ -349,7 +349,7 @@ _test_dev_max_open_active_zones() {
 
 _require_test_dev_is_partition() {
 	if ! _test_dev_is_partition; then
-		SKIP_REASON="${TEST_DEV} is not a partition device"
+		SKIP_REASONS+=("${TEST_DEV} is not a partition device")
 		return 1
 	fi
 	return 0
@@ -391,7 +391,7 @@ unload_module() {
 
 _have_writeable_kmsg() {
 	if [[ ! -w /dev/kmsg ]]; then
-		SKIP_REASON="cannot write to /dev/kmsg"
+		SKIP_REASONS+=("cannot write to /dev/kmsg")
 		return 1
 	fi
 	return 0

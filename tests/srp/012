@@ -16,7 +16,7 @@ test_io_schedulers() {
 	done
 	for mq in y n; do
 		if [ $mq = n ] && ! _have_legacy_dm; then
-			unset SKIP_REASON
+			unset SKIP_REASONS
 			continue
 		fi
 		use_blk_mq ${mq} ${mq} || return $?

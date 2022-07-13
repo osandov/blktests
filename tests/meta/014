@@ -9,5 +9,5 @@
 DESCRIPTION="skip in test()"
 
 test() {
-	SKIP_REASON="(╯°□°)╯︵ ┻━┻"
+	SKIP_REASONS+=("(╯°□°)╯︵ ┻━┻")
 }

@@ -225,9 +225,16 @@ _output_status() {
 	echo "]"
 }
 
+_output_skip_reasons()
+{
+	for reason in "${SKIP_REASONS[@]}"; do
+		echo "    $reason"
+	done
+}
+
 _output_notrun() {
 	_output_status "$1" "not run"
-	echo "    $SKIP_REASON"
+	_output_skip_reasons
 }
 
 _output_last_test_run() {
@@ -288,7 +295,7 @@ _output_test_run() {
 	} | column -t -s $'\t'
 
 	if [[ $status = "not run" ]]; then
-		echo "    $SKIP_REASON"
+		_output_skip_reasons
 	fi
 }
 
@@ -343,7 +350,7 @@ _call_test() {
 	# Remove leftovers from last time.
 	rm -f "${seqres}" "${seqres}."*
 
-	if [[ -v SKIP_REASON ]]; then
+	if [[ -v SKIP_REASONS ]]; then
 		TEST_RUN["status"]="not run"
 	else
 		if [[ -w /dev/kmsg ]]; then
@@ -371,7 +378,7 @@ _call_test() {
 
 		_cleanup
 
-		if [[ -v SKIP_REASON ]]; then
+		if [[ -v SKIP_REASONS ]]; then
 			TEST_RUN["status"]="not run"
 		elif ! diff "tests/${TEST_NAME}.out" "${seqres}.out" >/dev/null; then
 			mv "${seqres}.out" "${seqres}.out.bad"
@@ -493,10 +500,10 @@ _run_test() {
 			TEST_DEV_PART_SYSFS="${TEST_DEV_PART_SYSFS_DIRS["$TEST_DEV"]}"
 
 			local unset_skip_reason=0
-			if [[ ! -v SKIP_REASON ]]; then
+			if [[ ! -v SKIP_REASONS ]]; then
 				unset_skip_reason=1
 				if (( !CAN_BE_ZONED )) && _test_dev_is_zoned; then
-					SKIP_REASON="${TEST_DEV} is a zoned block device"
+					SKIP_REASONS+=("${TEST_DEV} is a zoned block device")
 				elif declare -fF device_requires >/dev/null; then
 					device_requires
 				fi
@@ -506,7 +513,7 @@ _run_test() {
 				ret=1
 			fi
 			if (( unset_skip_reason )); then
-				unset SKIP_REASON
+				unset SKIP_REASONS
 			fi
 		done
 
@@ -530,7 +537,7 @@ _run_group() {
 
 	if declare -fF group_requires >/dev/null; then
 		group_requires
-		if [[ -v SKIP_REASON ]]; then
+		if [[ -v SKIP_REASONS ]]; then
 			_output_notrun "${group}/***"
 			return 0
 		fi
@@ -544,10 +551,10 @@ _run_group() {
 			# shellcheck disable=SC2034
 			TEST_DEV_PART_SYSFS="${TEST_DEV_PART_SYSFS_DIRS["$TEST_DEV"]}"
 			group_device_requires
-			if [[ -v SKIP_REASON ]]; then
+			if [[ -v SKIP_REASONS ]]; then
 				_output_notrun "${group}/*** => $(basename "$TEST_DEV")"
 				unset "TEST_DEVS[$i]"
-				unset SKIP_REASON
+				unset SKIP_REASONS
 			fi
 		done
 		# Fix the array indices.

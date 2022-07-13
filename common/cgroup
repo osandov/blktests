@@ -31,7 +31,7 @@ _exit_cgroup2()
 _have_cgroup2()
 {
 	if [[ -z $(_cgroup2_base_dir) ]]; then
-		SKIP_REASON="cgroup2 is not mounted"
+		SKIP_REASONS+=("cgroup2 is not mounted")
 		return 1
 	fi
 	return 0
@@ -46,7 +46,7 @@ _have_cgroup2_controller()
 	dir="$(_cgroup2_base_dir)"
 
 	if ! grep -q "$controller" "$dir/cgroup.controllers"; then
-		SKIP_REASON="no support for $controller cgroup controller; if it is enabled, you may need to boot with cgroup_no_v1=$controller"
+		SKIP_REASONS+=("no support for $controller cgroup controller; if it is enabled, you may need to boot with cgroup_no_v1=$controller")
 		return 1
 	fi
 }
@@ -63,7 +63,7 @@ _have_cgroup2_controller_file()
 	echo "+$controller" > "$dir/cgroup.subtree_control"
 	if [[ ! -f $dir/blktests/$file ]]; then
 		rmdir "$dir/blktests"
-		SKIP_REASON="cgroup file $file doesn't exist"
+		SKIP_REASONS+=("cgroup file $file doesn't exist")
 		return 1
 	fi
 	rmdir "$dir/blktests"
