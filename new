@@ -98,10 +98,13 @@ EOF
 	echo "Created tests/${group}/rc"
 fi
 
+seq=0
 for test in tests/"$group"/+([0-9]); do
-	:
+	if [[ -e $test ]]; then
+		seq=${test##tests/"${group}"/+(0)}
+	fi
 done
-seq=${test##tests/"${group}"/+(0)}
+
 test_name="${group}/$(printf "%03d" $((seq + 1)))"
 
 cat << EOF > "tests/${test_name}"
