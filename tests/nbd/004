@@ -1,0 +1,58 @@
+#!/bin/bash
+# SPDX-License-Identifier: GPL-3.0+
+# Copyright (C) 2022 Sun Ke
+#
+# Regression test for commit 06c4da89c24e
+# nbd: call genl_unregister_family() first in nbd_cleanup()
+
+. tests/nbd/rc
+
+DESCRIPTION="module load/unload concurrently with connect/disconnect"
+QUICK=1
+
+requires() {
+	_have_modules nbd
+}
+
+module_load_and_unload() {
+	while true; do
+		modprobe nbd >/dev/null 2>&1
+		modprobe -r nbd >/dev/null 2>&1
+	done
+}
+
+connect_and_disconnect() {
+	while true; do
+		_netlink_connect >/dev/null 2>&1
+		_netlink_disconnect >/dev/null 2>&1
+	done
+}
+
+test() {
+	echo "Running ${TEST_NAME}"
+
+	_start_nbd_server_netlink
+
+	module_load_and_unload &
+	pid1=$!
+	connect_and_disconnect &
+	pid2=$!
+
+	sleep 10
+	{
+		kill -9 $pid1
+		wait $pid1
+		kill -9 $pid2
+		wait $pid2
+	} 2>/dev/null
+
+	_stop_nbd_server_netlink
+
+	if _dmesg_since_test_start | grep -q -e "couldn't allocate config" \
+		-e "cannot create duplicate filename"; then
+			echo "Fail"
+	fi
+
+	echo "Test complete"
+}
+

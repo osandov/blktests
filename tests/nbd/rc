@@ -76,3 +76,21 @@ _stop_nbd_server() {
 	rm -f "${TMPDIR}/nbd.pid"
 	rm -f "${TMPDIR}/export"
 }
+
+_start_nbd_server_netlink() {
+	truncate -s 10G "${TMPDIR}/export"
+	nbd-server 8000 "${TMPDIR}/export" >/dev/null 2>&1
+}
+
+_stop_nbd_server_netlink() {
+	killall -SIGTERM nbd-server
+	rm -f "${TMPDIR}/export"
+}
+
+_netlink_connect() {
+	nbd-client localhost 8000 /dev/nbd0 >> "$FULL" 2>&1
+}
+
+_netlink_disconnect() {
+	nbd-client -d /dev/nbd0 >> "$FULL" 2>&1
+}
