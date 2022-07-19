@@ -27,17 +27,20 @@ _have_cpu_hotplug() {
 		SKIP_REASONS+=("CPU hotplugging is not supported")
 		return 1
 	fi
+
+	RESTORE_CPUS_ONLINE=1
 	return 0
 }
 
 _online_cpu() {
-	# shellcheck disable=SC2034
-	RESTORE_CPUS_ONLINE=1
 	echo 1 > "/sys/devices/system/cpu/cpu$1/online"
 }
 
 _offline_cpu() {
-	# shellcheck disable=SC2034
-	RESTORE_CPUS_ONLINE=1
+	if [[ -z ${RESTORE_CPUS_ONLINE} ]]; then
+		echo "offlining cpu but RESTORE_CPUS_ONLINE is not set"
+		return 1
+	fi
+
 	echo 0 > "/sys/devices/system/cpu/cpu$1/online"
 }
