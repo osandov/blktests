@@ -1,0 +1,16 @@
+Running nvme/042
+Testing hmac 0
+NQN:blktests-subsystem-1 disconnected 1 controller(s)
+Testing hmac 1
+NQN:blktests-subsystem-1 disconnected 1 controller(s)
+Testing hmac 2
+NQN:blktests-subsystem-1 disconnected 1 controller(s)
+Testing hmac 3
+NQN:blktests-subsystem-1 disconnected 1 controller(s)
+Testing key length 32
+NQN:blktests-subsystem-1 disconnected 1 controller(s)
+Testing key length 48
+NQN:blktests-subsystem-1 disconnected 1 controller(s)
+Testing key length 64
+NQN:blktests-subsystem-1 disconnected 1 controller(s)
+Test complete

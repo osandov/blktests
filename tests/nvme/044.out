@@ -1,0 +1,12 @@
+Running nvme/044
+Test host authentication
+NQN:blktests-subsystem-1 disconnected 1 controller(s)
+Test invalid ctrl authentication (should fail)
+no controller found: failed to write to nvme-fabrics device
+NQN:blktests-subsystem-1 disconnected 0 controller(s)
+Test valid ctrl authentication
+NQN:blktests-subsystem-1 disconnected 1 controller(s)
+Test invalid ctrl key (should fail)
+no controller found: failed to write to nvme-fabrics device
+NQN:blktests-subsystem-1 disconnected 0 controller(s)
+Test complete

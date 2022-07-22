@@ -10,6 +10,8 @@
 def_traddr="127.0.0.1"
 def_adrfam="ipv4"
 def_trsvcid="4420"
+def_hostnqn="$(cat /etc/nvme/hostnqn 2> /dev/null)"
+def_hostid="$(cat /etc/nvme/hostid 2> /dev/null)"
 nvme_trtype=${nvme_trtype:-"loop"}
 
 _nvme_requires() {
@@ -94,6 +96,14 @@ _require_nvme_trtype_is_fabrics() {
 	return 0
 }
 
+_require_nvme_cli_auth() {
+	if ! nvme gen-dhchap-key -n nvmf-test-subsys > /dev/null 2>&1 ; then
+		SKIP_REASON+=("nvme gen-dhchap-key command missing")
+		return 1
+	fi
+	return 0
+}
+
 _test_dev_nvme_ctrl() {
 	echo "/dev/char/$(cat "${TEST_DEV_SYSFS}/device/dev")"
 }
@@ -141,6 +151,12 @@ _cleanup_nvmet() {
 			rmdir "${ns}"
 		done
 		rmdir "${subsys}"
+	done
+
+	for host in "${NVMET_CFS}"/hosts/*; do
+		name=$(basename "${host}")
+		echo "WARNING: Test did not clean up host: ${name}"
+		rmdir "${host}"
 	done
 
 	shopt -u nullglob
@@ -199,10 +215,26 @@ _nvme_connect_subsys() {
 	local subsysnqn="$2"
 	local traddr="${3:-$def_traddr}"
 	local trsvcid="${4:-$def_trsvcid}"
+	local hostnqn="${5:-$def_hostnqn}"
+	local hostid="${6:-$def_hostid}"
+	local hostkey="${7}"
+	local ctrlkey="${8}"
 
 	ARGS=(-t "${trtype}" -n "${subsysnqn}")
 	if [[ "${trtype}" != "loop" ]]; then
 		ARGS+=(-a "${traddr}" -s "${trsvcid}")
+	fi
+	if [[ "${hostnqn}" != "$def_hostnqn" ]]; then
+		ARGS+=(--hostnqn="${hostnqn}")
+	fi
+	if [[ "${hostid}" != "$def_hostid" ]]; then
+		ARGS+=(--hostid="${hostid}")
+	fi
+	if [[ -n "${hostkey}" ]]; then
+		ARGS+=(--dhchap-secret="${hostkey}")
+	fi
+	if [[ -n "${ctrlkey}" ]]; then
+		ARGS+=(--dhchap-ctrl-secret="${ctrlkey}")
 	fi
 	nvme connect "${ARGS[@]}"
 }
@@ -275,6 +307,25 @@ _create_nvmet_subsystem() {
 	_create_nvmet_ns "${nvmet_subsystem}" "1" "${blkdev}" "${uuid}"
 }
 
+_create_nvmet_host() {
+	local nvmet_subsystem="$1"
+	local nvmet_hostnqn="$2"
+	local nvmet_hostkey="$3"
+	local nvmet_ctrlkey="$4"
+	local cfs_path="${NVMET_CFS}/subsystems/${nvmet_subsystem}"
+	local host_path="${NVMET_CFS}/hosts/${nvmet_hostnqn}"
+
+	mkdir "${host_path}"
+	echo 0 > "${cfs_path}/attr_allow_any_host"
+	ln -s "${host_path}" "${cfs_path}/allowed_hosts/${nvmet_hostnqn}"
+	if [[ "${nvmet_hostkey}" ]] ; then
+		echo "${nvmet_hostkey}" > "${host_path}/dhchap_key"
+	fi
+	if [[ "${nvmet_ctrlkey}" ]] ; then
+		echo "${nvmet_ctrlkey}" > "${host_path}/dhchap_ctrl_key"
+	fi
+}
+
 _remove_nvmet_ns() {
 	local nvmet_subsystem="$1"
 	local nsid=$2
@@ -290,7 +341,15 @@ _remove_nvmet_subsystem() {
 	local subsys_path="${NVMET_CFS}/subsystems/${nvmet_subsystem}"
 
 	_remove_nvmet_ns "${nvmet_subsystem}" "1"
+	rm -f "${subsys_path}"/allowed_hosts/*
 	rmdir "${subsys_path}"
+}
+
+_remove_nvmet_host() {
+	local nvmet_host="$1"
+	local host_path="${NVMET_CFS}/hosts/${nvmet_host}"
+
+	rmdir "${host_path}"
 }
 
 _create_nvmet_passthru() {
@@ -332,11 +391,48 @@ _remove_nvmet_subsystem_from_port() {
 	rm "${NVMET_CFS}/ports/${port}/subsystems/${nvmet_subsystem}"
 }
 
+_set_nvmet_hostkey() {
+	local nvmet_hostnqn="$1"
+	local nvmet_hostkey="$2"
+	local cfs_path="${NVMET_CFS}/hosts/${nvmet_hostnqn}"
+
+	echo "${nvmet_hostkey}" > \
+	     "${cfs_path}/dhchap_key"
+}
+
+_set_nvmet_ctrlkey() {
+	local nvmet_hostnqn="$1"
+	local nvmet_ctrlkey="$2"
+	local cfs_path="${NVMET_CFS}/hosts/${nvmet_hostnqn}"
+
+	echo "${nvmet_ctrlkey}" > \
+	     "${cfs_path}/dhchap_ctrl_key"
+}
+
+_set_nvmet_hash() {
+	local nvmet_hostnqn="$1"
+	local nvmet_hash="$2"
+	local cfs_path="${NVMET_CFS}/hosts/${nvmet_hostnqn}"
+
+	echo "${nvmet_hash}" > \
+	     "${cfs_path}/dhchap_hash"
+}
+
+_set_nvmet_dhgroup() {
+	local nvmet_hostnqn="$1"
+	local nvmet_dhgroup="$2"
+	local cfs_path="${NVMET_CFS}/hosts/${nvmet_hostnqn}"
+
+	echo "${nvmet_dhgroup}" > \
+	     "${cfs_path}/dhchap_dhgroup"
+}
+
 _find_nvme_dev() {
 	local subsys=$1
 	local subsysnqn
 	local dev
 	for dev in /sys/class/nvme/nvme*; do
+		[ -e "$dev" ] || continue
 		dev="$(basename "$dev")"
 		subsysnqn="$(cat "/sys/class/nvme/${dev}/subsysnqn")"
 		if [[ "$subsysnqn" == "$subsys" ]]; then
