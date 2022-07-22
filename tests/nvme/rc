@@ -98,7 +98,7 @@ _require_nvme_trtype_is_fabrics() {
 
 _require_nvme_cli_auth() {
 	if ! nvme gen-dhchap-key -n nvmf-test-subsys > /dev/null 2>&1 ; then
-		SKIP_REASON+=("nvme gen-dhchap-key command missing")
+		SKIP_REASONS+=("nvme gen-dhchap-key command missing")
 		return 1
 	fi
 	return 0
