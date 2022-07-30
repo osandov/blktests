@@ -25,9 +25,6 @@ test() {
 	blktrace -D "$TMP_DIR" "/dev/${SCSI_DEBUG_DEVICES[0]}" >"$FULL" 2>&1 &
 	sleep 0.5
 	echo 1 > "/sys/block/${SCSI_DEBUG_DEVICES[0]}/device/delete"
-	if [[ ! -d /sys/kernel/debug/block/${SCSI_DEBUG_DEVICES[0]} ]]; then
-		echo "debugfs directory deleted with blktrace active"
-	fi
 	{ kill $!; wait; } >/dev/null 2>/dev/null
 	if [[ -d /sys/kernel/debug/block/${SCSI_DEBUG_DEVICES[0]} ]]; then
 		echo "debugfs directory leaked"
