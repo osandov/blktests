@@ -8,12 +8,36 @@
 DESCRIPTION="test gap zone support with BTRFS"
 QUICK=1
 
+# compare 3 digits versions (e.g., 5.18.1)
+ver_a_is_before_b() {
+	local a1 a2 a3 b1 b2 b3
+
+	IFS='.' read -r a1 a2 a3 <<< "$1"
+	IFS='.' read -r b1 b2 b3 <<< "$2"
+	(((a1 * 65536 + a2 * 256 + a3) < (b1 * 65536 + b2 * 256 + b3)))
+}
+
+# mkfs.btrfs version from 5.17 to 5.18.x fails to format zoned block devices
+have_good_mkfs_btrfs() {
+	local ver
+
+	ver=$(mkfs.btrfs -V | sed 's/[^[:digit:]]*//')
+	if ver_a_is_before_b "$ver" 5.17; then
+		return 0
+	elif ver_a_is_before_b "$ver" 5.19; then
+		SKIP_REASONS+=("mkfs.btrfs ver $ver fails to format zoned block devices")
+		return 1
+	fi
+	return 0
+}
+
 requires() {
 	_have_fio
 	_have_driver btrfs
 	_have_module_param scsi_debug zone_cap_mb
 	_have_program mkfs.btrfs
 	_have_scsi_debug
+	have_good_mkfs_btrfs
 }
 
 test() {
