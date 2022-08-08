@@ -12,7 +12,6 @@
 #include <sys/stat.h>
 #include <sys/types.h>
 #include <sys/wait.h>
-#include <linux/fs.h>
 #include <linux/nbd.h>
 
 int main(int argc, char **argv)
