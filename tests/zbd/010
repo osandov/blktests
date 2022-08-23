@@ -12,7 +12,7 @@ QUICK=1
 requires() {
 	_have_fio
 	_have_driver f2fs
-	_have_modules null_blk
+	_have_module null_blk
 	_have_module_param scsi_debug zone_cap_mb
 	_have_program mkfs.f2fs
 	_have_scsi_debug

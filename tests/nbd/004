@@ -11,7 +11,7 @@ DESCRIPTION="module load/unload concurrently with connect/disconnect"
 QUICK=1
 
 requires() {
-	_have_modules nbd
+	_have_module nbd
 }
 
 module_load_and_unload() {

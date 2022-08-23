@@ -28,7 +28,7 @@ is_lio_configured() {
 }
 
 group_requires() {
-	local m name p required_modules
+	local m name p
 
 	_have_configfs || return
 	if is_lio_configured; then
@@ -37,26 +37,24 @@ group_requires() {
 	fi
 	_have_driver sd_mod
 	_have_driver sg
-	required_modules=(
-		dm_multipath
-		dm_queue_length
-		dm_service_time
-		ib_ipoib
-		ib_srp
-		ib_srpt
-		ib_umad
-		ib_uverbs
-		null_blk
-		rdma_cm
-		rdma_rxe
-		scsi_debug
-		scsi_dh_alua
-		scsi_dh_emc
-		scsi_dh_rdac
-		target_core_iblock
-		target_core_mod
-	)
-	_have_modules "${required_modules[@]}" || return
+
+	_have_module dm_multipath
+	_have_module dm_queue_length
+	_have_module dm_service_time
+	_have_module ib_ipoib
+	_have_module ib_srp
+	_have_module ib_srpt
+	_have_module ib_umad
+	_have_module ib_uverbs
+	_have_module null_blk
+	_have_module rdma_cm
+	_have_module rdma_rxe
+	_have_module scsi_debug
+	_have_module scsi_dh_alua
+	_have_module scsi_dh_emc
+	_have_module scsi_dh_rdac
+	_have_module target_core_iblock
+	_have_module target_core_mod
 
 	for p in mkfs.ext4 mkfs.xfs multipath multipathd pidof rdma \
 		 sg_reset fio; do

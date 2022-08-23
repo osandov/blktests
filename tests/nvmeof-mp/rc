@@ -12,7 +12,7 @@ nvme_port=7777
 ini_timeout=1
 
 group_requires() {
-	local m name p required_modules
+	local m name p
 
 	_have_kernel_config_file || return
 	# Since the nvmeof-mp tests are based on the dm-mpath driver, these
@@ -25,22 +25,20 @@ group_requires() {
 	fi
 
 	_have_configfs || return
-	required_modules=(
-		dm_multipath
-		dm_queue_length
-		dm_service_time
-		null_blk
-		rdma_cm
-		ib_ipoib
-		ib_umad
-		nvme-rdma
-		nvmet-rdma
-		rdma_rxe
-		scsi_dh_alua
-		scsi_dh_emc
-		scsi_dh_rdac
-	)
-	_have_modules "${required_modules[@]}" || return
+
+	_have_module dm_multipath
+	_have_module dm_queue_length
+	_have_module dm_service_time
+	_have_module null_blk
+	_have_module rdma_cm
+	_have_module ib_ipoib
+	_have_module ib_umad
+	_have_module nvme-rdma
+	_have_module nvmet-rdma
+	_have_module rdma_rxe
+	_have_module scsi_dh_alua
+	_have_module scsi_dh_emc
+	_have_module scsi_dh_rdac
 
 	for p in mkfs.ext4 mkfs.xfs multipath multipathd pidof rdma fio; do
 		_have_program "$p" || return

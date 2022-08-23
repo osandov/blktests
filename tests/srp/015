@@ -10,7 +10,7 @@ TIMED=1
 requires() {
 	# See also iproute commit 4336c5821a7b ("rdma: add 'link add/delete'
 	# commands").
-	_have_modules siw && _have_kver 5 5 && _have_iproute2 190404
+	_have_module siw && _have_kver 5 5 && _have_iproute2 190404
 }
 
 test_disconnect_repeatedly() {

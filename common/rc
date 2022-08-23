@@ -57,22 +57,11 @@ _have_driver()
 	return 0
 }
 
-# Check that the specified modules are available as loadable modules and not
+# Check that the specified module is available as a loadable module and not
 # built-in the kernel.
-_have_modules() {
-	local missing=()
-	local module
-
-	for module in "$@"; do
-		if ! _module_file_exists "${module}"; then
-			missing+=("$module")
-		fi
-	done
-	if [[ ${#missing} -gt 1 ]]; then
-		SKIP_REASONS+=("the following modules are not available: ${missing[*]}")
-		return 1
-	elif [[ ${#missing} -eq 1 ]]; then
-		SKIP_REASONS+=("${missing[0]} module is not available")
+_have_module() {
+	if ! _module_file_exists "${1}"; then
+		SKIP_REASONS+=("${1} module is not available")
 		return 1
 	fi
 	return 0
