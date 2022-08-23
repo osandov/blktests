@@ -35,6 +35,8 @@ group_requires() {
 		SKIP_REASONS+=("LIO must be unloaded before the SRP tests are run")
 		return
 	fi
+	_have_driver sd_mod
+	_have_driver sg
 	required_modules=(
 		dm_multipath
 		dm_queue_length
@@ -51,9 +53,6 @@ group_requires() {
 		scsi_dh_alua
 		scsi_dh_emc
 		scsi_dh_rdac
-		sd_mod
-		sd_mod
-		sg
 		target_core_iblock
 		target_core_mod
 	)
