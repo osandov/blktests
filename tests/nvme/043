@@ -56,8 +56,7 @@ test() {
 		_set_nvmet_hash "${hostnqn}" "${hash}"
 
 		_nvme_connect_subsys "${nvme_trtype}" "${subsys_name}" \
-				     "${def_traddr}" "${def_trsvcid}" \
-				     "${hostnqn}" "${hostid}" \
+				     "" "" "${hostnqn}" "${hostid}" \
 				     "${hostkey}"
 
 		udevadm settle
@@ -72,8 +71,7 @@ test() {
 		_set_nvmet_dhgroup "${hostnqn}" "${dhgroup}"
 
 		_nvme_connect_subsys "${nvme_trtype}" "${subsys_name}" \
-				     "${def_traddr}" "${def_trsvcid}" \
-				     "${hostnqn}" "${hostid}" \
+				     "" "" "${hostnqn}" "${hostid}" \
 				     "${hostkey}"
 
 		udevadm settle
