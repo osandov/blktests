@@ -344,7 +344,7 @@ _nvme_connect_subsys() {
 	if [[ -n "${ctrlkey}" ]]; then
 		ARGS+=(--dhchap-ctrl-secret="${ctrlkey}")
 	fi
-	nvme connect "${ARGS[@]}"
+	nvme connect "${ARGS[@]}" 2> /dev/null
 }
 
 _nvme_discover() {
