@@ -447,6 +447,8 @@ _run_test() {
 	RUN_FOR_ZONED=0
 	FALLBACK_DEVICE=0
 
+	local ret=0
+
 	# Ensure job control monitor mode is off in the sub-shell for test case
 	# runs to suppress job status output.
 	set +m
@@ -461,14 +463,13 @@ _run_test() {
 
 		RESULTS_DIR="$OUTPUT/nodev"
 		_call_test test
-		local ret=$?
+		ret=$?
 		if (( RUN_ZONED_TESTS && CAN_BE_ZONED )); then
 			RESULTS_DIR="$OUTPUT/nodev_zoned"
 			RUN_FOR_ZONED=1
 			_call_test test
 			ret=$(( ret || $? ))
 		fi
-		return $ret
 	else
 		if [[ ${#TEST_DEVS[@]} -eq 0 ]] && \
 			declare -fF fallback_device >/dev/null; then
@@ -494,7 +495,6 @@ _run_test() {
 			requires
 		fi
 
-		local ret=0
 		for TEST_DEV in "${TEST_DEVS[@]}"; do
 			TEST_DEV_SYSFS="${TEST_DEV_SYSFS_DIRS["$TEST_DEV"]}"
 			TEST_DEV_PART_SYSFS="${TEST_DEV_PART_SYSFS_DIRS["$TEST_DEV"]}"
@@ -523,9 +523,9 @@ _run_test() {
 			unset "TEST_DEV_PART_SYSFS_DIRS[${TEST_DEVS[0]}]"
 			TEST_DEVS=()
 		fi
-
-		return $ret
 	fi
+
+	return $ret
 }
 
 _run_group() {
