@@ -428,11 +428,11 @@ stop_soft_rdma() {
 		      echo "$i ..."
 		      rdma link del "${i}" || echo "Failed to remove ${i}"
 		done
-	if ! unload_module rdma_rxe 10; then
+	if ! _unload_module rdma_rxe 10; then
 		echo "Unloading rdma_rxe failed"
 		return 1
 	fi
-	if ! unload_module siw 10; then
+	if ! _unload_module siw 10; then
 		echo "Unloading siw failed"
 		return 1
 	fi

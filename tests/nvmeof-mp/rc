@@ -162,12 +162,12 @@ start_nvme_client() {
 }
 
 stop_nvme_client() {
-	unload_module nvme-rdma || return $?
-	unload_module nvme-fabrics || return $?
+	_unload_module nvme-rdma || return $?
+	_unload_module nvme-fabrics || return $?
 	# Ignore nvme and nvme-core unload errors - this test may be run on a
 	# system equipped with one or more NVMe SSDs.
-	unload_module nvme >&/dev/null
-	unload_module nvme-core >&/dev/null
+	_unload_module nvme >&/dev/null
+	_unload_module nvme-core >&/dev/null
 	return 0
 }
 
@@ -267,8 +267,8 @@ stop_nvme_target() {
 				rmdir "$d"
 			done
 	)
-	unload_module nvmet_rdma &&
-		unload_module nvmet &&
+	_unload_module nvmet_rdma &&
+		_unload_module nvmet &&
 		_exit_null_blk
 }
 

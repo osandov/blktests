@@ -325,14 +325,14 @@ stop_srp_ini() {
 	log_out
 	for ((i=40;i>=0;i--)); do
 		remove_mpath_devs || return $?
-		unload_module ib_srp >/dev/null 2>&1 && break
+		_unload_module ib_srp >/dev/null 2>&1 && break
 		sleep 1
 	done
 	if [ -e /sys/module/ib_srp ]; then
 		echo "Error: unloading kernel module ib_srp failed"
 		return 1
 	fi
-	unload_module scsi_transport_srp || return $?
+	_unload_module scsi_transport_srp || return $?
 }
 
 # Associate the LIO device with name $1/$2 with file $3 and SCSI serial $4.
@@ -491,7 +491,7 @@ start_lio_srpt() {
 	if modinfo ib_srpt | grep -q '^parm:[[:blank:]]*rdma_cm_port:'; then
 		opts+=("rdma_cm_port=${srp_rdma_cm_port}")
 	fi
-	unload_module ib_srpt
+	_unload_module ib_srpt
 	modprobe ib_srpt "${opts[@]}" || return $?
 	i=0
 	for r in "${vdev_path[@]}"; do
@@ -553,7 +553,7 @@ stop_lio_srpt() {
 			 target_core_file target_core_stgt target_core_user \
 			 target_core_mod
 	do
-		unload_module $m 10 || return $?
+		_unload_module $m 10 || return $?
 	done
 }
 

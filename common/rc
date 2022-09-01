@@ -385,7 +385,7 @@ _uptime_s() {
 }
 
 # Arguments: module to unload ($1) and retry count ($2).
-unload_module() {
+_unload_module() {
 	local i m=$1 rc=${2:-1}
 
 	[ ! -e "/sys/module/$m" ] && return 0
