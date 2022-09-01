@@ -28,21 +28,17 @@ _have_nbd() {
 }
 
 _have_nbd_netlink() {
-	local ret=0
-
 	if ! _have_nbd; then
 		return 1
 	fi
 	if ! _have_program genl-ctrl-list; then
 		return 1
 	fi
-	modprobe -q nbd
 	if ! genl-ctrl-list | grep -q nbd; then
 		SKIP_REASONS+=("nbd does not support netlink")
-		ret=1
+		return 1
 	fi
-	modprobe -qr nbd
-	return $ret
+	return 0
 }
 
 _wait_for_nbd_connect() {
@@ -66,7 +62,6 @@ _wait_for_nbd_disconnect() {
 }
 
 _start_nbd_server() {
-	modprobe -q nbd
 	truncate -s 10G "${TMPDIR}/export"
 	cat > "${TMPDIR}/nbd.conf" << EOF
 [generic]
@@ -78,20 +73,17 @@ EOF
 
 _stop_nbd_server() {
 	kill -SIGTERM "$(cat "${TMPDIR}/nbd.pid")"
-	modprobe -qr nbd
 	rm -f "${TMPDIR}/nbd.pid"
 	rm -f "${TMPDIR}/export"
 }
 
 _start_nbd_server_netlink() {
-	modprobe -q nbd
 	truncate -s 10G "${TMPDIR}/export"
 	nbd-server 8000 "${TMPDIR}/export" >/dev/null 2>&1
 }
 
 _stop_nbd_server_netlink() {
 	killall -SIGTERM nbd-server
-	modprobe -qr nbd
 	rm -f "${TMPDIR}/export"
 }
 
