@@ -43,16 +43,23 @@ _module_file_exists()
 }
 
 # Check that the specified module or driver is available, regardless of whether
-# it is built-in or built separately as a module.
+# it is built-in or built separately as a module. Load the module if it is
+# loadable and not yet loaded. In this case, the loaded module is unloaded at
+# test case end regardless of whether the test case is skipped or executed.
 _have_driver()
 {
 	local modname="${1//-/_}"
 
-	if [ ! -d "/sys/module/${modname}" ] &&
-		   ! modprobe -qn "${modname}"; then
+	if [ -d "/sys/module/${modname}" ]; then
+		return 0
+	fi
+
+	if ! modprobe -q "${modname}"; then
 		SKIP_REASONS+=("driver ${modname} is not available")
 		return 1
 	fi
+
+	MODULES_TO_UNLOAD+=("${modname}")
 
 	return 0
 }

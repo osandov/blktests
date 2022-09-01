@@ -452,6 +452,16 @@ _unload_module() {
 	return 1
 }
 
+_unload_modules() {
+	local i
+
+	for ((i=${#MODULES_TO_UNLOAD[@]}; i > 0; i--)); do
+		_unload_module "${MODULES_TO_UNLOAD[i-1]}" 10
+	done
+
+	unset MODULES_TO_UNLOAD
+}
+
 _run_test() {
 	TEST_NAME="$1"
 	CAN_BE_ZONED=0
@@ -459,6 +469,7 @@ _run_test() {
 	DMESG_FILTER="cat"
 	RUN_FOR_ZONED=0
 	FALLBACK_DEVICE=0
+	MODULES_TO_UNLOAD=()
 
 	local ret=0
 
@@ -537,6 +548,8 @@ _run_test() {
 			TEST_DEVS=()
 		fi
 	fi
+
+	_unload_modules
 
 	return $ret
 }
