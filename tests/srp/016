@@ -1,0 +1,20 @@
+#!/bin/bash
+# SPDX-License-Identifier: GPL-2.0+
+# Copyright 2022 Google LLC
+
+. tests/srp/rc
+
+DESCRIPTION="RDMA hot-unplug"
+QUICK=1
+
+test_hot_unplug() {
+	use_blk_mq y y || return $?
+	# This triggers a use-after-free with older kernels. See also
+	# https://lore.kernel.org/linux-rdma/17649b9c-7e42-1625-8bc9-8ad333ab771c@fujitsu.com/
+	stop_soft_rdma
+}
+
+test() {
+	trap 'trap "" EXIT; teardown' EXIT
+	setup && test_hot_unplug && echo Passed
+}
