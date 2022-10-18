@@ -23,7 +23,7 @@ test() {
 	local port
 	local subsys_name="blktests-subsystem-1"
 	local hostid
-	local hostnqn="nqn.2014-08.org.nvmexpress:uuid:${hostid}"
+	local hostnqn
 	local file_path="${TMPDIR}/img"
 	local hmac
 	local key_len
@@ -37,6 +37,7 @@ test() {
 		echo "uuidgen failed"
 		return 1
 	fi
+	hostnqn="nqn.2014-08.org.nvmexpress:uuid:${hostid}"
 
 	_setup_nvmet
 

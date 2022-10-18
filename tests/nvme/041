@@ -23,7 +23,7 @@ test() {
 	local port
 	local subsys_name="blktests-subsystem-1"
 	local hostid
-	local hostnqn="nqn.2014-08.org.nvmexpress:uuid:${hostid}"
+	local hostnqn
 	local file_path="${TMPDIR}/img"
 	local hostkey
 	local ctrldev
@@ -35,6 +35,7 @@ test() {
 		echo "uuidgen failed"
 		return 1
 	fi
+	hostnqn="nqn.2014-08.org.nvmexpress:uuid:${hostid}"
 	hostkey="$(nvme gen-dhchap-key -n ${subsys_name} 2> /dev/null)"
 	if [ -z "$hostkey" ] ; then
 		echo "nvme gen-dhchap-key failed"
