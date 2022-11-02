@@ -324,6 +324,17 @@ _get_pci_parent_from_blkdev() {
 		tail -2 | head -1
 }
 
+_require_test_dev_size_mb() {
+	local require_sz_mb=$1
+	local test_dev_sz_mb=$(($(blockdev --getsize64 "$TEST_DEV")/1024/1024))
+
+	if (( "$test_dev_sz_mb" < "$require_sz_mb" )); then
+		SKIP_REASONS+=("${TEST_DEV} required at least ${require_sz_mb}m")
+		return 1
+	fi
+	return 0
+}
+
 _require_test_dev_in_hotplug_slot() {
 	local parent
 	parent="$(_get_pci_parent_from_blkdev)"

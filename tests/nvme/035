@@ -16,6 +16,10 @@ requires() {
 	_have_fio
 }
 
+device_requires() {
+	_require_test_dev_size_mb 1024
+}
+
 test_device() {
 	local subsys="blktests-subsystem-1"
 	local ctrldev
