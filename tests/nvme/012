@@ -44,7 +44,7 @@ test() {
 	cat "/sys/block/${nvmedev}n1/uuid"
 	cat "/sys/block/${nvmedev}n1/wwid"
 
-	_xfs_run_fio_verify_io "/dev/${nvmedev}n1"
+	_xfs_run_fio_verify_io "/dev/${nvmedev}n1" "900m"
 
 	_nvme_disconnect_subsys "${subsys_name}"
 
