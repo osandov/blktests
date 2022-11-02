@@ -16,7 +16,7 @@ _xfs_mkfs_and_mount() {
 
 	mkdir -p "${mount_dir}"
 	umount "${mount_dir}"
-	mkfs.xfs -l size=32m -f "${bdev}"
+	mkfs.xfs -l size=64m -f "${bdev}"
 	mount "${bdev}" "${mount_dir}"
 }
 
