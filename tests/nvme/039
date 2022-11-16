@@ -143,9 +143,6 @@ test_device() {
 	inject_invalid_status_on_read "${ns_dev}"
 	inject_write_fault_on_write "${ns_dev}"
 
-	inject_access_denied_on_identify "${ctrl_dev}"
-	inject_invalid_admin_cmd "${ctrl_dev}"
-
 	_nvme_err_inject_cleanup "${ns_dev}" "${ctrl_dev}"
 
 	echo "Test complete"

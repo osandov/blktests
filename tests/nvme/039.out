@@ -2,6 +2,4 @@ Running nvme/039
  Read(0x2) @ LBA 0, 1 blocks, Unrecovered Read Error (sct 0x2 / sc 0x81) DNR 
  Read(0x2) @ LBA 0, 1 blocks, Unknown (sct 0x3 / sc 0x75) DNR 
  Write(0x1) @ LBA 0, 1 blocks, Write Fault (sct 0x2 / sc 0x80) DNR 
- Identify(0x6), Access Denied (sct 0x2 / sc 0x86) DNR 
- Unknown(0x96), Invalid Command Opcode (sct 0x0 / sc 0x1) DNR 
 Test complete
