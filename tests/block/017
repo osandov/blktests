@@ -24,11 +24,38 @@ show_inflight() {
 	awk '$3 == "nullb1" { print "diskstats " $12 }' /proc/diskstats
 }
 
+# Measure how long it takes for inflight counter check using time command.
+# Convert X.YYYs time format into integer in milliseconds.
+counter_check_duration_in_millis()
+{
+	local show_seconds sub_second seconds
+
+	show_seconds=$( { time show_inflight > /dev/null; } 2>&1 )
+	show_seconds=${show_seconds/s/}
+	sub_second=${show_seconds##*.}
+	sub_second=$((10#${sub_second}))
+	seconds=${show_seconds%%.*}
+	echo $(( seconds * 1000 + sub_second ))
+}
+
 test() {
+	local io_in_millis
+
 	echo "Running ${TEST_NAME}"
 
-	if ! _configure_null_blk nullb1 irqmode=2 completion_nsec=500000000 \
-			power=1; then
+	# Prepare null_blk to measure time to check inflight counters. IOs
+	# should be inflight long enough to cover counter checks twice.
+	if ! _configure_null_blk nullb1 irqmode=2 power=1; then
+		return 1
+	fi
+
+	io_in_millis=$(( 500 + $(counter_check_duration_in_millis) * 2 ))
+
+	_exit_null_blk
+
+	# Prepare null_blk again with desired IO inflight duration
+	if ! _configure_null_blk nullb1 irqmode=2 \
+	     completion_nsec=$((io_in_millis * 1000 * 1000)) power=1; then
 		return 1
 	fi
 
