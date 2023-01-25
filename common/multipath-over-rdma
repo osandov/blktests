@@ -131,7 +131,7 @@ sleep_until() {
 
 # Kill all processes that have opened block device $1.
 stop_bdev_users() {
-	[ -n "$1" ] || return $?
+	[ -n "$1" ] || return 1
 	lsof -F p "$1" 2>/dev/null | while read -r line; do
 		p="${line#p}"
 		if [ "$p" != "$line" ]; then

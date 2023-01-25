@@ -125,7 +125,7 @@ _get_blkzone_report() {
 	TMP_REPORT_FILE=${TMPDIR}/blkzone_report
 	if ! blkzone report "${target_dev}" > "${TMP_REPORT_FILE}"; then
 		echo "blkzone command failed"
-		return $?
+		return 1
 	fi
 
 	cap_idx=3
