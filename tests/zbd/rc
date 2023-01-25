@@ -80,21 +80,21 @@ _get_sysfs_variable() {
 	unset SYSFS_VARS
 	local _dir=${TEST_DEV_SYSFS}
 	if _test_dev_is_partition; then
-		SYSFS_VARS[$SV_CAPACITY]=$(<"${TEST_DEV_PART_SYSFS}"/size)
+		SYSFS_VARS[SV_CAPACITY]=$(<"${TEST_DEV_PART_SYSFS}"/size)
 	else
-		SYSFS_VARS[$SV_CAPACITY]=$(<"${_dir}"/size)
+		SYSFS_VARS[SV_CAPACITY]=$(<"${_dir}"/size)
 	fi
-	SYSFS_VARS[$SV_CHUNK_SECTORS]=$(<"${_dir}"/queue/chunk_sectors)
-	SYSFS_VARS[$SV_PHYS_BLK_SIZE]=$(<"${_dir}"/queue/physical_block_size)
-	SYSFS_VARS[$SV_PHYS_BLK_SECTORS]=$((SYSFS_VARS[SV_PHYS_BLK_SIZE] / 512))
+	SYSFS_VARS[SV_CHUNK_SECTORS]=$(<"${_dir}"/queue/chunk_sectors)
+	SYSFS_VARS[SV_PHYS_BLK_SIZE]=$(<"${_dir}"/queue/physical_block_size)
+	SYSFS_VARS[SV_PHYS_BLK_SECTORS]=$((SYSFS_VARS[SV_PHYS_BLK_SIZE] / 512))
 
 	# If the nr_zones sysfs attribute exists, get its value. Otherwise,
 	# calculate its value based on the total capacity and zone size, taking
 	# into account that the last zone can be smaller than other zones.
 	if [[ -e "${_dir}"/queue/nr_zones ]] && ! _test_dev_is_partition; then
-		SYSFS_VARS[$SV_NR_ZONES]=$(<"${_dir}"/queue/nr_zones)
+		SYSFS_VARS[SV_NR_ZONES]=$(<"${_dir}"/queue/nr_zones)
 	else
-		SYSFS_VARS[$SV_NR_ZONES]=$(( (SYSFS_VARS[SV_CAPACITY] - 1) \
+		SYSFS_VARS[SV_NR_ZONES]=$(( (SYSFS_VARS[SV_CAPACITY] - 1) \
 				/ SYSFS_VARS[SV_CHUNK_SECTORS] + 1 ))
 	fi
 }
