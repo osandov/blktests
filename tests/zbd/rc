@@ -269,7 +269,7 @@ _find_two_contiguous_seq_zones() {
 	for ((idx = NR_CONV_ZONES; idx < REPORTED_COUNT; idx++)); do
 		if [[ ${ZONE_TYPES[idx]} -eq ${type_seq} &&
 		      ${ZONE_TYPES[idx+1]} -eq ${type_seq} ]]; then
-			if [[ -n ${cap_eq_len} ]] &&
+			if [[ ${cap_eq_len} = "cap_eq_len" ]] &&
 				   ((ZONE_CAPS[idx] != ZONE_LENGTHS[idx])); then
 				continue
 			fi
