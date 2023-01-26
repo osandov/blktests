@@ -54,7 +54,7 @@ make_all_running() {
 set_running_loop() {
 	local dev="$1"
 
-	[ -e "$dev" ] || return $?
+	[ -e "$dev" ] || return 1
 	while true; do
 		sleep 1
 		make_all_running "$dev"
@@ -66,8 +66,8 @@ set_running_loop() {
 sg_reset_loop() {
 	local cmd dev="$1" duration="$2" deadline i=0 reset_type
 
-	[ -e "$dev" ] || return $?
-	[ -n "$duration" ] || return $?
+	[ -e "$dev" ] || return 1
+	[ -n "$duration" ] || return 1
 	reset_type=(-d -b)
 	deadline=$(($(_uptime_s) + duration))
 	while true; do

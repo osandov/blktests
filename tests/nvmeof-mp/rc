@@ -72,7 +72,7 @@ use_blk_mq() {
 	(
 		cd /sys/module/dm_mod/parameters || return $?
 		if [ -e use_blk_mq ]; then
-			echo "$dm_mode" >use_blk_mq || return $?
+			echo "$dm_mode" >use_blk_mq || return 1
 		fi
 	)
 
@@ -115,8 +115,8 @@ log_out() {
 simulate_network_failure_loop() {
 	local d dev="$1" duration="$2" deadline i rc=0 sf
 
-	[ -e "$dev" ] || return $?
-	[ -n "$duration" ] || return $?
+	[ -e "$dev" ] || return 1
+	[ -n "$duration" ] || return 1
 	deadline=$(($(_uptime_s) + duration))
 	while [ $rc = 0 ]; do
 		sleep_until 5 ${deadline} || break

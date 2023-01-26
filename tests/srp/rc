@@ -96,13 +96,13 @@ use_blk_mq() {
 	(
 		cd /sys/module/dm_mod/parameters || return $?
 		if [ -e use_blk_mq ]; then
-			echo "$dm_mode" >use_blk_mq || return $?
+			echo "$dm_mode" >use_blk_mq || return 1
 		fi
 	)
 	(
 		cd /sys/module/scsi_mod/parameters || return $?
 		if [ -e use_blk_mq ]; then
-			echo "$scsi_mode" >use_blk_mq || return $?
+			echo "$scsi_mode" >use_blk_mq || return 1
 		fi
 	)
 
@@ -260,8 +260,8 @@ log_out() {
 simulate_network_failure_loop() {
 	local d dev="$1" duration="$2" deadline i rc=0 s
 
-	[ -e "$dev" ] || return $?
-	[ -n "$duration" ] || return $?
+	[ -e "$dev" ] || return 1
+	[ -n "$duration" ] || return 1
 	deadline=$(($(_uptime_s) + duration))
 	s=5
 	while [ $rc = 0 ]; do
@@ -520,7 +520,7 @@ start_lio_srpt() {
 		cd srpt || return $?
 		if [ -e discovery_auth/rdma_cm_port ]; then
 			echo "${srp_rdma_cm_port}" > discovery_auth/rdma_cm_port ||
-				return $?
+				return 1
 		fi
 		configure_target_ports "${target_ids[@]}" -- "${ini_ids[@]}"
 	)

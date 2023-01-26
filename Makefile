@@ -13,9 +13,7 @@ install:
 	cp -R tests common $(dest)
 	$(MAKE) -C src dest=$(dest)/src install
 
-# SC2119: "Use foo "$@" if function's $1 should mean script's $1". False
-# positives on helpers like _init_scsi_debug.
-SHELLCHECK_EXCLUDE := SC2119
+SHELLCHECK_EXCLUDE := ""
 
 check:
 	shellcheck -x -e $(SHELLCHECK_EXCLUDE) -f gcc check new common/* \

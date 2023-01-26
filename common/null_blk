@@ -44,14 +44,14 @@ _configure_null_blk() {
 	mkdir "$nullb" || return $?
 
 	if (( RUN_FOR_ZONED )); then
-		echo "1" > "$nullb/zoned" || return $?
+		echo "1" > "$nullb/zoned" || return 1
 	fi
 
 	while [[ $# -gt 0 ]]; do
 		param="${1%%=*}"
 		val="${1#*=}"
 		shift
-		echo "$val" > "$nullb/$param" || return $?
+		echo "$val" > "$nullb/$param" || return 1
 	done
 }
 

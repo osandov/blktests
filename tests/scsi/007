@@ -28,7 +28,7 @@ test() {
 
 	echo "Running ${TEST_NAME}"
 
-	if ! _init_scsi_debug; then
+	if ! _init_scsi_debug delay=0; then
 		return 1
 	fi
 
