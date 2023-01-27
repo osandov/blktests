@@ -20,10 +20,10 @@ _remove_null_blk_devices() {
 _init_null_blk() {
 	_remove_null_blk_devices
 
-	local zoned=""
-	if (( RUN_FOR_ZONED )); then zoned="zoned=1"; fi
+	local args=("$@")
+	if (( RUN_FOR_ZONED )); then args+=("zoned=1"); fi
 
-	if ! modprobe -r null_blk || ! modprobe null_blk "$@" "${zoned}" ; then
+	if ! modprobe -r null_blk || ! modprobe null_blk "${args[@]}" ; then
 		SKIP_REASONS+=("requires modular null_blk")
 		return 1
 	fi
