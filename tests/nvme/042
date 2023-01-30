@@ -58,8 +58,7 @@ test() {
 		_set_nvmet_hostkey "${hostnqn}" "${hostkey}"
 
 		_nvme_connect_subsys "${nvme_trtype}" "${subsys_name}" \
-				     "${def_traddr}" "${def_trsvcid}" \
-				     "${hostnqn}" "${hostid}" \
+				     "" "" "${hostnqn}" "${hostid}" \
 				     "${hostkey}"
 		udevadm settle
 
@@ -76,8 +75,7 @@ test() {
 		_set_nvmet_hostkey "${hostnqn}" "${hostkey}"
 
 		_nvme_connect_subsys "${nvme_trtype}" "${subsys_name}" \
-				     "${def_traddr}" "${def_trsvcid}" \
-				     "${hostnqn}" "${hostid}" \
+				     "" "" "${hostnqn}" "${hostid}" \
 				     "${hostkey}"
 
 		udevadm settle

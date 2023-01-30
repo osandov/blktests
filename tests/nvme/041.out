@@ -1,6 +1,5 @@
 Running nvme/041
 Test unauthenticated connection (should fail)
-no controller found: failed to write to nvme-fabrics device
 NQN:blktests-subsystem-1 disconnected 0 controller(s)
 Test authenticated connection
 NQN:blktests-subsystem-1 disconnected 1 controller(s)
