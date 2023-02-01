@@ -17,19 +17,6 @@ _have_fio_with_poll() {
 	return 0
 }
 
-_require_test_dev_supports_io_poll() {
-	local old_io_poll
-	if ! old_io_poll="$(cat "${TEST_DEV_SYSFS}/queue/io_poll" 2>/dev/null)"; then
-		SKIP_REASONS+=("kernel does not support polling")
-		return 1
-	fi
-	if ! echo "$old_io_poll" >"${TEST_DEV_SYSFS}/queue/io_poll" 2>/dev/null; then
-		SKIP_REASONS+=("$TEST_DEV does not support polling")
-		return 1
-	fi
-	return 0
-}
-
 _require_test_dev_supports_io_poll_delay() {
 	local old_io_poll_delay
 	if ! old_io_poll_delay="$(cat "${TEST_DEV_SYSFS}/queue/io_poll_delay" 2>/dev/null)"; then
