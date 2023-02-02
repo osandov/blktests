@@ -3,6 +3,7 @@
 // Copyright (c) 2016-2018 Western Digital Corporation or its affiliates
 
 #include <cassert>
+#include <cstdint>     // uintptr_t
 #include <cstring>     // memset()
 #include <fcntl.h>     // O_RDONLY
 #include <iomanip>
