@@ -16,8 +16,7 @@ requires() {
 }
 
 device_requires() {
-	_require_test_dev_supports_io_poll &&
-		_require_test_dev_supports_io_poll_delay
+	_require_test_dev_supports_io_poll_delay
 }
 
 fallback_device() {
@@ -40,7 +39,7 @@ run_fio_job() {
 
 	_fio_perf --bs=4k --rw=randread --norandommap --name=reads \
 		--filename="$TEST_DEV" --size="$size" --direct=1 \
-		--ioengine=pvsync2 --hipri=1
+		--ioengine=pvsync2 --hipri="$1"
 }
 
 test_device() {
@@ -51,24 +50,22 @@ test_device() {
 
 	# no polling, run job
 	FIO_PERF_PREFIX="no poll "
-	_test_dev_queue_set io_poll 0
-	run_fio_job
+	run_fio_job 0
 
 	# turn on polling, switch to classic, run job
 	FIO_PERF_PREFIX="classic poll "
-	_test_dev_queue_set io_poll 1
 	_test_dev_queue_set io_poll_delay -1
-	run_fio_job
+	run_fio_job 1
 
 	# switch to auto-hybrid polling, run job
 	FIO_PERF_PREFIX="auto hybrid poll "
 	_test_dev_queue_set io_poll_delay 0
-	run_fio_job
+	run_fio_job 1
 
 	# switch to explicit delay polling, run job
 	FIO_PERF_PREFIX="fixed hybrid poll "
 	_test_dev_queue_set io_poll_delay 4
-	run_fio_job
+	run_fio_job 1
 
 	echo "Test complete"
 }
