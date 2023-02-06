@@ -1,6 +1,9 @@
 Running nvme/017
-Discovery Log Number of Records 1, Generation counter X
+Discovery Log Number of Records 2, Generation counter X
 =====Discovery Log Entry 0======
+trtype:  loop
+subnqn:  nqn.2014-08.org.nvmexpress.discovery
+=====Discovery Log Entry 1======
 trtype:  loop
 subnqn:  blktests-subsystem-1
 Test complete
