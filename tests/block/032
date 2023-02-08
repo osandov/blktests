@@ -1,0 +1,35 @@
+#!/bin/bash
+# SPDX-License-Identifier: GPL-3.0+
+# Copyright (C) 2023 Ming Lei
+#
+# Test umount after deleting disk. Removes a device while the disk
+# is still mounted.
+
+. tests/block/rc
+. common/xfs
+. common/scsi_debug
+
+DESCRIPTION="remove one mounted device"
+QUICK=1
+
+requires() {
+	_have_xfs && _have_scsi_debug
+}
+
+test() {
+	echo "Running ${TEST_NAME}"
+
+	if ! _init_scsi_debug dev_size_mb=300; then
+		return 1
+	fi
+
+	mkdir -p "${TMPDIR}/mnt"
+	_xfs_mkfs_and_mount "/dev/${SCSI_DEBUG_DEVICES[0]}" "${TMPDIR}/mnt" > /dev/null 2>&1
+	echo 1 > "/sys/block/${SCSI_DEBUG_DEVICES[0]}/device/delete"
+	sleep 2
+	umount "${TMPDIR}/mnt"
+
+	_exit_scsi_debug
+
+	echo "Test complete"
+}
