@@ -1,0 +1,51 @@
+#!/bin/bash
+# SPDX-License-Identifier: GPL-3.0+
+# Copyright (C) 2023 Kanchan Joshi, Samsung Electronics
+# Test for unprivileged passthrough
+
+. tests/nvme/rc
+
+DESCRIPTION="basic test for unprivileged passthrough on /dev/ngX"
+QUICK=1
+
+requires() {
+	_nvme_requires
+	_require_normal_user
+	_have_kver 6 2
+}
+
+test_device() {
+	echo "Running ${TEST_NAME}"
+	local ngdev=${TEST_DEV/nvme/ng}
+	local perm nsid
+
+	perm="$(stat -c "%a" "$ngdev")"
+	nsid="$(_test_dev_nvme_nsid)"
+
+	chmod g+r,o+r "$ngdev"
+
+	if ! _run_user "nvme io-passthru ${ngdev} -o 2 -l 4096 \
+		-n $nsid -r" >> "${FULL}" 2>&1; then
+		echo "Error: io-passthru read failed"
+	fi
+
+	if _run_user "echo hello | nvme io-passthru ${ngdev} -o 1 -l 4096 \
+		-n $nsid -r" >> "${FULL}" 2>&1; then
+		echo "Error: io-passthru write passed (unexpected)"
+	fi
+
+	if ! _run_user "nvme id-ns ${ngdev}" >> "${FULL}" 2>&1; then
+		echo "Error: id-ns failed"
+	fi
+
+	if ! _run_user "nvme id-ctrl ${ngdev}" >> "${FULL}" 2>&1; then
+		echo "Error: id-ctrl failed"
+	fi
+
+	if _run_user "nvme ns-descs ${ngdev}" >> "${FULL}" 2>&1; then
+		echo "Error: ns-descs passed (unexpected)"
+	fi
+
+	echo "Test complete"
+	chmod "$perm" "$ngdev"
+}
