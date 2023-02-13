@@ -381,6 +381,14 @@ _require_test_dev_is_partition() {
 	return 0
 }
 
+_require_normal_user() {
+	if ! id "$NORMAL_USER" >/dev/null 2>&1; then
+		SKIP_REASONS+=("valid NORMAL_USER is not specfied")
+		return 1
+	fi
+	return 0
+}
+
 # Prints a space-separated list with the names of all I/O schedulers supported
 # by block device $1.
 _io_schedulers() {
@@ -408,4 +416,9 @@ _have_writeable_kmsg() {
 		return 1
 	fi
 	return 0
+}
+
+# Run the given command as NORMAL_USER
+_run_user() {
+	su "$NORMAL_USER" -c "$1"
 }

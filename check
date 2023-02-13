@@ -799,6 +799,7 @@ fi
 
 : "${LOGGER_PROG:="$(type -P logger || echo true)"}"
 : "${RUN_ZONED_TESTS:=0}"
+: "${NORMAL_USER:=''}"
 
 # Sanity check options.
 if [[ $QUICK_RUN -ne 0 && ! "${TIMEOUT:-}" ]]; then

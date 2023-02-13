@@ -113,6 +113,16 @@ use_siw=1 ./check nvmeof-mp/
 use_siw=1 ./check srp/
 ```
 
+### Normal user
+
+To run test cases which require normal user privilege, prepare a user and
+specify it to the `NORMAL_USER` variable. The test cases are skipped unless a
+valid user is specified.
+
+```sh
+NORMAL_USER=blktests_user
+```
+
 ### Custom Setup
 
 The `config` file is really just a bash file that is sourced at the beginning
