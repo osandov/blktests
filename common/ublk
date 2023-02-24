@@ -1,0 +1,35 @@
+#!/bin/bash
+# SPDX-License-Identifier: GPL-3.0+
+# Copyright (C) 2023 Ming Lei
+#
+# ublk_drv helper functions.
+
+. common/shellcheck
+
+_have_ublk() {
+	_have_driver ublk_drv
+	_have_src_program miniublk
+}
+
+_remove_ublk_devices() {
+	src/miniublk del -a
+}
+
+_init_ublk() {
+	_remove_ublk_devices
+
+	modprobe -rq ublk_drv
+	if ! modprobe ublk_drv; then
+		SKIP_REASONS+=("requires ublk_drv")
+		return 1
+	fi
+
+	udevadm settle
+	return 0
+}
+
+_exit_ublk() {
+	_remove_ublk_devices
+	udevadm settle
+	modprobe -r -q ublk_drv
+}
