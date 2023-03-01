@@ -24,6 +24,8 @@ _nvme_requires() {
 	loop)
 		_have_driver nvme-loop
 		_have_configfs
+		def_adrfam="loop"
+		def_traddr="1"
 		;;
 	pci)
 		_have_driver nvme
@@ -331,6 +333,8 @@ _nvme_connect_subsys() {
 		ARGS+=(-a "${traddr}" -w "${host_traddr}")
 	elif [[ "${trtype}" != "loop" ]]; then
 		ARGS+=(-a "${traddr}" -s "${trsvcid}")
+	elif [[ "${traddr}" ]]; then
+		ARGS+=(-a "${traddr}")
 	fi
 	if [[ "${hostnqn}" != "$def_hostnqn" ]]; then
 		ARGS+=(--hostnqn="${hostnqn}")
@@ -379,7 +383,7 @@ _create_nvmet_port() {
 	echo "${trtype}" > "${NVMET_CFS}/ports/${port}/addr_trtype"
 	echo "${traddr}" > "${NVMET_CFS}/ports/${port}/addr_traddr"
 	echo "${adrfam}" > "${NVMET_CFS}/ports/${port}/addr_adrfam"
-	if [[ "${adrfam}" != "fc" ]]; then
+	if [[ "${adrfam}" != "fc" && "${adrfam}" != "loop" ]]; then
 		echo "${trsvcid}" > "${NVMET_CFS}/ports/${port}/addr_trsvcid"
 	fi
 
