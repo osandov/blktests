@@ -372,9 +372,32 @@ _create_nvmet_port() {
 	local trsvcid="${4:-$def_trsvcid}"
 
 	local port
+	local portcfs
 	for ((port = 0; ; port++)); do
-		if [[ ! -e "${NVMET_CFS}/ports/${port}" ]]; then
+		portcfs="${NVMET_CFS}/ports/${port}"
+		if [[ ! -e "${portcfs}" ]]; then
 			break
+		else
+			tmp_trtype=$(cat "${portcfs}/addr_trtype")
+			tmp_traddr=$(cat "${portcfs}/addr_traddr")
+			tmp_trsvcid=$(cat "${portcfs}/addr_trsvcid")
+			if [[ "${tmp_trtype}" != "${trtype}" ]]; then
+				continue
+			fi
+			if [[ "${tmp_traddr}" != "${traddr}" ]]; then
+				continue
+			fi
+			if [[ "${trtype}" == "loop" ]]; then
+				traddr=$((tmp_traddr + 1))
+			elif [[ "${trtype}" == "tcp" ]]; then
+				if [[ "${tmp_trsvcid}" != "${trsvcid}" ]]; then
+					continue
+				fi
+				trsvcid=$((tmp_trsvcid + 1))
+			else
+				# target port present, return
+				exit 1
+			fi
 		fi
 	done
 
@@ -400,6 +423,24 @@ _remove_nvmet_port() {
 	done
 	rm -f "${port_cfs}"/subsystems/*
 	rmdir "${port_cfs}"
+}
+
+_nvmet_traddr_from_port() {
+	local port="$1"
+	local port_cfs="${NVMET_CFS}/ports/${port}"
+
+	if [ -d "${port_cfs}" ] ; then
+		cat "${port_cfs}/addr_traddr"
+	fi
+}
+
+_nvmet_trsvcid_from_port() {
+	local port="$1"
+	local port_cfs="${NVMET_CFS}/ports/${port}"
+
+	if [ -d "${port_cfs}" ] ; then
+		cat "${port_cfs}/addr_trsvcid"
+	fi
 }
 
 _create_nvmet_anagroup() {
