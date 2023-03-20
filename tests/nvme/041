@@ -55,14 +55,17 @@ test() {
 	# Test unauthenticated connection (should fail)
 	echo "Test unauthenticated connection (should fail)"
 	_nvme_connect_subsys "${nvme_trtype}" "${subsys_name}" \
-			     "" "" "${hostnqn}" "${hostid}"
+			     --hostnqn "${hostnqn}" \
+			     --hostid "${hostid}"
 
 	_nvme_disconnect_subsys "${subsys_name}"
 
 	# Test authenticated connection
 	echo "Test authenticated connection"
 	_nvme_connect_subsys "${nvme_trtype}" "${subsys_name}" \
-			     "" "" "${hostnqn}" "${hostid}" "${hostkey}"
+			     --hostnqn "${hostnqn}" \
+			     --hostid "${hostid}" \
+			     --dhchap-secret "${hostkey}"
 
 	udevadm settle
 

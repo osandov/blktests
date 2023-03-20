@@ -65,8 +65,10 @@ test() {
 	_set_nvmet_dhgroup "${hostnqn}" "ffdhe2048"
 
 	_nvme_connect_subsys "${nvme_trtype}" "${subsys_name}" \
-			     "" "" "${hostnqn}" "${hostid}" \
-			     "${hostkey}" "${ctrlkey}"
+			     --hostnqn "${hostnqn}" \
+			     --hostid "${hostid}" \
+			     --dhchap-secret "${hostkey}" \
+			     --dhchap-ctrl-secret "${ctrlkey}"
 
 	udevadm settle
 
