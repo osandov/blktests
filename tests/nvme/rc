@@ -326,6 +326,9 @@ _nvme_connect_subsys() {
 	local hostid="$def_hostid"
 	local hostkey=""
 	local ctrlkey=""
+	local nr_io_queues=""
+	local nr_write_queues=""
+	local nr_poll_queues=""
 
 	while [[ $# -gt 0 ]]; do
 		case $1 in
@@ -355,6 +358,18 @@ _nvme_connect_subsys() {
 				;;
 			-C|--dhchap-ctrl-secret)
 				ctrlkey="$2"
+				shift 2
+				;;
+			-i|--nr-io-queues)
+				nr_io_queues="$2"
+				shift 2
+				;;
+			-W|--nr-write-queues)
+				nr_write_queues="$2"
+				shift 2
+				;;
+			-P|--nr-poll-queues)
+				nr_poll_queues="$2"
 				shift 2
 				;;
 			*)
@@ -387,6 +402,16 @@ _nvme_connect_subsys() {
 	if [[ -n "${ctrlkey}" ]]; then
 		ARGS+=(--dhchap-ctrl-secret="${ctrlkey}")
 	fi
+	if [[ -n "${nr_io_queues}" ]]; then
+		ARGS+=(--nr-io-queues="${nr_io_queues}")
+	fi
+	if [[ -n "${nr_write_queues}" ]]; then
+		ARGS+=(--nr-write-queues="${nr_write_queues}")
+	fi
+	if [[ -n "${nr_poll_queues}" ]]; then
+		ARGS+=(--nr-poll-queues="${nr_poll_queues}")
+	fi
+
 	nvme connect "${ARGS[@]}" 2> /dev/null
 }
 
