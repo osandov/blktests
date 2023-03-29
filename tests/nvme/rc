@@ -93,17 +93,26 @@ _require_test_dev_is_nvme() {
 	return 0
 }
 
+_require_nvme_trtype() {
+	local trtype
+	for trtype in "$@"; do
+		if [[ "${nvme_trtype}" == "$trtype" ]]; then
+			return 0
+		fi
+	done
+	SKIP_REASONS+=("nvme_trtype=${nvme_trtype} is not supported in this test")
+	return 1
+}
+
 _require_nvme_trtype_is_loop() {
-	if [[ "${nvme_trtype}" != "loop" ]]; then
-		SKIP_REASONS+=("nvme_trtype=${nvme_trtype} is not supported in this test")
+	if ! _require_nvme_trtype loop; then
 		return 1
 	fi
 	return 0
 }
 
 _require_nvme_trtype_is_fabrics() {
-	if [[ "${nvme_trtype}" == "pci" ]]; then
-		SKIP_REASONS+=("nvme_trtype=${nvme_trtype} is not supported in this test")
+	if ! _require_nvme_trtype loop fc rdma tcp; then
 		return 1
 	fi
 	return 0
