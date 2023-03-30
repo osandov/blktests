@@ -1,0 +1,63 @@
+#!/bin/bash
+# SPDX-License-Identifier: GPL-3.0+
+# Copyright 2023 Alyssa Ross
+#
+# Regression test for patch "loop: LOOP_CONFIGURE: send uevents for partitions".
+
+. tests/loop/rc
+
+DESCRIPTION="check that LOOP_CONFIGURE sends uevents for partitions"
+
+QUICK=1
+
+test() {
+	echo "Running ${TEST_NAME}"
+
+	# Make a disk image with a partition.
+	truncate -s 3MiB "$TMPDIR/img"
+	sfdisk "$TMPDIR/img" >"$FULL" <<EOF
+label: gpt
+size=1MiB
+EOF
+
+	mkfifo "$TMPDIR/mon"
+	timeout 5 udevadm monitor -ks block/partition >"$TMPDIR/mon" &
+
+	# Open the fifo for reading, and wait for udevadm monitor to start.
+	exec 3< "$TMPDIR/mon"
+	read -r _ <&3
+	read -r _ <&3
+	read -r _ <&3
+
+	dev="$(losetup -f)"
+
+	# The default udev behavior is to watch loop devices, which means that
+	# udevd will explicitly prompt the kernel to rescan the partitions with
+	# ioctl(BLKRRPART).  We want to make sure we're getting uevents from
+	# ioctl(LOOP_CONFIGURE), so disable this udev behavior for our device to
+	# avoid false positives.
+	[[ ! -d /run/udev/rules.d ]] && mkdir -p /run/udev/rules.d
+	echo "ACTION!=\"remove\", KERNEL==\"${dev#/dev/}\", OPTIONS+=\"nowatch\"" \
+		>/run/udev/rules.d/99-blktests-$$.rules
+	udevadm control -R
+
+	# Open and close the loop device for writing, to trigger the inotify
+	# event udevd had already started listening for.
+	: > "$dev"
+
+	# Wait for udev to have processed the inotify event.
+	udevadm control --ping
+
+	losetup -P "$dev" "$TMPDIR/img"
+
+	# Wait for at most 1 add event so we don't need to wait for timeout if
+	# we get what we're looking for.
+	<&3 grep -m 1 '^KERNEL\[.*\] add' |
+		sed -e 's/\[.*\]//' -e 's/loop[0-9]\+/loop_/g'
+
+	rm /run/udev/rules.d/99-blktests-$$.rules
+	udevadm control -R
+	losetup -d "$dev"
+
+	echo "Test complete"
+}
