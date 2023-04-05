@@ -1,0 +1,127 @@
+#!/bin/bash
+# SPDX-License-Identifier: GPL-3.0+
+# Copyright (C) 2023 Daniel Wagner, SUSE Labs
+#
+# Test queue count changes on reconnect
+
+. tests/nvme/rc
+
+DESCRIPTION="Test queue count changes on reconnect"
+
+requires() {
+	_nvme_requires
+	_have_loop
+	_require_nvme_trtype tcp rdma fc
+	_require_min_cpus 2
+}
+
+nvmf_wait_for_state() {
+	local def_state_timeout=5
+	local subsys_name="$1"
+	local state="$2"
+	local timeout="${3:-$def_state_timeout}"
+	local nvmedev
+	local state_file
+	local start_time
+	local end_time
+
+	nvmedev=$(_find_nvme_dev "${subsys_name}")
+	state_file="/sys/class/nvme-fabrics/ctl/${nvmedev}/state"
+
+	start_time=$(date +%s)
+	while ! grep -q "${state}" "${state_file}"; do
+		sleep 1
+		end_time=$(date +%s)
+                if (( end_time - start_time > timeout )); then
+			echo "expected state \"${state}\" not " \
+				"reached within ${timeout} seconds"
+			return 1
+		fi
+	done
+
+	return 0
+}
+
+set_nvmet_attr_qid_max() {
+	local nvmet_subsystem="$1"
+	local qid_max="$2"
+	local cfs_path="${NVMET_CFS}/subsystems/${nvmet_subsystem}"
+
+	echo "${qid_max}" > "${cfs_path}/attr_qid_max"
+}
+
+set_qid_max() {
+	local port="$1"
+	local subsys_name="$2"
+	local qid_max="$3"
+
+	set_nvmet_attr_qid_max "${subsys_name}" "${qid_max}"
+
+	# Setting qid_max forces a disconnect and the reconntect attempt starts
+	nvmf_wait_for_state "${subsys_name}" "connecting" || return 1
+	nvmf_wait_for_state "${subsys_name}" "live" || return 1
+
+	return 0
+}
+
+test() {
+	echo "Running ${TEST_NAME}"
+
+	_setup_nvmet
+
+	local subsys_name="blktests-subsystem-1"
+	local cfs_path="${NVMET_CFS}/subsystems/${subsys_name}"
+	local file_path="${TMPDIR}/img"
+	local skipped=false
+	local hostnqn
+	local hostid
+	local port
+
+	hostid="$(uuidgen)"
+	if [ -z "$hostid" ] ; then
+		echo "uuidgen failed"
+		return 1
+	fi
+	hostnqn="nqn.2014-08.org.nvmexpress:uuid:${hostid}"
+
+	truncate -s 512M "${file_path}"
+
+	_create_nvmet_subsystem "${subsys_name}" "${file_path}" \
+		"b92842df-a394-44b1-84a4-92ae7d112861"
+	port="$(_create_nvmet_port "${nvme_trtype}")"
+	_add_nvmet_subsys_to_port "${port}" "${subsys_name}"
+	_create_nvmet_host "${subsys_name}" "${hostnqn}"
+
+	if [[ -f "${cfs_path}/attr_qid_max" ]] ; then
+		_nvme_connect_subsys "${nvme_trtype}" "${subsys_name}" \
+					--hostnqn "${hostnqn}" \
+					--hostid "${hostid}" \
+					--keep-alive-tmo 1 \
+					--reconnect-delay 2
+
+		if ! nvmf_wait_for_state "${subsys_name}" "live" ; then
+			echo FAIL
+		else
+			set_qid_max "${port}" "${subsys_name}" 1 || echo FAIL
+			set_qid_max "${port}" "${subsys_name}" 128 || echo FAIL
+		fi
+
+		_nvme_disconnect_subsys "${subsys_name}"
+	else
+		SKIP_REASONS+=("missing attr_qid_max feature")
+		skipped=true
+	fi
+
+	_remove_nvmet_subsystem_from_port "${port}" "${subsys_name}"
+	_remove_nvmet_subsystem "${subsys_name}"
+	_remove_nvmet_port "${port}"
+	_remove_nvmet_host "${hostnqn}"
+
+	rm "${file_path}"
+
+	if [[ "${skipped}" = true ]] ; then
+		return 1
+	fi
+
+	echo "Test complete"
+}
