@@ -338,6 +338,9 @@ _nvme_connect_subsys() {
 	local nr_io_queues=""
 	local nr_write_queues=""
 	local nr_poll_queues=""
+	local keep_alive_tmo=""
+	local reconnect_delay=""
+	local ctrl_loss_tmo=""
 
 	while [[ $# -gt 0 ]]; do
 		case $1 in
@@ -381,6 +384,18 @@ _nvme_connect_subsys() {
 				nr_poll_queues="$2"
 				shift 2
 				;;
+			-k|--keep-alive-tmo)
+				keep_alive_tmo="$2"
+				shift 2
+				;;
+			-c|--reconnect-delay)
+				reconnect_delay="$2"
+				shift 2
+				;;
+			-l|--ctrl-loss-tmo)
+				ctrl_loss_tmo="$2"
+				shift 2
+				;;
 			*)
 				positional_args+=("$1")
 				shift
@@ -419,6 +434,15 @@ _nvme_connect_subsys() {
 	fi
 	if [[ -n "${nr_poll_queues}" ]]; then
 		ARGS+=(--nr-poll-queues="${nr_poll_queues}")
+	fi
+	if [[ -n "${keep_alive_tmo}" ]]; then
+		ARGS+=(--keep-alive-tmo="${keep_alive_tmo}")
+	fi
+	if [[ -n "${reconnect_delay}" ]]; then
+		ARGS+=(--reconnect-delay="${reconnect_delay}")
+	fi
+	if [[ -n "${ctrl_loss_tmo}" ]]; then
+		ARGS+=(--ctrl-loss-tmo="${ctrl_loss_tmo}")
 	fi
 
 	nvme connect "${ARGS[@]}" 2> /dev/null
