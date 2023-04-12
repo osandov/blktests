@@ -18,6 +18,15 @@ requires() {
 	    _have_kernel_option FAULT_INJECTION_DEBUG_FS
 }
 
+# Get the last dmesg lines as many as specified. Exclude the lines to indicate
+# suppression by rate limit.
+last_dmesg()
+{
+	local nr_lines=$1
+
+	dmesg -t | grep -v "callbacks suppressed" | tail "-$nr_lines"
+}
+
 inject_unrec_read_on_read()
 {
 	# Inject a 'Unrecovered Read Error' (0x281) status error on a READ
@@ -29,10 +38,10 @@ inject_unrec_read_on_read()
 	_nvme_disable_err_inject "$1"
 
 	if ${nvme_verbose_errors}; then
-		dmesg -t | tail -2 | grep "Unrecovered Read Error (" | \
+		last_dmesg 2 | grep "Unrecovered Read Error (" | \
 		    sed 's/nvme.*://g'
 	else
-		dmesg -t | tail -2 | grep "Cmd(" | sed 's/I\/O Cmd/Read/g' | \
+		last_dmesg 2 | grep "Cmd(" | sed 's/I\/O Cmd/Read/g' | \
 		    sed 's/I\/O Error/Unrecovered Read Error/g' | \
 		    sed 's/nvme.*://g'
 	fi
@@ -49,10 +58,10 @@ inject_invalid_status_on_read()
 	_nvme_disable_err_inject "$1"
 
 	if ${nvme_verbose_errors}; then
-		dmesg -t | tail -2 | grep "Unknown (" | \
+		last_dmesg 2 | grep "Unknown (" | \
 		    sed 's/nvme.*://g'
 	else
-		dmesg -t | tail -2 | grep "Cmd(" | sed 's/I\/O Cmd/Read/g' | \
+		last_dmesg 2 | grep "Cmd(" | sed 's/I\/O Cmd/Read/g' | \
 		    sed 's/I\/O Error/Unknown/g' | \
 		    sed 's/nvme.*://g'
 	fi
@@ -69,10 +78,10 @@ inject_write_fault_on_write()
 	_nvme_disable_err_inject "$1"
 
 	if ${nvme_verbose_errors}; then
-		dmesg -t | tail -2 | grep "Write Fault (" | \
+		last_dmesg 2 | grep "Write Fault (" | \
 		    sed 's/nvme.*://g'
 	else
-		dmesg -t | tail -2 | grep "Cmd(" | sed 's/I\/O Cmd/Write/g' | \
+		last_dmesg 2 | grep "Cmd(" | sed 's/I\/O Cmd/Write/g' | \
 		    sed 's/I\/O Error/Write Fault/g' | \
 		    sed 's/nvme.*://g'
 	fi
@@ -90,10 +99,10 @@ inject_access_denied_on_identify()
 	_nvme_disable_err_inject "$1"
 
 	if ${nvme_verbose_errors}; then
-		dmesg -t | tail -1 | grep "Access Denied (" | \
+		last_dmesg 1 | grep "Access Denied (" | \
 		    sed 's/nvme.*://g'
 	else
-		dmesg -t | tail -1 | grep "Admin Cmd(" | \
+		last_dmesg 1 | grep "Admin Cmd(" | \
 		    sed 's/Admin Cmd/Identify/g' | \
 		    sed 's/I\/O Error/Access Denied/g' | \
 		    sed 's/nvme.*://g'
@@ -138,6 +147,9 @@ test_device() {
 	ctrl_dev=${ns_dev%n*}
 
 	_nvme_err_inject_setup "${ns_dev}" "${ctrl_dev}"
+
+	# wait DEFAULT_RATELIMIT_INTERVAL=5 seconds to ensure errors are printed
+	sleep 5
 
 	inject_unrec_read_on_read "${ns_dev}"
 	inject_invalid_status_on_read "${ns_dev}"
