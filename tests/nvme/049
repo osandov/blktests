@@ -1,0 +1,54 @@
+#!/bin/bash
+# SPDX-License-Identifier: GPL-3.0+
+# Copyright (C) 2023 Kanchan Joshi, Samsung Electronics
+# Test exercising uring passthrough IO on nvme char device
+
+. tests/nvme/rc
+
+DESCRIPTION="basic test for uring-passthrough I/O on /dev/ngX"
+QUICK=1
+
+requires() {
+	_nvme_requires
+	_have_kernel_option IO_URING
+	_have_kver 6 1
+	_have_fio_ver 3 33
+}
+
+test_device() {
+	echo "Running ${TEST_NAME}"
+	local ngdev=${TEST_DEV/nvme/ng}
+	local common_args=(
+		--size=1M
+		--filename="$ngdev"
+		--bs=4k
+		--rw=randread
+		--numjobs=1
+		--iodepth=16
+		--name=randread
+		--ioengine=io_uring_cmd
+		--cmd_type=nvme
+		--time_based
+		--runtime=2
+	)
+	local fio_output
+
+	# check security permission
+	if ! fio_output=$(fio --name=check --size=4k --filename="$ngdev" \
+			    --rw=read --ioengine=io_uring_cmd 2>&1) &&
+			grep -qe "Permission denied" <<< "$fio_output"; then
+		SKIP_REASONS+=("IORING_OP_URING_CMD is not allowed for $ngdev")
+		return
+	fi
+
+	#plain read test
+	_run_fio "${common_args[@]}"
+
+	#read with iopoll
+	_run_fio "${common_args[@]}" --hipri
+
+	#read with fixedbufs
+	_run_fio "${common_args[@]}" --fixedbufs
+
+	echo "Test complete"
+}
