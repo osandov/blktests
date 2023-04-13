@@ -26,6 +26,21 @@ _have_fio_zbd_zonemode() {
 	return 0
 }
 
+# Check whether the version of the fio is greater than or equal to $1.$2.$3
+_have_fio_ver() {
+	local d=$1 e=$2 f=$3
+
+	_have_fio || return $?
+
+	IFS='.' read -r a b c < <(fio --version | cut -c 5- | sed 's/-.*//')
+	if [ $((a * 65536 + b * 256 + c)) -lt $((d * 65536 + e * 256 + f)) ];
+	then
+		SKIP_REASONS+=("fio version too old")
+		return 1
+	fi
+	return 0
+}
+
 declare -A FIO_TERSE_FIELDS
 FIO_TERSE_FIELDS=(
 	# Read status
