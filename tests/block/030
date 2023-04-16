@@ -17,20 +17,39 @@ requires() {
 }
 
 test() {
-	local i sq=/sys/kernel/config/nullb/nullb0/submit_queues
+	local faultb=faultb0
+	local i sq
 
 	: "${TIMEOUT:=30}"
-	# Legend: init_hctx=<interval>,<probability>,<space>,<times>
 	# Set <space> to $(nproc) + 1 to make loading of null_blk succeed.
-	if ! _init_null_blk nr_devices=0 \
-	     "init_hctx=$(nproc),100,$(($(nproc) + 1)),-1"; then
-		echo "Loading null_blk failed"
-		return 1
-	fi
-	if ! _configure_null_blk nullb0 completion_nsec=0 blocksize=512 size=16\
-	     submit_queues="$(nproc)" memory_backed=1 power=1; then
-		echo "Configuring null_blk failed"
-		return 1
+	if ! _configure_null_blk "$faultb" completion_nsec=0 blocksize=512 size=16\
+	     submit_queues="$(nproc)" memory_backed=1 \
+	     init_hctx_fault_inject/interval="$(nproc)" \
+	     init_hctx_fault_inject/probability=100 \
+	     init_hctx_fault_inject/space="$(($(nproc) + 1))" \
+	     init_hctx_fault_inject/times=-1 \
+	     init_hctx_fault_inject/verbose=0 power=1 \
+	     > /dev/null 2>&1; then
+		rmdir /sys/kernel/config/nullb/"$faultb"
+		if _module_file_exists null_blk; then
+			faultb=nullb0
+
+			# Fall back to set up with module parameter. The format
+			# is "<interval>,<probability>,<space>,<times>"
+			if ! _init_null_blk nr_devices=0 \
+			    "init_hctx=$(nproc),100,$(($(nproc) + 1)),-1"; then
+				echo "Loading null_blk failed"
+				return 1
+			fi
+			if ! _configure_null_blk "$faultb" completion_nsec=0 blocksize=512 size=16\
+			    submit_queues="$(nproc)" memory_backed=1 power=1; then
+				echo "Configuring null_blk failed"
+				return 1
+			fi
+		else
+			SKIP_REASONS+=("requires fault injection via configfs or modular null_blk")
+			return 1
+		fi
 	fi
 	# Since older null_blk versions do not allow "submit_queues" to be
 	# modified, check first whether that configs attribute is writeable.
@@ -39,6 +58,7 @@ test() {
 	# blk_mq_realloc_hw_ctxs() error paths will be triggered. Whether or
 	# not this test succeeds depends on whether or not _check_dmesg()
 	# detects a kernel warning.
+	sq=/sys/kernel/config/nullb/"$faultb"/submit_queues
 	if { echo "$(<"$sq")" >$sq; } 2>/dev/null; then
 		for ((i = 0; i < 100; i++)); do
 			echo 1 > $sq
@@ -47,7 +67,7 @@ test() {
 	else
 		SKIP_REASONS+=("Skipping test because $sq cannot be modified")
 	fi
-	rmdir /sys/kernel/config/nullb/nullb0
+	rmdir /sys/kernel/config/nullb/"$faultb"
 	_exit_null_blk
 	echo Passed
 }
