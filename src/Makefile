@@ -40,6 +40,7 @@ override CFLAGS   := -O2 -Wall -Wshadow $(CFLAGS) $(CONFIG_DEFS)
 override CXXFLAGS := -O2 -std=c++11 -Wall -Wextra -Wshadow -Wno-sign-compare \
 		     -Werror $(CXXFLAGS) $(CONFIG_DEFS)
 MINIUBLK_FLAGS :=  -D_GNU_SOURCE -lpthread -luring
+LDFLAGS ?=
 
 all: $(TARGETS)
 
@@ -51,12 +52,12 @@ install: $(TARGETS)
 	install $(TARGETS) $(dest)
 
 $(C_TARGETS): %: %.c
-	$(CC) $(CPPFLAGS) $(CFLAGS) -o $@ $^
+	$(CC) $(CPPFLAGS) $(CFLAGS) $(LDFLAGS) -o $@ $^
 
 $(CXX_TARGETS): %: %.cpp
-	$(CXX) $(CPPFLAGS) $(CXXFLAGS) -o $@ $^
+	$(CXX) $(CPPFLAGS) $(CXXFLAGS) $(LDFLAGS) -o $@ $^
 
 $(C_MINIUBLK): %: miniublk.c
-	$(CC) $(CFLAGS) $(MINIUBLK_FLAGS) -o $@ miniublk.c
+	$(CC) $(CFLAGS) $(LDFLAGS) $(MINIUBLK_FLAGS) -o $@ miniublk.c
 
 .PHONY: all clean install
