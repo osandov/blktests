@@ -8,22 +8,7 @@ _have_scsi_debug() {
 	_have_driver scsi_debug
 }
 
-_init_scsi_debug() {
-	local -a args=("$@")
-
-	if (( RUN_FOR_ZONED )); then
-		if ! _have_module_param scsi_debug zbc; then
-			return
-		fi
-		args+=(zbc=host-managed zone_nr_conv=0)
-	fi
-
-	if ! modprobe -r scsi_debug || ! modprobe scsi_debug "${args[@]}"; then
-		return 1
-	fi
-
-	udevadm settle
-
+_setup_scsi_debug_vars() {
 	local host_sysfs host target_sysfs target
 	SCSI_DEBUG_HOSTS=()
 	SCSI_DEBUG_TARGETS=()
@@ -53,6 +38,25 @@ _init_scsi_debug() {
 	fi
 
 	return 0
+}
+
+_init_scsi_debug() {
+	local -a args=("$@")
+
+	if (( RUN_FOR_ZONED )); then
+		if ! _have_module_param scsi_debug zbc; then
+			return
+		fi
+		args+=(zbc=host-managed zone_nr_conv=0)
+	fi
+
+	if ! modprobe -r scsi_debug || ! modprobe scsi_debug "${args[@]}"; then
+		return 1
+	fi
+
+	udevadm settle
+
+	_setup_scsi_debug_vars
 }
 
 _exit_scsi_debug() {
