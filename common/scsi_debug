@@ -8,16 +8,51 @@ _have_scsi_debug() {
 	_have_driver scsi_debug
 }
 
+SD_PARAM_PATH=/sys/module/scsi_debug/parameters
+SD_PSEUDO_PATH=/sys/bus/pseudo/drivers/scsi_debug
+
+_scsi_debug_key_path() {
+	local key=${1}
+
+	path="${SD_PARAM_PATH}/$key"
+	if [[ ! -e $path ]]; then
+		path="${SD_PSEUDO_PATH}/$key"
+	fi
+	if [[ ! -w $path ]]; then
+		return 1
+	fi
+
+	echo "$path"
+}
+
+declare -a SCSI_DEBUG_HOSTS
+declare -a SCSI_DEBUG_TARGETS
+declare -a SCSI_DEBUG_DEVICES
+declare -a ORIG_SCSI_DEBUG_HOSTS
+declare -A ORIG_SCSI_DEBUG_PARAMS
+declare SCSI_DEBUG_ADD_HOST_RESTORE_VALUE
+
 _setup_scsi_debug_vars() {
 	local host_sysfs host target_sysfs target
+	local -i i
+
 	SCSI_DEBUG_HOSTS=()
 	SCSI_DEBUG_TARGETS=()
 	SCSI_DEBUG_DEVICES=()
+
 	for host_sysfs in /sys/class/scsi_host/*; do
 		if [[ "$(cat "${host_sysfs}/proc_name")" = scsi_debug ]]; then
 			host="${host_sysfs#/sys/class/scsi_host/host}"
+			local orig_host=0
+			for ((i=0;i<${#ORIG_SCSI_DEBUG_HOSTS[@]};i++)); do
+				if ((host == ORIG_SCSI_DEBUG_HOSTS[i])); then
+					orig_host=1
+				fi
+			done
+			((orig_host)) && continue
 			SCSI_DEBUG_HOSTS+=("$host")
 			for target_sysfs in /sys/class/scsi_device/"$host":*; do
+				[[ ! -e $target_sysfs ]] && break
 				target="${target_sysfs#/sys/class/scsi_device/}"
 				SCSI_DEBUG_TARGETS+=("$target")
 				SCSI_DEBUG_DEVICES+=("$(ls "$target_sysfs/device/block")")
@@ -59,10 +94,86 @@ _init_scsi_debug() {
 	_setup_scsi_debug_vars
 }
 
+_configure_scsi_debug() {
+	local -a args=("$@")
+	local -a values
+	local key value path add_host_value=1
+	local -i i
+
+	udevadm settle
+
+	# fall back to _init_scsi_debug because scsi_debug is loadable
+	if _module_file_exists scsi_debug; then
+		_init_scsi_debug "${args[@]}"
+		return
+	fi
+
+	# zoned device is not yet configurable due to read-only zbc parameter
+	if (( RUN_FOR_ZONED )) && ! _have_module scsi_debug; then
+		return 1
+	fi
+
+	# List SCSI_DEBUG_HOSTS before configuration
+	ORIG_SCSI_DEBUG_HOSTS=()
+	_setup_scsi_debug_vars >& /dev/null
+	ORIG_SCSI_DEBUG_HOSTS=("${SCSI_DEBUG_HOSTS[@]}")
+
+	# Save current values of all scsi_debug parameters except add_host
+	for path in "$SD_PARAM_PATH"/* "$SD_PSEUDO_PATH"/*; do
+		if [[ -f $path && ! $path =~ add_host ]] &&
+			   [[ $(stat -c "%A" "$path") =~ rw ]]; then
+			unset "ORIG_SCSI_DEBUG_PARAMS[$path]"
+			ORIG_SCSI_DEBUG_PARAMS["$path"]="$(<"$path")"
+		fi
+	done
+
+	# Modify parameters specifeid with key=value arguments
+	for o in "$@"; do
+		key=${o%=*}
+		value=${o#*=}
+		values+=("${value}")
+		if ! path=$(_scsi_debug_key_path "$key"); then
+			echo "sysfs to write $key is not avaialbe"
+			return 1
+		fi
+		if [[ $key == add_host ]]; then
+			add_host_value=${value}
+		else
+			if ! echo -n "$value" > "$path"; then
+				echo "Failed to set $path: $value"
+			fi
+		fi
+	done
+
+	echo "${add_host_value}" > ${SD_PSEUDO_PATH}/add_host
+	SCSI_DEBUG_ADD_HOST_RESTORE_VALUE="-${add_host_value}"
+
+	udevadm settle
+
+	_setup_scsi_debug_vars
+}
+
 _exit_scsi_debug() {
+	local path value
+
 	unset SCSI_DEBUG_HOSTS
 	unset SCSI_DEBUG_TARGETS
 	unset SCSI_DEBUG_DEVICES
 	udevadm settle
-	modprobe -r scsi_debug
+
+	if _module_file_exists scsi_debug; then
+		modprobe -r scsi_debug
+		return
+	fi
+
+	echo "${SCSI_DEBUG_ADD_HOST_RESTORE_VALUE}" > ${SD_PSEUDO_PATH}/add_host
+
+	# Restore parameters modified in _configure_scsi_debug or during test
+	for path in "${!ORIG_SCSI_DEBUG_PARAMS[@]}"; do
+		value=${ORIG_SCSI_DEBUG_PARAMS[$path]}
+		if [[ "$value" != $(<"$path") ]]; then
+			echo -n "$value" > "$path"
+		fi
+		unset "ORIG_SCSI_DEBUG_PARAMS[$path]"
+	done
 }
