@@ -13,13 +13,13 @@ DESCRIPTION="stress device hotplugging"
 TIMED=1
 
 requires() {
-	_have_module scsi_debug
-	_have_driver sd_mod
+	_have_scsi_debug
+	_have_kernel_option BLK_DEV_SD
 	_have_driver sr_mod
 }
 
 stress_scsi_debug() {
-	if ! _init_scsi_debug "$@"; then
+	if ! _configure_scsi_debug "$@"; then
 		return
 	fi
 
