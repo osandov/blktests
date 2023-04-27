@@ -1,0 +1,29 @@
+#!/bin/bash
+# SPDX-License-Identifier: GPL-3.0+
+# Copyright (C) 2023 Yu Kuai
+#
+# Regression test for commit 077a4033541f ("block: don't allow a disk link
+# holder to itself")
+
+. tests/dm/rc
+
+DESCRIPTION="reload a dm with maps to itself"
+QUICK=1
+
+requires() {
+	_have_kver 6 2
+}
+
+test_device() {
+	echo "Running ${TEST_NAME}"
+
+	dmsetup create test --table "0 8192 linear ${TEST_DEV} 0"
+	dmsetup suspend test
+	if dmsetup reload test --table "0 8192 linear /dev/mapper/test 0" \
+	   &> /dev/null; then
+		echo "reload a dm with maps to itself succeed."
+	fi
+	dmsetup remove test
+
+	echo "Test complete"
+}

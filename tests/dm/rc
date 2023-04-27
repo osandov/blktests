@@ -1,0 +1,13 @@
+#!/bin/bash
+# SPDX-License-Identifier: GPL-3.0+
+# Copyright (C) 2023 Yu Kuai
+#
+# Tests for device-mapper
+
+. common/rc
+
+group_requires() {
+	_have_root
+	_have_program dmsetup
+	_have_driver dm-mod
+}
