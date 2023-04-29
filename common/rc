@@ -207,7 +207,7 @@ _have_kernel_option() {
 _have_kver() {
 	local d=$1 e=$2 f=$3
 
-	IFS='.' read -r a b c < <(uname -r | sed 's/-.*//')
+	IFS='.' read -r a b c < <(uname -r | sed 's/-.*//;s/[^.0-9]//')
 	if [ $((a * 65536 + b * 256 + c)) -lt $((d * 65536 + e * 256 + f)) ];
 	then
 		SKIP_REASONS+=("Kernel version too old")
