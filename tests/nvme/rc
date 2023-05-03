@@ -287,6 +287,11 @@ _cleanup_nvmet() {
 	shopt -u nullglob
 	trap SIGINT
 
+	if [[ "${nvme_trtype}" == "fc" ]]; then
+		_cleanup_fcloop "${def_local_wwnn}" "${def_local_wwpn}" \
+				"${def_remote_wwnn}" "${def_remote_wwpn}"
+		modprobe -rq nvme-fcloop
+	fi
 	modprobe -rq nvme-"${nvme_trtype}" 2>/dev/null
 	if [[ "${nvme_trtype}" != "loop" ]]; then
 		modprobe -rq nvmet-"${nvme_trtype}" 2>/dev/null
@@ -294,10 +299,6 @@ _cleanup_nvmet() {
 	modprobe -rq nvmet 2>/dev/null
 	if [[ "${nvme_trtype}" == "rdma" ]]; then
 		stop_soft_rdma
-	fi
-	if [[ "${nvme_trtype}" == "fc" ]]; then
-		_cleanup_fcloop "${def_local_wwnn}" "${def_local_wwpn}" \
-			        "${def_remote_wwnn}" "${def_remote_wwpn}"
 	fi
 }
 
