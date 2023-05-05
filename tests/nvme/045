@@ -11,6 +11,7 @@ QUICK=1
 
 requires() {
 	_nvme_requires
+	_have_fio
 	_have_loop
 	_have_kernel_option NVME_AUTH
 	_have_kernel_option NVME_TARGET_AUTH
