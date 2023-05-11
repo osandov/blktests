@@ -107,6 +107,8 @@ The NVMe tests can be additionally parameterized via environment variables.
 - nvme_img_size: '1G' (default)
   Run the tests with given image size in bytes. 'm', 'M', 'g'
 	and 'G' postfix are supported.
+- nvme_num_iter: 1000 (default)
+  The number of iterations a test should do.
 
 ### Running nvme-rdma nvmeof-mp srp tests
 
