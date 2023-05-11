@@ -21,6 +21,7 @@ nvme_img_size=${nvme_img_size:-"1G"}
 
 _nvme_requires() {
 	_have_program nvme
+	_require_nvme_test_img_size 4m
 	case ${nvme_trtype} in
 	loop)
 		_have_driver nvme-loop
@@ -89,6 +90,20 @@ NVMET_CFS="/sys/kernel/config/nvmet/"
 _require_test_dev_is_nvme() {
 	if ! readlink -f "$TEST_DEV_SYSFS/device" | grep -q nvme; then
 		SKIP_REASONS+=("$TEST_DEV is not a NVMe device")
+		return 1
+	fi
+	return 0
+}
+
+_require_nvme_test_img_size() {
+	local require_sz_mb
+	local nvme_img_size_mb
+
+	require_sz_mb="$(convert_to_mb "$1")"
+	nvme_img_size_mb="$(convert_to_mb "${nvme_img_size}")"
+
+	if ((nvme_img_size_mb < require_sz_mb)); then
+		SKIP_REASONS+=("nvme_img_size must be at least ${require_sz_mb}m")
 		return 1
 	fi
 	return 0
