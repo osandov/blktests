@@ -15,20 +15,6 @@ requires() {
 	_require_nvme_trtype_is_fabrics
 }
 
-
-checkgenctr() {
-	local last=$1
-	local msg=$2
-	local genctr
-
-	genctr=$(_discovery_genctr)
-	if (( "${genctr}" <= "${last}" )); then
-		echo "Generation counter not incremented when ${msg} (${genctr} <= ${last})"
-	fi
-
-	echo "${genctr}"
-}
-
 test() {
 	local port
 	local genctr
@@ -48,20 +34,20 @@ test() {
 	_create_nvmet_subsystem "${subsys}2" "$(losetup -f)"
 	_add_nvmet_subsys_to_port "${port}" "${subsys}2"
 
-	genctr=$(checkgenctr "${genctr}" "adding a subsystem to a port")
+	genctr=$(_check_genctr "${genctr}" "adding a subsystem to a port")
 
 	echo 0 > "${NVMET_CFS}/subsystems/${subsys}2/attr_allow_any_host"
 
-	genctr=$(checkgenctr "${genctr}" "clearing attr_allow_any_host")
+	genctr=$(_check_genctr "${genctr}" "clearing attr_allow_any_host")
 
 	echo 1 > "${NVMET_CFS}/subsystems/${subsys}2/attr_allow_any_host"
 
-	genctr=$(checkgenctr "${genctr}" "setting attr_allow_any_host")
+	genctr=$(_check_genctr "${genctr}" "setting attr_allow_any_host")
 
 	_remove_nvmet_subsystem_from_port "${port}" "${subsys}2"
 	_remove_nvmet_subsystem "${subsys}2"
 
-	genctr=$(checkgenctr "${genctr}" "removing a subsystem from a port")
+	genctr=$(_check_genctr "${genctr}" "removing a subsystem from a port")
 
 	_remove_nvmet_subsystem_from_port "${port}" "${subsys}1"
 	_remove_nvmet_subsystem "${subsys}1"

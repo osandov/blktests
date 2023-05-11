@@ -27,12 +27,14 @@ test() {
 	local loop_dev
 	loop_dev="$(losetup -f)"
 
+	local genctr=1
+
 	for ((i = 0; i < iterations; i++)); do
 		_create_nvmet_subsystem "blktests-subsystem-$i" "${loop_dev}"
 		_add_nvmet_subsys_to_port "${port}" "blktests-subsystem-$i"
 	done
 
-	_nvme_discover "${nvme_trtype}" | _filter_discovery
+	genctr=$(_check_genctr "${genctr}" "adding a subsystem to a port")
 
 	for ((i = iterations - 1; i >= 0; i--)); do
 		_remove_nvmet_subsystem_from_port "${port}" "blktests-subsystem-$i"
