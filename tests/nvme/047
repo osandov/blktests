@@ -25,6 +25,7 @@ test() {
 	local port
 	local nvmedev
 	local loop_dev
+	local rand_io_size
 	local file_path="$TMPDIR/img"
 	local subsys_name="blktests-subsystem-1"
 
@@ -42,7 +43,8 @@ test() {
 
 	nvmedev=$(_find_nvme_dev "${subsys_name}")
 
-	_xfs_run_fio_verify_io /dev/"${nvmedev}n1" "1m" || echo FAIL
+	rand_io_size="$(_nvme_calc_rand_io_size 4M)"
+	_run_fio_rand_io --filename="/dev/${nvmedev}n1" --size="${rand_io_size}"
 
 	_nvme_disconnect_subsys "${subsys_name}" >> "$FULL" 2>&1
 
@@ -50,7 +52,7 @@ test() {
 		--nr-write-queues 1 \
 		--nr-poll-queues 1 || echo FAIL
 
-	_xfs_run_fio_verify_io /dev/"${nvmedev}n1" "1m" || echo FAIL
+	_run_fio_rand_io --filename="/dev/${nvmedev}n1" --size="${rand_io_size}"
 
 	_nvme_disconnect_subsys "${subsys_name}" >> "$FULL" 2>&1
 

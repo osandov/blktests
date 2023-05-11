@@ -150,6 +150,16 @@ _test_dev_nvme_nsid() {
 	cat "${TEST_DEV_SYSFS}/nsid"
 }
 
+_nvme_calc_rand_io_size() {
+	local img_size_mb
+	local io_size_kb
+
+	img_size_mb="$(convert_to_mb "$1")"
+	io_size_kb="$(((img_size_mb * 1024) / $(nproc)))"
+
+	echo "${io_size_kb}k"
+}
+
 _nvme_fcloop_add_rport() {
 	local local_wwnn="$1"
 	local local_wwpn="$2"

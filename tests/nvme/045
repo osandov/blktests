@@ -32,6 +32,7 @@ test() {
 	local ctrlkey
 	local new_ctrlkey
 	local ctrldev
+	local rand_io_size
 
 	echo "Running ${TEST_NAME}"
 
@@ -121,7 +122,8 @@ test() {
 
 	nvmedev=$(_find_nvme_dev "${subsys_name}")
 
-	_run_fio_rand_io --size=4m --filename="/dev/${nvmedev}n1"
+	rand_io_size="$(_nvme_calc_rand_io_size 4m)"
+	_run_fio_rand_io --size="${rand_io_size}" --filename="/dev/${nvmedev}n1"
 
 	_nvme_disconnect_subsys "${subsys_name}"
 
