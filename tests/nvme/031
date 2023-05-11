@@ -33,7 +33,7 @@ test() {
 
 	_setup_nvmet
 
-	truncate -s 1G "$TMPDIR/img"
+	truncate -s "${nvme_img_size}" "$TMPDIR/img"
 
 	loop_dev="$(losetup -f --show "$TMPDIR/img")"
 

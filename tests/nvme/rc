@@ -17,6 +17,7 @@ def_local_wwpn="0x20001100aa000002"
 def_hostnqn="$(cat /etc/nvme/hostnqn 2> /dev/null)"
 def_hostid="$(cat /etc/nvme/hostid 2> /dev/null)"
 nvme_trtype=${nvme_trtype:-"loop"}
+nvme_img_size=${nvme_img_size:-"1G"}
 
 _nvme_requires() {
 	_have_program nvme

@@ -24,7 +24,7 @@ test() {
 	local port
 	port="$(_create_nvmet_port "${nvme_trtype}")"
 
-	truncate -s 1G "$TMPDIR/img"
+	truncate -s "${nvme_img_size}" "$TMPDIR/img"
 
 	local loop_dev
 	loop_dev="$(losetup -f --show "$TMPDIR/img")"

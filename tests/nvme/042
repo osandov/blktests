@@ -41,7 +41,7 @@ test() {
 
 	_setup_nvmet
 
-	truncate -s 512M "${file_path}"
+	truncate -s "${nvme_img_size}" "${file_path}"
 
 	_create_nvmet_subsystem "${subsys_name}" "${file_path}"
 	port="$(_create_nvmet_port "${nvme_trtype}")"

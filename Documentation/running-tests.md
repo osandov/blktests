@@ -104,6 +104,9 @@ The NVMe tests can be additionally parameterized via environment variables.
 
 - nvme_trtype: 'loop' (default), 'tcp', 'rdma' and 'fc'
   Run the tests with the given transport.
+- nvme_img_size: '1G' (default)
+  Run the tests with given image size in bytes. 'm', 'M', 'g'
+	and 'G' postfix are supported.
 
 ### Running nvme-rdma nvmeof-mp srp tests
 
