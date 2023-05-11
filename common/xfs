@@ -37,6 +37,9 @@ _xfs_run_fio_verify_io() {
 		sz_mb="${avail_mb}"
 	else
 		sz_mb="$(convert_to_mb "${sz}")"
+		if [[ "${sz_mb}" -gt "${avail_mb}" ]]; then
+			sz_mb="${avail_mb}"
+		fi
 	fi
 
 	_run_fio_verify_io --size="${sz_mb}m" --directory="${mount_dir}/"
