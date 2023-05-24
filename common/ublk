@@ -15,8 +15,16 @@ _remove_ublk_devices() {
 	src/miniublk del -a
 }
 
+_get_ublk_dev_state() {
+	src/miniublk list -n "$1" | grep "state" | awk '{print $11}'
+}
+
+_get_ublk_daemon_pid() {
+	src/miniublk list -n "$1" | grep "pid" | awk '{print $7}'
+}
+
 _init_ublk() {
-	_remove_ublk_devices
+	_remove_ublk_devices > /dev/null 2>&1
 
 	modprobe -rq ublk_drv
 	if ! modprobe ublk_drv; then

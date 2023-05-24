@@ -1,0 +1,52 @@
+#!/bin/bash
+# SPDX-License-Identifier: GPL-3.0+
+# Copyright (C) 2023 Ziyang Zhang
+#
+# Test mounting block device exported by ublk
+
+. tests/ublk/rc
+
+DESCRIPTION="test mounting block device exported by ublk"
+
+requires() {
+	_have_program mkfs.ext4
+}
+
+test() {
+	local expect_fstype="ext4"
+	local mnt="$TMPDIR/mnt"
+
+	echo "Running ${TEST_NAME}"
+
+	if ! _init_ublk; then
+		return 1
+	fi
+
+	truncate -s 1G "$TMPDIR/img"
+	${UBLK_PROG} add -t loop -f  "$TMPDIR/img" -n 0 > "$FULL" 2>&1
+
+	udevadm settle
+	if ! ${UBLK_PROG} list -n 0 >> "$FULL" 2>&1; then
+		echo "fail to list dev"
+	fi
+
+	wipefs -a /dev/ublkb0 >> "$FULL" 2>&1
+	mkfs."$expect_fstype" /dev/ublkb0 >> "$FULL" 2>&1
+	mkdir -p "$mnt"
+	mount /dev/ublkb0 "$mnt" >> "$FULL" 2>&1
+
+	local ublk_fstype
+	ublk_fstype="$(findmnt -l -o FSTYPE -n "$mnt")"
+	if [ "$ublk_fstype" != "$expect_fstype" ]; then
+		echo "got $ublk_fstype, should be $expect_fstype"
+	fi
+	umount "$mnt" > /dev/null 2>&1
+
+	${UBLK_PROG} del -n 0 >> "$FULL" 2>&1
+
+	_exit_ublk
+
+	echo "Test complete"
+}
+
+

@@ -1,0 +1,17 @@
+#!/bin/bash
+# SPDX-License-Identifier: GPL-3.0+
+# Copyright (C) 2023 Ziyang Zhang
+#
+# ublk tests.
+
+. common/rc
+. common/ublk
+. common/fio
+
+group_requires() {
+	_have_root
+	_have_ublk
+	_have_fio
+}
+
+export UBLK_PROG="src/miniublk"
