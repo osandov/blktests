@@ -10,12 +10,29 @@ DESCRIPTION="disable PCI device while doing I/O"
 TIMED=1
 CAN_BE_ZONED=1
 
+pci_dev_mounted() {
+	local d dev p pdev
+
+	pdev="$(_get_pci_dev_from_blkdev)"
+	for d in /sys/block/*; do
+		dev=${d##*/}
+		p=$(_get_pci_from_dev_sysfs "$d")
+		[[ $p != "$pdev" ]] && continue
+		grep -qe "/dev/$dev" /proc/mounts && return 0
+	done
+	return 1
+}
+
 requires() {
 	_have_fio && _have_program setpci
 }
 
 device_requires() {
 	_require_test_dev_is_pci
+	if pci_dev_mounted; then
+		SKIP_REASONS+=("mounted block device exists on test target PCI device")
+		return 1
+	fi
 }
 
 test_device() {
