@@ -59,4 +59,18 @@ test_device() {
 	done
 
 	echo "Test complete"
+
+	# This test triggers NVME controller resets. When any failure happens
+	# during the resets, the driver marks the NVME block devices with zero
+	# capacity. Then following tests fail with the zero capacity devices. To
+	# get back the correct capacity, remove and rescan the devices.
+	if ((!$(<"$TEST_DEV_SYSFS/size"))); then
+		echo "$TEST_DEV has zero capacity" >> "$FULL"
+		if [[ -w $TEST_DEV_SYSFS/device/device/remove ]] &&
+			   [[ -w /sys/bus/pci/rescan ]]; then
+			echo "Rescan to tegain the correct capacity" >> "$FULL"
+			echo 1 > "$TEST_DEV_SYSFS/device/device/remove"
+			echo 1 > /sys/bus/pci/rescan
+		fi
+	fi
 }
