@@ -313,10 +313,14 @@ _require_test_dev_is_pci() {
 	return 0
 }
 
-_get_pci_dev_from_blkdev() {
-	readlink -f "$TEST_DEV_SYSFS/device" | \
+_get_pci_from_dev_sysfs() {
+	readlink -f "$1/device" | \
 		grep -Eo '[0-9a-f]{4,5}:[0-9a-f]{2}:[0-9a-f]{2}\.[0-9a-f]' | \
 		tail -1
+}
+
+_get_pci_dev_from_blkdev() {
+	_get_pci_from_dev_sysfs "$TEST_DEV_SYSFS"
 }
 
 _get_pci_parent_from_blkdev() {
