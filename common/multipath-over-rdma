@@ -2,7 +2,7 @@
 # SPDX-License-Identifier: GPL-2.0+
 # Copyright (c) 2017-2018 Western Digital Corporation or its affiliates.
 #
-# Functions and global variables used by both the srp and nvmeof-mp tests.
+# Functions and global variables used by the srp tests.
 
 . common/shellcheck
 . common/null_blk

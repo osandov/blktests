@@ -110,18 +110,16 @@ The NVMe tests can be additionally parameterized via environment variables.
 - nvme_num_iter: 1000 (default)
   The number of iterations a test should do.
 
-### Running nvme-rdma nvmeof-mp srp tests
+### Running nvme-rdma srp tests
 
 Most of these tests will use the rdma_rxe (soft-RoCE) driver by default. The siw (soft-iWARP) driver is also supported.
 ```sh
 To use the rdma_rxe driver:
 nvme_trtype=rdma ./check nvme/
-./check nvmeof-mp/
 ./check srp/
 
 To use the siw driver:
 use_siw=1 nvme_trtype=rdma ./check nvme/
-use_siw=1 ./check nvmeof-mp/
 use_siw=1 ./check srp/
 ```
 
