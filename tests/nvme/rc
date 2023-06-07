@@ -734,12 +734,6 @@ _nvmet_passthru_target_cleanup() {
 	_remove_nvmet_passhtru "${subsys_name}"
 }
 
-_filter_discovery() {
-	sed -n -r -e "s/Generation counter [0-9]+/Generation counter X/" \
-		  -e '/Discovery Log Number|Log Entry|trtype|subnqn/p'
-
-}
-
 _discovery_genctr() {
 	_nvme_discover "${nvme_trtype}" |
 		sed -n -e 's/^.*Generation counter \([0-9]\+\).*$/\1/p'
