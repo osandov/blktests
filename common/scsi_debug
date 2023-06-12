@@ -85,7 +85,12 @@ _init_scsi_debug() {
 		args+=(zbc=host-managed zone_nr_conv=0)
 	fi
 
-	if ! modprobe -r scsi_debug || ! modprobe scsi_debug "${args[@]}"; then
+	if ! _unload_module scsi_debug 10; then
+		echo "Unloading scsi_debug failed" >&2
+		return 1
+	fi
+	if ! modprobe scsi_debug "${args[@]}"; then
+		echo "Loading scsi_debug ${args[*]} failed" >&2
 		return 1
 	fi
 
