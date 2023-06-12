@@ -18,6 +18,7 @@ requires() {
 
 test() {
 	local subsys="blktests-subsystem-1"
+	local file_path="${TMPDIR}/img"
 	local port
 	local loop_dev
 	local nvmedev
@@ -26,8 +27,8 @@ test() {
 	echo "Running ${TEST_NAME}"
 
 	_setup_nvmet
-	truncate -s "${nvme_img_size}" "$TMPDIR/img"
-	loop_dev="$(losetup -f --show "$TMPDIR/img")"
+	truncate -s "${nvme_img_size}" "${file_path}"
+	loop_dev="$(losetup -f --show "${file_path}")"
 
 	port="$(_create_nvmet_port "${nvme_trtype}")"
 	_create_nvmet_subsystem "${subsys}" "${loop_dev}"
@@ -56,6 +57,10 @@ test() {
 	_remove_nvmet_subsystem_from_port "${port}" "${subsys}"
 	_remove_nvmet_subsystem "${subsys}"
 	_remove_nvmet_port "${port}"
+
+	losetup -d "${loop_dev}"
+
+	rm -f "${file_path}"
 
 	echo "Test complete"
 }
