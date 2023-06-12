@@ -441,14 +441,15 @@ _test_dev_is_zoned() {
 
 # Arguments: module to unload ($1) and retry count ($2).
 _unload_module() {
-	local i m=$1 rc=${2:-1}
+	local i m=$1 rc=${2:-1} reason
 
 	[ ! -e "/sys/module/$m" ] && return 0
 	for ((i=rc;i>0;i--)); do
-		modprobe -r "$m"
+		reason=$(modprobe -r "$m" 2>&1)
 		[ ! -e "/sys/module/$m" ] && return 0
 		sleep .1
 	done
+	echo "${reason}" >&2
 	return 1
 }
 
