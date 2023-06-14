@@ -1,0 +1,60 @@
+#!/bin/bash
+# SPDX-License-Identifier: GPL-3.0+
+# Copyright (C) 2023 Nitesh Shetty
+#
+# Check memory leak when null_blk driver is loaded with memory_backed=1
+
+. tests/block/rc
+. common/null_blk
+
+DESCRIPTION="load/unload null_blk memory_backed=1 to check memleak"
+QUICK=1
+
+requires() {
+	_have_module null_blk
+	_have_module_param null_blk memory_backed
+	_have_program dd
+}
+
+run_nullblk_dd() {
+	if ! _init_null_blk memory_backed=1; then
+		echo "Loading null_blk failed"
+		return 1
+	fi
+	dd if=/dev/urandom of=/dev/nullb0 oflag=direct bs=1M count="$1" > \
+		/dev/null 2>&1
+	_exit_null_blk
+}
+
+free_memory() {
+	sed -n -e 's/^MemFree:[[:blank:]]*\([0-9]*\)[[:blank:]]*kB$/\1/p' \
+		/proc/meminfo
+}
+
+test() {
+	echo "Running ${TEST_NAME}"
+
+	local mem_leak=0 size=50
+	local i mem_start mem_end mem_used
+
+	for ((i = 0; i < 5; i++)); do
+		mem_start=$(free_memory)
+		run_nullblk_dd $size
+		mem_end=$(free_memory)
+
+		mem_used=$(((mem_start - mem_end) / 1024))
+		# -10MB to account for some randomness in freeing by some
+		# simultaneous process
+		if ((mem_used >= size - 10)); then
+			mem_leak=$((mem_leak + 1))
+		fi
+	done
+
+	# There might be possibilty of some random process freeing up memory at
+	# same time nullblk is unloaded.
+	# we consider 3/5 times to be positive.
+	if ((mem_leak > 3)); then
+		echo "Memleak: Memory is not freed by null-blk driver"
+	fi
+	echo "Test complete"
+}
