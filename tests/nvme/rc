@@ -14,8 +14,23 @@ def_remote_wwnn="0x10001100aa000001"
 def_remote_wwpn="0x20001100aa000001"
 def_local_wwnn="0x10001100aa000002"
 def_local_wwpn="0x20001100aa000002"
-def_hostnqn="$(cat /etc/nvme/hostnqn 2> /dev/null)"
-def_hostid="$(cat /etc/nvme/hostid 2> /dev/null)"
+
+if [ -f "/etc/nvme/hostid" ]; then
+	def_hostid="$(cat /etc/nvme/hostid 2> /dev/null)"
+else
+	def_hostid="$(uuidgen)"
+fi
+if [ -z "$def_hostid" ] ; then
+	def_hostid="0f01fb42-9f7f-4856-b0b3-51e60b8de349"
+fi
+
+if [ -f "/etc/nvme/hostnqn" ]; then
+	def_hostnqn="$(cat /etc/nvme/hostnqn 2> /dev/null)"
+fi
+if [ -z "$def_hostnqn" ] ; then
+	def_hostnqn="nqn.2014-08.org.nvmexpress:uuid:${def_hostid}"
+fi
+
 nvme_trtype=${nvme_trtype:-"loop"}
 nvme_img_size=${nvme_img_size:-"1G"}
 nvme_num_iter=${nvme_num_iter:-"1000"}
@@ -442,12 +457,8 @@ _nvme_connect_subsys() {
 	elif [[ "${trtype}" != "loop" ]]; then
 		ARGS+=(-a "${traddr}" -s "${trsvcid}")
 	fi
-	if [[ "${hostnqn}" != "$def_hostnqn" ]]; then
-		ARGS+=(--hostnqn="${hostnqn}")
-	fi
-	if [[ "${hostid}" != "$def_hostid" ]]; then
-		ARGS+=(--hostid="${hostid}")
-	fi
+	ARGS+=(--hostnqn="${hostnqn}")
+	ARGS+=(--hostid="${hostid}")
 	if [[ -n "${hostkey}" ]]; then
 		ARGS+=(--dhchap-secret="${hostkey}")
 	fi
@@ -483,6 +494,8 @@ _nvme_discover() {
 	local trsvcid="${3:-$def_trsvcid}"
 
 	ARGS=(-t "${trtype}")
+	ARGS+=(--hostnqn="${def_hostnqn}")
+	ARGS+=(--hostid="${def_hostid}")
 	if [[ "${trtype}" = "fc" ]]; then
 		ARGS+=(-a "${traddr}" -w "${host_traddr}")
 	elif [[ "${trtype}" != "loop" ]]; then
