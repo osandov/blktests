@@ -39,6 +39,11 @@ test() {
 		return 1
 	fi
 	hostnqn="nqn.2014-08.org.nvmexpress:uuid:${hostid}"
+	hostkey="$(nvme gen-dhchap-key -n ${subsys_name} 2> /dev/null)"
+	if [ -z "$hostkey" ] ; then
+		echo "nvme gen-dhchap-key failed"
+		return 1
+	fi
 
 	_setup_nvmet
 
