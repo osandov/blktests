@@ -42,6 +42,24 @@ nvmf_wait_for_state() {
 	return 0
 }
 
+nvmf_check_queue_count() {
+	local subsys_name="$1"
+	local queue_count="$2"
+	local nvmedev
+	local queue_count_file
+
+	nvmedev=$(_find_nvme_dev "${subsys_name}")
+	queue_count_file=$(cat /sys/class/nvme-fabrics/ctl/"${nvmedev}"/queue_count)
+
+	queue_count=$((queue_count + 1))
+	if [[ "${queue_count}" -ne "${queue_count_file}" ]]; then
+		echo "expected queue count ${queue_count} not set"
+		return 1
+	fi
+
+	return 0
+}
+
 set_nvmet_attr_qid_max() {
 	local nvmet_subsystem="$1"
 	local qid_max="$2"
@@ -56,10 +74,8 @@ set_qid_max() {
 	local qid_max="$3"
 
 	set_nvmet_attr_qid_max "${subsys_name}" "${qid_max}"
-
-	# Setting qid_max forces a disconnect and the reconntect attempt starts
-	nvmf_wait_for_state "${subsys_name}" "connecting" || return 1
 	nvmf_wait_for_state "${subsys_name}" "live" || return 1
+	nvmf_check_queue_count "${subsys_name}" "${qid_max}" || return 1
 
 	return 0
 }
@@ -103,7 +119,7 @@ test() {
 			echo FAIL
 		else
 			set_qid_max "${port}" "${subsys_name}" 1 || echo FAIL
-			set_qid_max "${port}" "${subsys_name}" 128 || echo FAIL
+			set_qid_max "${port}" "${subsys_name}" 2 || echo FAIL
 		fi
 
 		_nvme_disconnect_subsys "${subsys_name}"
