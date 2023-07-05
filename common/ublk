@@ -27,8 +27,7 @@ _init_ublk() {
 	_remove_ublk_devices > /dev/null 2>&1
 
 	modprobe -rq ublk_drv
-	if ! modprobe ublk_drv; then
-		SKIP_REASONS+=("requires ublk_drv")
+	if _module_file_exists ublk_drv && ! modprobe ublk_drv; then
 		return 1
 	fi
 
