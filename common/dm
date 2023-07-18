@@ -21,3 +21,24 @@ _get_dev_path_by_id() {
 	done
 	return 1
 }
+
+_dm_destination_dev_set_scheduler() {
+	local dest_dev_id dest_dev path
+
+	while read -r dest_dev_id; do
+		if ! dest_dev=$(_get_dev_path_by_id "${dest_dev_id}"); then
+			continue
+		fi
+		path=${dest_dev/dev/sys\/block}/queue/scheduler
+		if [[ ! -w ${path} ]]; then
+			echo "Can not set scheduler of device mapper destination: ${dest_dev}"
+			continue
+		fi
+		if [[ ${SYSFS_QUEUE_SAVED["$path"]-unset} == unset ]]; then
+			SYSFS_QUEUE_SAVED["$path"]="$(sed \
+					-e 's/.*\[//' -e 's/\].*//' "${path}")"
+		fi
+		echo "${1}" > "${path}"
+	done < <(dmsetup table "$(<"${TEST_DEV_SYSFS}/dm/name")" |
+			 sed -n  's/.* \([0-9]*:[0-9]*\).*/\1/p')
+}

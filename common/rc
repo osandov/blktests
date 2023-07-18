@@ -10,6 +10,7 @@ shopt -s extglob
 # Include fio helpers by default.
 . common/fio
 . common/cgroup
+. common/dm
 
 # If a test runs multiple "subtests", then each subtest should typically run
 # for TIMEOUT / number of subtests.
@@ -292,6 +293,14 @@ _test_dev_queue_set() {
 		SYSFS_QUEUE_SAVED["$path"]="$(_test_dev_queue_get "$1")"
 	fi
 	echo "$2" >"$path"
+}
+
+_test_dev_set_scheduler() {
+	if [[ -w "${TEST_DEV_SYSFS}/queue/scheduler" ]]; then
+		_test_dev_queue_set scheduler "$1"
+	elif _test_dev_is_dm; then
+		_dm_destination_dev_set_scheduler "$1"
+	fi
 }
 
 _require_test_dev_is_pci() {
