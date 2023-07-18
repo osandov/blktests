@@ -38,7 +38,7 @@ test_device() {
 
 	blkzone reset -o "${ZONE_STARTS[zone_idx]}" "${TEST_DEV}"
 
-	_test_dev_queue_set scheduler deadline
+	_test_dev_set_scheduler deadline
 
 	: "${TIMEOUT:=30}"
 	FIO_PERF_FIELDS=("write io" "write iops")

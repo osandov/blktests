@@ -24,7 +24,7 @@ test_device() {
 	local -a opts=()
 
 	if _test_dev_is_zoned; then
-		_test_dev_queue_set scheduler deadline
+		_test_dev_set_scheduler deadline
 		opts+=("--direct=1" "--zonemode=zbd")
 		opts+=("--max_open_zones=$(_test_dev_max_open_active_zones)")
 	fi
