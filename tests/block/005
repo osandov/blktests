@@ -14,6 +14,10 @@ requires() {
 	_have_fio
 }
 
+device_requires() {
+	_require_test_dev_sysfs queue/scheduler
+}
+
 test_device() {
 	echo "Running ${TEST_NAME}"
 
