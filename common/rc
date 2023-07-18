@@ -256,6 +256,14 @@ _test_dev_is_rotational() {
 	[[ $(cat "${TEST_DEV_SYSFS}/queue/rotational") -ne 0 ]]
 }
 
+_require_test_dev_sysfs() {
+	if [[ ! -e "${TEST_DEV_SYSFS}/$1" ]]; then
+		SKIP_REASONS+=("${TEST_DEV} does not have sysfs attribute $1")
+		return 1
+	fi
+	return 0
+}
+
 _require_test_dev_is_rotational() {
 	if ! _test_dev_is_rotational; then
 		SKIP_REASONS+=("$TEST_DEV is not rotational")
