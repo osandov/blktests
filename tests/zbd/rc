@@ -6,6 +6,7 @@
 
 . common/rc
 . common/null_blk
+. common/dm
 
 #
 # Test requirement check functions
@@ -281,10 +282,6 @@ _find_two_contiguous_seq_zones() {
 	return 1
 }
 
-_test_dev_is_dm() {
-	[[ -r "${TEST_DEV_SYSFS}/dm/name" ]]
-}
-
 _require_test_dev_is_logical() {
 	if ! _test_dev_is_partition && ! _test_dev_is_dm; then
 		SKIP_REASONS+=("$TEST_DEV is not a logical device")
@@ -305,20 +302,6 @@ _test_dev_has_dm_map() {
 		return 1
 	fi
 	return 0
-}
-
-# Get device file path from the device ID "major:minor".
-_get_dev_path_by_id() {
-	for d in /sys/block/* /sys/block/*/*; do
-		if [[ ! -r "${d}/dev" ]]; then
-			continue
-		fi
-		if [[ "${1}" == "$(<"${d}/dev")" ]]; then
-			echo "/dev/${d##*/}"
-			return 0
-		fi
-	done
-	return 1
 }
 
 # Given sector of TEST_DEV, return the device which contain the sector and

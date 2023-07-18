@@ -1,0 +1,23 @@
+#!/bin/bash
+# SPDX-License-Identifier: GPL-3.0+
+# Copyright (C) 2023 Western Digital Corporation or its affiliates.
+#
+# scsi_debug helper functions.
+
+_test_dev_is_dm() {
+	[[ -r "${TEST_DEV_SYSFS}/dm/name" ]]
+}
+
+# Get device file path from the device ID "major:minor".
+_get_dev_path_by_id() {
+	for d in /sys/block/* /sys/block/*/*; do
+		if [[ ! -r "${d}/dev" ]]; then
+			continue
+		fi
+		if [[ "${1}" == "$(<"${d}/dev")" ]]; then
+			echo "/dev/${d##*/}"
+			return 0
+		fi
+	done
+	return 1
+}
