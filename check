@@ -314,10 +314,10 @@ _cleanup() {
 	fi
 
 	local key value
-	for key in "${!TEST_DEV_QUEUE_SAVED[@]}"; do
-		value="${TEST_DEV_QUEUE_SAVED["$key"]}"
-		echo "$value" >"${TEST_DEV_SYSFS}/queue/${key}"
-		unset "TEST_DEV_QUEUE_SAVED[$key]"
+	for key in "${!SYSFS_QUEUE_SAVED[@]}"; do
+		value="${SYSFS_QUEUE_SAVED["$key"]}"
+		echo "$value" >"${key}"
+		unset "SYSFS_QUEUE_SAVED[$key]"
 	done
 
 	if [[ "${RESTORE_CPUS_ONLINE:-}" ]]; then
@@ -336,7 +336,7 @@ _call_test() {
 	local seqres="${RESULTS_DIR}/${TEST_NAME}"
 	# shellcheck disable=SC2034
 	FULL="${seqres}.full"
-	declare -A TEST_DEV_QUEUE_SAVED
+	declare -A SYSFS_QUEUE_SAVED
 
 	declare -A LAST_TEST_RUN
 	_read_last_test_run

@@ -284,12 +284,14 @@ _test_dev_queue_get() {
 }
 
 _test_dev_queue_set() {
-	# For bash >=4.3 we'd write if [[ ! -v TEST_DEV_QUEUE_SAVED["$1"] ]].
-	if [[ -z ${TEST_DEV_QUEUE_SAVED["$1"]} &&
-	      ${TEST_DEV_QUEUE_SAVED["$1"]-unset} == unset ]]; then
-		TEST_DEV_QUEUE_SAVED["$1"]="$(_test_dev_queue_get "$1")"
+	local path="${TEST_DEV_SYSFS}/queue/$1"
+
+	# For bash >=4.3 we'd write if [[ ! -v SYSFS_QUEUE_SAVED["$path"] ]].
+	if [[ -z ${SYSFS_QUEUE_SAVED["$path"]} &&
+	      ${SYSFS_QUEUE_SAVED["$path"]-unset} == unset ]]; then
+		SYSFS_QUEUE_SAVED["$path"]="$(_test_dev_queue_get "$1")"
 	fi
-	echo "$2" >"${TEST_DEV_SYSFS}/queue/$1"
+	echo "$2" >"$path"
 }
 
 _require_test_dev_is_pci() {
