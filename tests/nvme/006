@@ -23,9 +23,9 @@ test() {
 	local port
 	local loop_dev
 
-	truncate -s "${nvme_img_size}" "$TMPDIR/img"
+	truncate -s "${nvme_img_size}" "${def_file_path}"
 
-	loop_dev="$(losetup -f --show "$TMPDIR/img")"
+	loop_dev="$(losetup -f --show "${def_file_path}")"
 
 	_create_nvmet_subsystem "${def_subsysnqn}" "${loop_dev}" \
 		"91fdba0d-f87b-4c25-b80f-db7be1418b9e"
@@ -38,7 +38,7 @@ test() {
 
 	losetup -d "$loop_dev"
 
-	rm "$TMPDIR/img"
+	rm "${def_file_path}"
 
 	echo "Test complete"
 }

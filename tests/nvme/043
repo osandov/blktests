@@ -26,7 +26,6 @@ test() {
 	_setup_nvmet
 
 	local port
-	local file_path="${TMPDIR}/img"
 	local hash
 	local dhgroup
 	local hostkey
@@ -38,9 +37,9 @@ test() {
 		return 1
 	fi
 
-	truncate -s "${nvme_img_size}" "${file_path}"
+	truncate -s "${nvme_img_size}" "${def_file_path}"
 
-	_create_nvmet_subsystem "${def_subsysnqn}" "${file_path}"
+	_create_nvmet_subsystem "${def_subsysnqn}" "${def_file_path}"
 	port="$(_create_nvmet_port "${nvme_trtype}")"
 	_add_nvmet_subsys_to_port "${port}" "${def_subsysnqn}"
 	_create_nvmet_host "${def_subsysnqn}" "${def_hostnqn}" "${hostkey}"
@@ -84,7 +83,7 @@ test() {
 
 	_remove_nvmet_host "${def_hostnqn}"
 
-	rm "${file_path}"
+	rm "${def_file_path}"
 
 	echo "Test complete"
 }
