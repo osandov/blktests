@@ -26,7 +26,6 @@ test() {
 	_setup_nvmet
 
 	local port
-	local subsys_name="blktests-subsystem-1"
 	local hostid
 	local hostnqn
 	local file_path="${TMPDIR}/img"
@@ -37,13 +36,13 @@ test() {
 	hostid="${def_hostid}"
 	hostnqn="${def_hostnqn}"
 
-	hostkey="$(nvme gen-dhchap-key -n ${subsys_name} 2> /dev/null)"
+	hostkey="$(nvme gen-dhchap-key -n ${def_subsysnqn} 2> /dev/null)"
 	if [ -z "$hostkey" ] ; then
 		echo "failed to generate host key"
 		return 1
 	fi
 
-	ctrlkey="$(nvme gen-dhchap-key -n ${subsys_name} 2> /dev/null)"
+	ctrlkey="$(nvme gen-dhchap-key -n ${def_subsysnqn} 2> /dev/null)"
 	if [ -z "$ctrlkey" ] ; then
 		echo "failed to generate ctrl key"
 		return 1
@@ -51,29 +50,29 @@ test() {
 
 	truncate -s "${nvme_img_size}" "${file_path}"
 
-	_create_nvmet_subsystem "${subsys_name}" "${file_path}"
+	_create_nvmet_subsystem "${def_subsysnqn}" "${file_path}"
 	port="$(_create_nvmet_port "${nvme_trtype}")"
-	_add_nvmet_subsys_to_port "${port}" "${subsys_name}"
-	_create_nvmet_host "${subsys_name}" "${hostnqn}" \
+	_add_nvmet_subsys_to_port "${port}" "${def_subsysnqn}"
+	_create_nvmet_host "${def_subsysnqn}" "${hostnqn}" \
 			   "${hostkey}" "${ctrlkey}"
 
 	_set_nvmet_dhgroup "${hostnqn}" "ffdhe2048"
 
 	# Step 1: Connect with host authentication only
 	echo "Test host authentication"
-	_nvme_connect_subsys "${nvme_trtype}" "${subsys_name}" \
+	_nvme_connect_subsys "${nvme_trtype}" "${def_subsysnqn}" \
 			     --hostnqn "${hostnqn}" \
 			     --hostid "${hostid}" \
 			     --dhchap-secret "${hostkey}"
 
 	udevadm settle
 
-	_nvme_disconnect_subsys "${subsys_name}"
+	_nvme_disconnect_subsys "${def_subsysnqn}"
 
 	# Step 2: Connect with host authentication
 	# and invalid ctrl authentication
 	echo "Test invalid ctrl authentication (should fail)"
-	_nvme_connect_subsys "${nvme_trtype}" "${subsys_name}" \
+	_nvme_connect_subsys "${nvme_trtype}" "${def_subsysnqn}" \
 			     --hostnqn "${hostnqn}" \
 			     --hostid "${hostid}" \
 			     --dhchap-secret "${hostkey}" \
@@ -81,12 +80,12 @@ test() {
 
 	udevadm settle
 
-	_nvme_disconnect_subsys "${subsys_name}"
+	_nvme_disconnect_subsys "${def_subsysnqn}"
 
 	# Step 3: Connect with host authentication
 	# and valid ctrl authentication
 	echo "Test valid ctrl authentication"
-	_nvme_connect_subsys "${nvme_trtype}" "${subsys_name}" \
+	_nvme_connect_subsys "${nvme_trtype}" "${def_subsysnqn}" \
 			     --hostnqn "${hostnqn}" \
 			     --hostid "${hostid}" \
 			     --dhchap-secret "${hostkey}" \
@@ -94,13 +93,13 @@ test() {
 
 	udevadm settle
 
-	_nvme_disconnect_subsys "${subsys_name}"
+	_nvme_disconnect_subsys "${def_subsysnqn}"
 
 	# Step 4: Connect with host authentication
 	# and invalid ctrl key
 	echo "Test invalid ctrl key (should fail)"
 	invkey="DHHC-1:00:Jc/My1o0qtLCWRp+sHhAVafdfaS7YQOMYhk9zSmlatobqB8C:"
-	_nvme_connect_subsys "${nvme_trtype}" "${subsys_name}" \
+	_nvme_connect_subsys "${nvme_trtype}" "${def_subsysnqn}" \
 			     --hostnqn "${hostnqn}" \
 			     --hostid "${hostid}" \
 			     --dhchap-secret "${hostkey}" \
@@ -108,10 +107,10 @@ test() {
 
 	udevadm settle
 
-	_nvme_disconnect_subsys "${subsys_name}"
+	_nvme_disconnect_subsys "${def_subsysnqn}"
 
-	_remove_nvmet_subsystem_from_port "${port}" "${subsys_name}"
-	_remove_nvmet_subsystem "${subsys_name}"
+	_remove_nvmet_subsystem_from_port "${port}" "${def_subsysnqn}"
+	_remove_nvmet_subsystem "${def_subsysnqn}"
 
 	_remove_nvmet_port "${port}"
 

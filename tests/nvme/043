@@ -45,10 +45,10 @@ test() {
 
 	truncate -s "${nvme_img_size}" "${file_path}"
 
-	_create_nvmet_subsystem "${subsys_name}" "${file_path}"
+	_create_nvmet_subsystem "${def_subsysnqn}" "${file_path}"
 	port="$(_create_nvmet_port "${nvme_trtype}")"
-	_add_nvmet_subsys_to_port "${port}" "${subsys_name}"
-	_create_nvmet_host "${subsys_name}" "${hostnqn}" "${hostkey}"
+	_add_nvmet_subsys_to_port "${port}" "${def_subsysnqn}"
+	_create_nvmet_host "${def_subsysnqn}" "${hostnqn}" "${hostkey}"
 
 	for hash in "hmac(sha256)" "hmac(sha384)" "hmac(sha512)" ; do
 
@@ -56,14 +56,14 @@ test() {
 
 		_set_nvmet_hash "${hostnqn}" "${hash}"
 
-		_nvme_connect_subsys "${nvme_trtype}" "${subsys_name}" \
+		_nvme_connect_subsys "${nvme_trtype}" "${def_subsysnqn}" \
 				     --hostnqn "${hostnqn}" \
 				     --hostid "${hostid}" \
 				     --dhchap-secret "${hostkey}"
 
 		udevadm settle
 
-		_nvme_disconnect_subsys "${subsys_name}"
+		_nvme_disconnect_subsys "${def_subsysnqn}"
 	done
 
 	for dhgroup in "ffdhe2048" "ffdhe3072" "ffdhe4096" "ffdhe6144" "ffdhe8192" ; do
@@ -72,18 +72,18 @@ test() {
 
 		_set_nvmet_dhgroup "${hostnqn}" "${dhgroup}"
 
-		_nvme_connect_subsys "${nvme_trtype}" "${subsys_name}" \
+		_nvme_connect_subsys "${nvme_trtype}" "${def_subsysnqn}" \
 				      --hostnqn "${hostnqn}" \
 				      --hostid "${hostid}" \
 				      --dhchap-secret "${hostkey}"
 
 		udevadm settle
 
-		_nvme_disconnect_subsys "${subsys_name}"
+		_nvme_disconnect_subsys "${def_subsysnqn}"
 	done
 
-	_remove_nvmet_subsystem_from_port "${port}" "${subsys_name}"
-	_remove_nvmet_subsystem "${subsys_name}"
+	_remove_nvmet_subsystem_from_port "${port}" "${def_subsysnqn}"
+	_remove_nvmet_subsystem "${def_subsysnqn}"
 
 	_remove_nvmet_port "${port}"
 

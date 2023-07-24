@@ -22,19 +22,18 @@ test() {
 
 	local port
 	local loop_dev
-	local subsys_name="blktests-subsystem-1"
 
 	truncate -s "${nvme_img_size}" "$TMPDIR/img"
 
 	loop_dev="$(losetup -f --show "$TMPDIR/img")"
 
-	_create_nvmet_subsystem "${subsys_name}" "${loop_dev}" \
+	_create_nvmet_subsystem "${def_subsysnqn}" "${loop_dev}" \
 		"91fdba0d-f87b-4c25-b80f-db7be1418b9e"
 	port="$(_create_nvmet_port "${nvme_trtype}")"
-	_add_nvmet_subsys_to_port "${port}" "${subsys_name}"
+	_add_nvmet_subsys_to_port "${port}" "${def_subsysnqn}"
 
-	_remove_nvmet_subsystem_from_port "${port}" "${subsys_name}"
-	_remove_nvmet_subsystem "${subsys_name}"
+	_remove_nvmet_subsystem_from_port "${port}" "${def_subsysnqn}"
+	_remove_nvmet_subsystem "${def_subsysnqn}"
 	_remove_nvmet_port "${port}"
 
 	losetup -d "$loop_dev"

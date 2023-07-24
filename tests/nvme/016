@@ -21,30 +21,29 @@ test() {
 	local port
 	local iterations="${nvme_num_iter}"
 	local loop_dev
-	local subsys_nqn="blktests-subsystem-1"
 
 	loop_dev="$(losetup -f)"
 	local genctr=1
 
-	_create_nvmet_subsystem "${subsys_nqn}" "${loop_dev}"
+	_create_nvmet_subsystem "${def_subsysnqn}" "${loop_dev}"
 
 	for ((i = 2; i <= iterations; i++)); do
-		_create_nvmet_ns "${subsys_nqn}" "${i}" "${loop_dev}"
+		_create_nvmet_ns "${def_subsysnqn}" "${i}" "${loop_dev}"
 	done
 
 	port="$(_create_nvmet_port "${nvme_trtype}")"
-	_add_nvmet_subsys_to_port "$port" "${subsys_nqn}"
+	_add_nvmet_subsys_to_port "$port" "${def_subsysnqn}"
 
 	genctr=$(_check_genctr "${genctr}" "adding a subsystem to a port")
 
-	_remove_nvmet_subsystem_from_port "${port}" "${subsys_nqn}"
+	_remove_nvmet_subsystem_from_port "${port}" "${def_subsysnqn}"
 	_remove_nvmet_port "${port}"
 
 	for ((i = iterations; i > 1; i--)); do
-		_remove_nvmet_ns "${subsys_nqn}" "$i"
+		_remove_nvmet_ns "${def_subsysnqn}" "$i"
 	done
 
-	_remove_nvmet_subsystem "${subsys_nqn}"
+	_remove_nvmet_subsystem "${def_subsysnqn}"
 
 	echo "Test complete"
 }

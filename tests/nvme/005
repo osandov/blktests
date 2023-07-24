@@ -31,23 +31,23 @@ test() {
 
 	loop_dev="$(losetup -f --show "$TMPDIR/img")"
 
-	_create_nvmet_subsystem "blktests-subsystem-1" "${loop_dev}" \
+	_create_nvmet_subsystem "${def_subsysnqn}" "${loop_dev}" \
 		"91fdba0d-f87b-4c25-b80f-db7be1418b9e"
-	_add_nvmet_subsys_to_port "${port}" "blktests-subsystem-1"
+	_add_nvmet_subsys_to_port "${port}" "${def_subsysnqn}"
 
-	_nvme_connect_subsys "${nvme_trtype}" blktests-subsystem-1
+	_nvme_connect_subsys "${nvme_trtype}" "${def_subsysnqn}"
 
-	nvmedev=$(_find_nvme_dev "blktests-subsystem-1")
+	nvmedev=$(_find_nvme_dev "${def_subsysnqn}")
 
 	udevadm settle
 
 	echo 1 > "/sys/class/nvme/${nvmedev}/reset_controller"
 
 	_nvme_disconnect_ctrl "${nvmedev}"
-	_remove_nvmet_subsystem_from_port "${port}" "blktests-subsystem-1"
+	_remove_nvmet_subsystem_from_port "${port}" "${def_subsysnqn}"
 	_remove_nvmet_port "${port}"
 
-	_remove_nvmet_subsystem "blktests-subsystem-1"
+	_remove_nvmet_subsystem "${def_subsysnqn}"
 	losetup -d "$loop_dev"
 	rm "$TMPDIR/img"
 

@@ -22,29 +22,28 @@ test() {
 	local port
 	local nvmedev
 	local file_path="$TMPDIR/img"
-	local subsys_name="blktests-subsystem-1"
 	local nblk_range="10,10,10,10,10,10,10,10,10,10"
 	local sblk_range="100,200,300,400,500,600,700,800,900,1000"
 
 	truncate -s "${nvme_img_size}" "${file_path}"
 
-	_create_nvmet_subsystem "${subsys_name}" "${file_path}" \
+	_create_nvmet_subsystem "${def_subsysnqn}" "${file_path}" \
 		"91fdba0d-f87b-4c25-b80f-db7be1418b9e"
 	port="$(_create_nvmet_port "${nvme_trtype}")"
-	_add_nvmet_subsys_to_port "${port}" "${subsys_name}"
+	_add_nvmet_subsys_to_port "${port}" "${def_subsysnqn}"
 
-	_nvme_connect_subsys "${nvme_trtype}" "${subsys_name}"
+	_nvme_connect_subsys "${nvme_trtype}" "${def_subsysnqn}"
 
-	nvmedev=$(_find_nvme_dev "${subsys_name}")
+	nvmedev=$(_find_nvme_dev "${def_subsysnqn}")
 	cat "/sys/block/${nvmedev}n1/uuid"
 	cat "/sys/block/${nvmedev}n1/wwid"
 
 	nvme dsm "/dev/${nvmedev}" -n 1 -d -s "${sblk_range}" -b "${nblk_range}"
 
-	_nvme_disconnect_subsys "${subsys_name}"
+	_nvme_disconnect_subsys "${def_subsysnqn}"
 
-	_remove_nvmet_subsystem_from_port "${port}" "${subsys_name}"
-	_remove_nvmet_subsystem "${subsys_name}"
+	_remove_nvmet_subsystem_from_port "${port}" "${def_subsysnqn}"
+	_remove_nvmet_subsystem "${def_subsysnqn}"
 	_remove_nvmet_port "${port}"
 
 	rm -f "${file_path}"
