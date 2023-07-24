@@ -88,25 +88,21 @@ test() {
 	local cfs_path="${NVMET_CFS}/subsystems/${def_subsysnqn}"
 	local file_path="${TMPDIR}/img"
 	local skipped=false
-	local hostnqn
-	local hostid
 	local port
-
-	hostid="${def_hostid}"
-	hostnqn="${def_hostnqn}"
 
 	truncate -s "${nvme_img_size}" "${file_path}"
 
 	_create_nvmet_subsystem "${def_subsysnqn}" "${file_path}" \
 		"b92842df-a394-44b1-84a4-92ae7d112861"
 	port="$(_create_nvmet_port "${nvme_trtype}")"
+
 	_add_nvmet_subsys_to_port "${port}" "${def_subsysnqn}"
 	_create_nvmet_host "${def_subsysnqn}" "${def_hostnqn}"
 
 	if [[ -f "${cfs_path}/attr_qid_max" ]] ; then
 		_nvme_connect_subsys "${nvme_trtype}" "${def_subsysnqn}" \
-					--hostnqn "${hostnqn}" \
-					--hostid "${hostid}" \
+					--hostnqn "${def_hostnqn}" \
+					--hostid "${def_hostid}" \
 					--keep-alive-tmo 1 \
 					--reconnect-delay 2
 
@@ -126,7 +122,7 @@ test() {
 	_remove_nvmet_subsystem_from_port "${port}" "${def_subsysnqn}"
 	_remove_nvmet_subsystem "${def_subsysnqn}"
 	_remove_nvmet_port "${port}"
-	_remove_nvmet_host "${hostnqn}"
+	_remove_nvmet_host "${def_hostnqn}"
 
 	rm "${file_path}"
 
