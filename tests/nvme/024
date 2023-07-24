@@ -26,7 +26,7 @@ test() {
 	truncate -s "${nvme_img_size}" "${def_file_path}"
 
 	_create_nvmet_subsystem "${def_subsysnqn}" "${def_file_path}" \
-		"91fdba0d-f87b-4c25-b80f-db7be1418b9e"
+		"${def_subsys_uuid}"
 	port="$(_create_nvmet_port "${nvme_trtype}")"
 	_add_nvmet_subsys_to_port "${port}" "${def_subsysnqn}"
 
