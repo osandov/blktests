@@ -14,13 +14,14 @@ requires() {
 }
 
 test_device() {
+	echo "Running ${TEST_NAME}"
+
+	_setup_nvmet
+
 	local subsys="blktests-subsystem-1"
 	local ctrldev
 	local port
 
-	echo "Running ${TEST_NAME}"
-
-	_setup_nvmet
 	port=$(_nvmet_passthru_target_setup "${subsys}")
 	nsdev=$(_nvmet_passthru_target_connect "${nvme_trtype}" "${subsys}")
 

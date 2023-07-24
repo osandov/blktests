@@ -17,11 +17,11 @@ requires() {
 test() {
 	echo "Running ${TEST_NAME}"
 
+	_setup_nvmet
+
 	local port
 	local file_path
 	local subsys_name="blktests-subsystem-1"
-
-	_setup_nvmet
 
 	file_path="${TMPDIR}/img"
 

@@ -16,13 +16,13 @@ requires() {
 }
 
 test() {
-	local port
-	local genctr
-	local subsys="blktests-subsystem-"
-
 	echo "Running ${TEST_NAME}"
 
 	_setup_nvmet
+
+	local port
+	local genctr
+	local subsys="blktests-subsystem-"
 
 	port="$(_create_nvmet_port "${nvme_trtype}")"
 

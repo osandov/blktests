@@ -17,6 +17,10 @@ requires() {
 }
 
 test() {
+	echo "Running ${TEST_NAME}"
+
+	_setup_nvmet
+
 	local subsys="blktests-subsystem-1"
 	local file_path="${TMPDIR}/img"
 	local port
@@ -24,9 +28,6 @@ test() {
 	local nvmedev
 	local fio_pid
 
-	echo "Running ${TEST_NAME}"
-
-	_setup_nvmet
 	truncate -s "${nvme_img_size}" "${file_path}"
 	loop_dev="$(losetup -f --show "${file_path}")"
 

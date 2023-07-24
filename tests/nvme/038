@@ -19,12 +19,12 @@ requires() {
 }
 
 test() {
-	local subsys_path="${NVMET_CFS}/subsystems/blktests-subsystem-1"
-	local port
-
 	echo "Running ${TEST_NAME}"
 
 	_setup_nvmet
+
+	local subsys_path="${NVMET_CFS}/subsystems/blktests-subsystem-1"
+	local port
 
 	mkdir -p "${subsys_path}"
 	rmdir "${subsys_path}"

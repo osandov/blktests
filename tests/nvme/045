@@ -22,6 +22,10 @@ requires() {
 
 
 test() {
+	echo "Running ${TEST_NAME}"
+
+	_setup_nvmet
+
 	local port
 	local subsys_name="blktests-subsystem-1"
 	local hostid
@@ -33,8 +37,6 @@ test() {
 	local new_ctrlkey
 	local ctrldev
 	local rand_io_size
-
-	echo "Running ${TEST_NAME}"
 
 	hostid="${def_hostid}"
 	hostnqn="${def_hostnqn}"
@@ -50,8 +52,6 @@ test() {
 		echo "failed to generate ctrl key"
 		return 1
 	fi
-
-	_setup_nvmet
 
 	truncate -s "${nvme_img_size}" "${file_path}"
 
