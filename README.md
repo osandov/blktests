@@ -54,5 +54,5 @@ referred to as a document. It describes variables and functions that test cases
 should implement, global variables that test cases can refer and coding
 guidelines.
 
-Pull requests on GitHub and patches to <linux-block@vger.kernel.org> are both
+Patches to <linux-block@vger.kernel.org> and pull requests on GitHub are both
 accepted. See [here](CONTRIBUTING.md) for more information on contributing.
