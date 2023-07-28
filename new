@@ -232,7 +232,7 @@ test() {
 	echo "Test complete"
 }
 
-# Finally, some coding style guidlines:
+# Finally, some coding style guidelines:
 # - Indent with tabs.
 # - Don't add a space before the parentheses or a newline before the curly brace
 #   in function definitions.
@@ -242,7 +242,7 @@ test() {
 # - Functions defined by the testing framework or group scripts, including
 #   helpers, have a leading underscore. E.g., _have_scsi_debug. Functions local
 #   to the test should not have a leading underscore.
-# - Use the bash [[ ]] form of tests instead of [ ].
+# - Both [[ ]] form and [ ] form are fine for tests. [[ ]] is preferred.
 # - Always quote variable expansions unless the variable is a number or inside of
 #   a [[ ]] test.
 # - Use the \$() form of command substitution instead of backticks.
