@@ -48,6 +48,14 @@ configuration and running tests.
 
 ## Adding Tests
 
+New test cases are welcomed when,
+
+- a bug in block layer or storage stack is found and the new test case confirms
+  fix of the bug,
+- a new feature is introduced in block layer or storage stack, and the new test
+  cases confirm that the feature is working well, or,
+- the new test cases extend coverage of block layer and storage stack code.
+
 The `./new` script creates a new test from a template. The generated template
 contains more detailed documentation. [The ./new script itself](new) can be
 referred to as a document. It describes variables and functions that test cases
