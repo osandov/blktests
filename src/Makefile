@@ -39,7 +39,8 @@ CONFIG_DEFS := $(call HAVE_C_HEADER,linux/blkzoned.h,-DHAVE_LINUX_BLKZONED_H)
 override CFLAGS   := -O2 -Wall -Wshadow $(CFLAGS) $(CONFIG_DEFS)
 override CXXFLAGS := -O2 -std=c++11 -Wall -Wextra -Wshadow -Wno-sign-compare \
 		     -Werror $(CXXFLAGS) $(CONFIG_DEFS)
-MINIUBLK_FLAGS :=  -D_GNU_SOURCE -lpthread -luring
+MINIUBLK_FLAGS :=  -D_GNU_SOURCE
+MINIUBLK_LIBS := -lpthread -luring
 LDFLAGS ?=
 
 all: $(TARGETS)
@@ -58,6 +59,7 @@ $(CXX_TARGETS): %: %.cpp
 	$(CXX) $(CPPFLAGS) $(CXXFLAGS) $(LDFLAGS) -o $@ $^
 
 $(C_MINIUBLK): %: miniublk.c
-	$(CC) $(CFLAGS) $(LDFLAGS) $(MINIUBLK_FLAGS) -o $@ miniublk.c
+	$(CC) $(CFLAGS) $(LDFLAGS) $(MINIUBLK_FLAGS) -o $@ miniublk.c \
+		$(MINIUBLK_LIBS)
 
 .PHONY: all clean install
