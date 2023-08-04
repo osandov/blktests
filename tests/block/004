@@ -15,7 +15,10 @@ requires() {
 }
 
 device_requires() {
-	! _test_dev_is_zoned || _have_fio_zbd_zonemode
+	if _test_dev_is_zoned; then
+		_have_fio_zbd_zonemode
+		_have_program blkzone
+	fi
 }
 
 test_device() {
@@ -24,6 +27,7 @@ test_device() {
 	local -a opts=()
 
 	if _test_dev_is_zoned; then
+		blkzone reset "$TEST_DEV"
 		_test_dev_set_scheduler deadline
 		opts+=("--direct=1" "--zonemode=zbd")
 		opts+=("--max_open_zones=$(_test_dev_max_open_active_zones)")
