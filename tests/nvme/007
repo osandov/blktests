@@ -21,18 +21,9 @@ test() {
 
 	local port
 
-	truncate -s "${nvme_img_size}" "${def_file_path}"
+	port="$(_nvmet_target_setup --blkdev=file)"
 
-	_create_nvmet_subsystem "${def_subsysnqn}" "${def_file_path}" \
-		"${def_subsys_uuid}"
-	port="$(_create_nvmet_port "${nvme_trtype}")"
-	_add_nvmet_subsys_to_port "${port}" "${def_subsysnqn}"
-
-	_remove_nvmet_subsystem_from_port "${port}" "${def_subsysnqn}"
-	_remove_nvmet_subsystem "${def_subsysnqn}"
-	_remove_nvmet_port "${port}"
-
-	rm "${def_file_path}"
+	_nvmet_target_cleanup "${port}"
 
 	echo "Test complete"
 }
