@@ -26,15 +26,10 @@ test() {
 	_setup_nvmet
 
 	local port
-	local hostid
-	local hostnqn
 	local file_path="${TMPDIR}/img"
 	local hostkey
 	local ctrlkey
 	local ctrldev
-
-	hostid="${def_hostid}"
-	hostnqn="${def_hostnqn}"
 
 	hostkey="$(nvme gen-dhchap-key -n ${def_subsysnqn} 2> /dev/null)"
 	if [ -z "$hostkey" ] ; then
@@ -53,16 +48,16 @@ test() {
 	_create_nvmet_subsystem "${def_subsysnqn}" "${file_path}"
 	port="$(_create_nvmet_port "${nvme_trtype}")"
 	_add_nvmet_subsys_to_port "${port}" "${def_subsysnqn}"
-	_create_nvmet_host "${def_subsysnqn}" "${hostnqn}" \
+	_create_nvmet_host "${def_subsysnqn}" "${def_hostnqn}" \
 			   "${hostkey}" "${ctrlkey}"
 
-	_set_nvmet_dhgroup "${hostnqn}" "ffdhe2048"
+	_set_nvmet_dhgroup "${def_hostnqn}" "ffdhe2048"
 
 	# Step 1: Connect with host authentication only
 	echo "Test host authentication"
 	_nvme_connect_subsys "${nvme_trtype}" "${def_subsysnqn}" \
-			     --hostnqn "${hostnqn}" \
-			     --hostid "${hostid}" \
+			     --hostnqn "${def_hostnqn}" \
+			     --hostid "${def_hostid}" \
 			     --dhchap-secret "${hostkey}"
 
 	udevadm settle
@@ -73,8 +68,8 @@ test() {
 	# and invalid ctrl authentication
 	echo "Test invalid ctrl authentication (should fail)"
 	_nvme_connect_subsys "${nvme_trtype}" "${def_subsysnqn}" \
-			     --hostnqn "${hostnqn}" \
-			     --hostid "${hostid}" \
+			     --hostnqn "${def_hostnqn}" \
+			     --hostid "${def_hostid}" \
 			     --dhchap-secret "${hostkey}" \
 			     --dhchap-ctrl-secret "${hostkey}"
 
@@ -86,8 +81,8 @@ test() {
 	# and valid ctrl authentication
 	echo "Test valid ctrl authentication"
 	_nvme_connect_subsys "${nvme_trtype}" "${def_subsysnqn}" \
-			     --hostnqn "${hostnqn}" \
-			     --hostid "${hostid}" \
+			     --hostnqn "${def_hostnqn}" \
+			     --hostid "${def_hostid}" \
 			     --dhchap-secret "${hostkey}" \
 			     --dhchap-ctrl-secret "${ctrlkey}"
 
@@ -100,8 +95,8 @@ test() {
 	echo "Test invalid ctrl key (should fail)"
 	invkey="DHHC-1:00:Jc/My1o0qtLCWRp+sHhAVafdfaS7YQOMYhk9zSmlatobqB8C:"
 	_nvme_connect_subsys "${nvme_trtype}" "${def_subsysnqn}" \
-			     --hostnqn "${hostnqn}" \
-			     --hostid "${hostid}" \
+			     --hostnqn "${def_hostnqn}" \
+			     --hostid "${def_hostid}" \
 			     --dhchap-secret "${hostkey}" \
 			     --dhchap-ctrl-secret "${invkey}"
 
@@ -114,7 +109,7 @@ test() {
 
 	_remove_nvmet_port "${port}"
 
-	_remove_nvmet_host "${hostnqn}"
+	_remove_nvmet_host "${def_hostnqn}"
 
 	rm "${file_path}"
 

@@ -27,8 +27,6 @@ test() {
 	_setup_nvmet
 
 	local port
-	local hostid
-	local hostnqn
 	local file_path="${TMPDIR}/img"
 	local hostkey
 	local new_hostkey
@@ -36,9 +34,6 @@ test() {
 	local new_ctrlkey
 	local ctrldev
 	local rand_io_size
-
-	hostid="${def_hostid}"
-	hostnqn="${def_hostnqn}"
 
 	hostkey="$(nvme gen-dhchap-key -n ${def_subsysnqn} 2> /dev/null)"
 	if [ -z "$hostkey" ] ; then
@@ -57,13 +52,13 @@ test() {
 	_create_nvmet_subsystem "${def_subsysnqn}" "${file_path}"
 	port="$(_create_nvmet_port "${nvme_trtype}")"
 	_add_nvmet_subsys_to_port "${port}" "${def_subsysnqn}"
-	_create_nvmet_host "${def_subsysnqn}" "${hostnqn}" "${hostkey}" "${ctrlkey}"
+	_create_nvmet_host "${def_subsysnqn}" "${def_hostnqn}" "${hostkey}" "${ctrlkey}"
 
-	_set_nvmet_dhgroup "${hostnqn}" "ffdhe2048"
+	_set_nvmet_dhgroup "${def_hostnqn}" "ffdhe2048"
 
 	_nvme_connect_subsys "${nvme_trtype}" "${def_subsysnqn}" \
-			     --hostnqn "${hostnqn}" \
-			     --hostid "${hostid}" \
+			     --hostnqn "${def_hostnqn}" \
+			     --hostid "${def_hostid}" \
 			     --dhchap-secret "${hostkey}" \
 			     --dhchap-ctrl-secret "${ctrlkey}"
 
@@ -82,7 +77,7 @@ test() {
 
 	new_hostkey="$(nvme gen-dhchap-key -n ${def_subsysnqn} 2> /dev/null)"
 
-	_set_nvmet_hostkey "${hostnqn}" "${new_hostkey}"
+	_set_nvmet_hostkey "${def_hostnqn}" "${new_hostkey}"
 
 	echo "Re-authenticate with new host key"
 
@@ -92,7 +87,7 @@ test() {
 
 	new_ctrlkey="$(nvme gen-dhchap-key -n ${def_subsysnqn} 2> /dev/null)"
 
-	_set_nvmet_ctrlkey "${hostnqn}" "${new_ctrlkey}"
+	_set_nvmet_ctrlkey "${def_hostnqn}" "${new_ctrlkey}"
 
 	echo "Re-authenticate with new ctrl key"
 
@@ -101,7 +96,7 @@ test() {
 
 	echo "Change DH group to ffdhe8192"
 
-	_set_nvmet_dhgroup "${hostnqn}" "ffdhe8192"
+	_set_nvmet_dhgroup "${def_hostnqn}" "ffdhe8192"
 
 	echo "Re-authenticate with changed DH group"
 
@@ -109,7 +104,7 @@ test() {
 
 	echo "Change hash to hmac(sha512)"
 
-	_set_nvmet_hash "${hostnqn}" "hmac(sha512)"
+	_set_nvmet_hash "${def_hostnqn}" "hmac(sha512)"
 
 	echo "Re-authenticate with changed hash"
 
@@ -127,7 +122,7 @@ test() {
 
 	_remove_nvmet_port "${port}"
 
-	_remove_nvmet_host "${hostnqn}"
+	_remove_nvmet_host "${def_hostnqn}"
 
 	rm "${file_path}"
 
