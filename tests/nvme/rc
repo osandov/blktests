@@ -608,7 +608,7 @@ _create_nvmet_subsystem() {
 	local cfs_path="${NVMET_CFS}/subsystems/${nvmet_subsystem}"
 
 	mkdir -p "${cfs_path}"
-	echo 1 > "${cfs_path}/attr_allow_any_host"
+	echo 0 > "${cfs_path}/attr_allow_any_host"
 	_create_nvmet_ns "${nvmet_subsystem}" "1" "${blkdev}" "${uuid}"
 }
 
@@ -678,7 +678,7 @@ _create_nvmet_passthru() {
 	local passthru_path="${subsys_path}/passthru"
 
 	mkdir -p "${subsys_path}"
-	echo 1 > "${subsys_path}/attr_allow_any_host"
+	echo 0 > "${subsys_path}/attr_allow_any_host"
 
 	_test_dev_nvme_ctrl > "${passthru_path}/device_path"
 	echo 1 > "${passthru_path}/enable"
@@ -693,6 +693,7 @@ _remove_nvmet_passhtru() {
 	local passthru_path="${subsys_path}/passthru"
 
 	echo 0 > "${passthru_path}/enable"
+	rm -f "${subsys_path}"/allowed_hosts/*
 	rmdir "${subsys_path}"
 }
 
@@ -784,6 +785,7 @@ _nvmet_passthru_target_setup() {
 	_create_nvmet_passthru "${subsys_name}"
 	port="$(_create_nvmet_port "${nvme_trtype}")"
 	_add_nvmet_subsys_to_port "${port}" "${subsys_name}"
+	_create_nvmet_host "${subsys_name}" "${def_hostnqn}"
 
 	echo "$port"
 }
@@ -810,6 +812,7 @@ _nvmet_passthru_target_cleanup() {
 	_remove_nvmet_subsystem_from_port "${port}" "${subsys_name}"
 	_remove_nvmet_port "${port}"
 	_remove_nvmet_passhtru "${subsys_name}"
+	_remove_nvmet_host "${def_hostnqn}"
 }
 
 _discovery_genctr() {
