@@ -19,20 +19,17 @@ test() {
 	_setup_nvmet
 
 	local port
-	local file_path
 	local iterations="${nvme_num_iter}"
 
-	file_path="${TMPDIR}/img"
-
-	truncate -s "${nvme_img_size}" "${file_path}"
+	truncate -s "${nvme_img_size}" "${def_file_path}"
 
 	local genctr=1
 
-	_create_nvmet_subsystem "${def_subsysnqn}" "${file_path}" \
+	_create_nvmet_subsystem "${def_subsysnqn}" "${def_file_path}" \
 		"91fdba0d-f87b-4c25-b80f-db7be1418b9e"
 
 	for ((i = 2; i <= iterations; i++)); do
-		_create_nvmet_ns "${def_subsysnqn}" "${i}" "${file_path}"
+		_create_nvmet_ns "${def_subsysnqn}" "${i}" "${def_file_path}"
 	done
 
 	port="$(_create_nvmet_port "${nvme_trtype}")"
@@ -49,7 +46,7 @@ test() {
 
 	_remove_nvmet_subsystem "${def_subsysnqn}"
 
-	rm "${file_path}"
+	rm "${def_file_path}"
 
 	echo "Test complete"
 }

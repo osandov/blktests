@@ -22,11 +22,10 @@ test() {
 
 	local port
 	local nvmedev
-	local file_path="$TMPDIR/img"
 
-	truncate -s "${nvme_img_size}" "${file_path}"
+	truncate -s "${nvme_img_size}" "${def_file_path}"
 
-	_create_nvmet_subsystem "${def_subsysnqn}" "${file_path}" \
+	_create_nvmet_subsystem "${def_subsysnqn}" "${def_file_path}" \
 		"91fdba0d-f87b-4c25-b80f-db7be1418b9e"
 	port="$(_create_nvmet_port "${nvme_trtype}")"
 	_add_nvmet_subsys_to_port "${port}" "${def_subsysnqn}"
@@ -46,7 +45,7 @@ test() {
 	_remove_nvmet_subsystem "${def_subsysnqn}"
 	_remove_nvmet_port "${port}"
 
-	rm -f "${file_path}"
+	rm -f "${def_file_path}"
 
 	echo "Test complete"
 }

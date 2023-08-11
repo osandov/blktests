@@ -23,13 +23,12 @@ test() {
 	local port
 	local nvmedev
 	local loop_dev
-	local file_path="$TMPDIR/img"
 	local nblk_range="10,10,10,10,10,10,10,10,10,10"
 	local sblk_range="100,200,300,400,500,600,700,800,900,1000"
 
-	truncate -s "${nvme_img_size}" "${file_path}"
+	truncate -s "${nvme_img_size}" "${def_file_path}"
 
-	loop_dev="$(losetup -f --show "${file_path}")"
+	loop_dev="$(losetup -f --show "${def_file_path}")"
 
 	_create_nvmet_subsystem "${def_subsysnqn}" "${loop_dev}" \
 		"91fdba0d-f87b-4c25-b80f-db7be1418b9e"
@@ -52,7 +51,7 @@ test() {
 
 	losetup -d "${loop_dev}"
 
-	rm -f "${file_path}"
+	rm -f "${def_file_path}"
 
 	echo "Test complete"
 }

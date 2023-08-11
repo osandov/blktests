@@ -21,14 +21,13 @@ test() {
 
 	_setup_nvmet
 
-	local file_path="${TMPDIR}/img"
 	local port
 	local loop_dev
 	local nvmedev
 	local fio_pid
 
-	truncate -s "${nvme_img_size}" "${file_path}"
-	loop_dev="$(losetup -f --show "${file_path}")"
+	truncate -s "${nvme_img_size}" "${def_file_path}"
+	loop_dev="$(losetup -f --show "${def_file_path}")"
 
 	port="$(_create_nvmet_port "${nvme_trtype}")"
 	_create_nvmet_subsystem "${def_subsysnqn}" "${loop_dev}"
@@ -60,7 +59,7 @@ test() {
 
 	losetup -d "${loop_dev}"
 
-	rm -f "${file_path}"
+	rm -f "${def_file_path}"
 
 	echo "Test complete"
 }
