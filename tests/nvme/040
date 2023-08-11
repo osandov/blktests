@@ -21,7 +21,6 @@ test() {
 
 	_setup_nvmet
 
-	local subsys="blktests-subsystem-1"
 	local file_path="${TMPDIR}/img"
 	local port
 	local loop_dev
@@ -32,11 +31,11 @@ test() {
 	loop_dev="$(losetup -f --show "${file_path}")"
 
 	port="$(_create_nvmet_port "${nvme_trtype}")"
-	_create_nvmet_subsystem "${subsys}" "${loop_dev}"
-	_add_nvmet_subsys_to_port "${port}" "${subsys}"
-	_nvme_connect_subsys "${nvme_trtype}" "${subsys}"
+	_create_nvmet_subsystem "${def_subsysnqn}" "${loop_dev}"
+	_add_nvmet_subsys_to_port "${port}" "${def_subsysnqn}"
+	_nvme_connect_subsys "${nvme_trtype}" "${def_subsysnqn}"
 	udevadm settle
-	nvmedev=$(_find_nvme_dev "${subsys}")
+	nvmedev=$(_find_nvme_dev "${def_subsysnqn}")
 
 	# start fio job
 	echo "starting background fio"
@@ -55,8 +54,8 @@ test() {
 
 	{ kill "${fio_pid}"; wait; } &> /dev/null
 
-	_remove_nvmet_subsystem_from_port "${port}" "${subsys}"
-	_remove_nvmet_subsystem "${subsys}"
+	_remove_nvmet_subsystem_from_port "${port}" "${def_subsysnqn}"
+	_remove_nvmet_subsystem "${def_subsysnqn}"
 	_remove_nvmet_port "${port}"
 
 	losetup -d "${loop_dev}"

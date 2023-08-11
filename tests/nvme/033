@@ -49,7 +49,7 @@ test_device() {
 
 	_setup_nvmet
 
-	local subsys="blktests-subsystem-1"
+	local subsys="${def_subsysnqn}"
 	local nsdev
 	local port
 

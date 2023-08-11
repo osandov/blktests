@@ -25,7 +25,6 @@ test() {
 	_setup_nvmet
 
 	local port
-	local subsys_name="blktests-subsystem-1"
 	local hostid
 	local hostnqn
 	local file_path="${TMPDIR}/img"
@@ -39,50 +38,50 @@ test() {
 
 	truncate -s "${nvme_img_size}" "${file_path}"
 
-	_create_nvmet_subsystem "${subsys_name}" "${file_path}"
+	_create_nvmet_subsystem "${def_subsysnqn}" "${file_path}"
 	port="$(_create_nvmet_port "${nvme_trtype}")"
-	_add_nvmet_subsys_to_port "${port}" "${subsys_name}"
-	_create_nvmet_host "${subsys_name}" "${hostnqn}"
+	_add_nvmet_subsys_to_port "${port}" "${def_subsysnqn}"
+	_create_nvmet_host "${def_subsysnqn}" "${hostnqn}"
 
 	for hmac in 0 1 2 3; do
 		echo "Testing hmac ${hmac}"
-		hostkey="$(nvme gen-dhchap-key --hmac=${hmac} -n ${subsys_name} 2> /dev/null)"
+		hostkey="$(nvme gen-dhchap-key --hmac=${hmac} -n ${def_subsysnqn} 2> /dev/null)"
 		if [ -z "$hostkey" ] ; then
 			echo "couldn't generate host key for hmac ${hmac}"
 			return 1
 		fi
 		_set_nvmet_hostkey "${hostnqn}" "${hostkey}"
 
-		_nvme_connect_subsys "${nvme_trtype}" "${subsys_name}" \
+		_nvme_connect_subsys "${nvme_trtype}" "${def_subsysnqn}" \
 				     --hostnqn "${hostnqn}" \
 				     --hostid "${hostid}" \
 				     --dhchap-secret "${hostkey}"
 		udevadm settle
 
-		_nvme_disconnect_subsys "${subsys_name}"
+		_nvme_disconnect_subsys "${def_subsysnqn}"
 	done
 
 	for key_len in 32 48 64; do
 		echo "Testing key length ${key_len}"
-		hostkey="$(nvme gen-dhchap-key --key-length=${key_len} -n ${subsys_name} 2> /dev/null)"
+		hostkey="$(nvme gen-dhchap-key --key-length=${key_len} -n ${def_subsysnqn} 2> /dev/null)"
 		if [ -z "$hostkey" ] ; then
 			echo "couldn't generate host key for length ${key_len}"
 			return 1
 		fi
 		_set_nvmet_hostkey "${hostnqn}" "${hostkey}"
 
-		_nvme_connect_subsys "${nvme_trtype}" "${subsys_name}" \
+		_nvme_connect_subsys "${nvme_trtype}" "${def_subsysnqn}" \
 				     --hostnqn "${hostnqn}" \
 				     --hostid "${hostid}" \
 				     --dhchap-secret "${hostkey}"
 
 		udevadm settle
 
-		_nvme_disconnect_subsys "${subsys_name}"
+		_nvme_disconnect_subsys "${def_subsysnqn}"
 	done
 
-	_remove_nvmet_subsystem_from_port "${port}" "${subsys_name}"
-	_remove_nvmet_subsystem "${subsys_name}"
+	_remove_nvmet_subsystem_from_port "${port}" "${def_subsysnqn}"
+	_remove_nvmet_subsystem "${def_subsysnqn}"
 
 	_remove_nvmet_port "${port}"
 

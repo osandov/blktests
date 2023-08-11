@@ -85,8 +85,7 @@ test() {
 
 	_setup_nvmet
 
-	local subsys_name="blktests-subsystem-1"
-	local cfs_path="${NVMET_CFS}/subsystems/${subsys_name}"
+	local cfs_path="${NVMET_CFS}/subsystems/${def_subsysnqn}"
 	local file_path="${TMPDIR}/img"
 	local skipped=false
 	local hostnqn
@@ -98,34 +97,34 @@ test() {
 
 	truncate -s "${nvme_img_size}" "${file_path}"
 
-	_create_nvmet_subsystem "${subsys_name}" "${file_path}" \
+	_create_nvmet_subsystem "${def_subsysnqn}" "${file_path}" \
 		"b92842df-a394-44b1-84a4-92ae7d112861"
 	port="$(_create_nvmet_port "${nvme_trtype}")"
-	_add_nvmet_subsys_to_port "${port}" "${subsys_name}"
-	_create_nvmet_host "${subsys_name}" "${hostnqn}"
+	_add_nvmet_subsys_to_port "${port}" "${def_subsysnqn}"
+	_create_nvmet_host "${def_subsysnqn}" "${def_hostnqn}"
 
 	if [[ -f "${cfs_path}/attr_qid_max" ]] ; then
-		_nvme_connect_subsys "${nvme_trtype}" "${subsys_name}" \
+		_nvme_connect_subsys "${nvme_trtype}" "${def_subsysnqn}" \
 					--hostnqn "${hostnqn}" \
 					--hostid "${hostid}" \
 					--keep-alive-tmo 1 \
 					--reconnect-delay 2
 
-		if ! nvmf_wait_for_state "${subsys_name}" "live" ; then
+		if ! nvmf_wait_for_state "${def_subsysnqn}" "live" ; then
 			echo FAIL
 		else
-			set_qid_max "${port}" "${subsys_name}" 1 || echo FAIL
-			set_qid_max "${port}" "${subsys_name}" 2 || echo FAIL
+			set_qid_max "${port}" "${def_subsysnqn}" 1 || echo FAIL
+			set_qid_max "${port}" "${def_subsysnqn}" 2 || echo FAIL
 		fi
 
-		_nvme_disconnect_subsys "${subsys_name}"
+		_nvme_disconnect_subsys "${def_subsysnqn}"
 	else
 		SKIP_REASONS+=("missing attr_qid_max feature")
 		skipped=true
 	fi
 
-	_remove_nvmet_subsystem_from_port "${port}" "${subsys_name}"
-	_remove_nvmet_subsystem "${subsys_name}"
+	_remove_nvmet_subsystem_from_port "${port}" "${def_subsysnqn}"
+	_remove_nvmet_subsystem "${def_subsysnqn}"
 	_remove_nvmet_port "${port}"
 	_remove_nvmet_host "${hostnqn}"
 

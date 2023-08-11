@@ -27,7 +27,6 @@ test() {
 	_setup_nvmet
 
 	local port
-	local subsys_name="blktests-subsystem-1"
 	local hostid
 	local hostnqn
 	local file_path="${TMPDIR}/img"
@@ -41,13 +40,13 @@ test() {
 	hostid="${def_hostid}"
 	hostnqn="${def_hostnqn}"
 
-	hostkey="$(nvme gen-dhchap-key -n ${subsys_name} 2> /dev/null)"
+	hostkey="$(nvme gen-dhchap-key -n ${def_subsysnqn} 2> /dev/null)"
 	if [ -z "$hostkey" ] ; then
 		echo "failed to generate host key"
 		return 1
 	fi
 
-	ctrlkey="$(nvme gen-dhchap-key -n ${subsys_name} 2> /dev/null)"
+	ctrlkey="$(nvme gen-dhchap-key -n ${def_subsysnqn} 2> /dev/null)"
 	if [ -z "$ctrlkey" ] ; then
 		echo "failed to generate ctrl key"
 		return 1
@@ -55,14 +54,14 @@ test() {
 
 	truncate -s "${nvme_img_size}" "${file_path}"
 
-	_create_nvmet_subsystem "${subsys_name}" "${file_path}"
+	_create_nvmet_subsystem "${def_subsysnqn}" "${file_path}"
 	port="$(_create_nvmet_port "${nvme_trtype}")"
-	_add_nvmet_subsys_to_port "${port}" "${subsys_name}"
-	_create_nvmet_host "${subsys_name}" "${hostnqn}" "${hostkey}" "${ctrlkey}"
+	_add_nvmet_subsys_to_port "${port}" "${def_subsysnqn}"
+	_create_nvmet_host "${def_subsysnqn}" "${hostnqn}" "${hostkey}" "${ctrlkey}"
 
 	_set_nvmet_dhgroup "${hostnqn}" "ffdhe2048"
 
-	_nvme_connect_subsys "${nvme_trtype}" "${subsys_name}" \
+	_nvme_connect_subsys "${nvme_trtype}" "${def_subsysnqn}" \
 			     --hostnqn "${hostnqn}" \
 			     --hostid "${hostid}" \
 			     --dhchap-secret "${hostkey}" \
@@ -72,7 +71,7 @@ test() {
 
 	echo "Re-authenticate with original host key"
 
-	ctrldev=$(_find_nvme_dev "${subsys_name}")
+	ctrldev=$(_find_nvme_dev "${def_subsysnqn}")
 	if [ -z "$ctrldev" ] ; then
 		echo "nvme controller not found"
 	fi
@@ -81,7 +80,7 @@ test() {
 
 	echo "Renew host key on the controller"
 
-	new_hostkey="$(nvme gen-dhchap-key -n ${subsys_name} 2> /dev/null)"
+	new_hostkey="$(nvme gen-dhchap-key -n ${def_subsysnqn} 2> /dev/null)"
 
 	_set_nvmet_hostkey "${hostnqn}" "${new_hostkey}"
 
@@ -91,7 +90,7 @@ test() {
 
 	echo "Renew ctrl key on the controller"
 
-	new_ctrlkey="$(nvme gen-dhchap-key -n ${subsys_name} 2> /dev/null)"
+	new_ctrlkey="$(nvme gen-dhchap-key -n ${def_subsysnqn} 2> /dev/null)"
 
 	_set_nvmet_ctrlkey "${hostnqn}" "${new_ctrlkey}"
 
@@ -116,15 +115,15 @@ test() {
 
 	echo "${new_hostkey}" > "${hostkey_file}"
 
-	nvmedev=$(_find_nvme_dev "${subsys_name}")
+	nvmedev=$(_find_nvme_dev "${def_subsysnqn}")
 
 	rand_io_size="$(_nvme_calc_rand_io_size 4m)"
 	_run_fio_rand_io --size="${rand_io_size}" --filename="/dev/${nvmedev}n1"
 
-	_nvme_disconnect_subsys "${subsys_name}"
+	_nvme_disconnect_subsys "${def_subsysnqn}"
 
-	_remove_nvmet_subsystem_from_port "${port}" "${subsys_name}"
-	_remove_nvmet_subsystem "${subsys_name}"
+	_remove_nvmet_subsystem_from_port "${port}" "${def_subsysnqn}"
+	_remove_nvmet_subsystem "${def_subsysnqn}"
 
 	_remove_nvmet_port "${port}"
 
