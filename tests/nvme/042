@@ -20,6 +20,10 @@ requires() {
 
 
 test() {
+	echo "Running ${TEST_NAME}"
+
+	_setup_nvmet
+
 	local port
 	local subsys_name="blktests-subsystem-1"
 	local hostid
@@ -30,12 +34,8 @@ test() {
 	local hostkey
 	local ctrldev
 
-	echo "Running ${TEST_NAME}"
-
 	hostid="${def_hostid}"
 	hostnqn="${def_hostnqn}"
-
-	_setup_nvmet
 
 	truncate -s "${nvme_img_size}" "${file_path}"
 

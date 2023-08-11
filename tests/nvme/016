@@ -16,12 +16,12 @@ requires() {
 test() {
 	echo "Running ${TEST_NAME}"
 
+	_setup_nvmet
+
 	local port
 	local iterations="${nvme_num_iter}"
 	local loop_dev
 	local subsys_nqn="blktests-subsystem-1"
-
-	_setup_nvmet
 
 	loop_dev="$(losetup -f)"
 	local genctr=1

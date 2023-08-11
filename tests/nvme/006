@@ -18,11 +18,11 @@ requires() {
 test() {
 	echo "Running ${TEST_NAME}"
 
+	_setup_nvmet
+
 	local port
 	local loop_dev
 	local subsys_name="blktests-subsystem-1"
-
-	_setup_nvmet
 
 	truncate -s "${nvme_img_size}" "$TMPDIR/img"
 

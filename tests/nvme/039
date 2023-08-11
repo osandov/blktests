@@ -131,11 +131,11 @@ inject_invalid_admin_cmd()
 }
 
 test_device() {
+	echo "Running ${TEST_NAME}"
+
 	local nvme_verbose_errors
 	local ns_dev
 	local ctrl_dev
-
-	echo "Running ${TEST_NAME}"
 
 	if _check_kernel_option NVME_VERBOSE_ERRORS; then
 		nvme_verbose_errors=true

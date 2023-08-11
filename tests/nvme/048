@@ -81,6 +81,10 @@ set_qid_max() {
 }
 
 test() {
+	echo "Running ${TEST_NAME}"
+
+	_setup_nvmet
+
 	local subsys_name="blktests-subsystem-1"
 	local cfs_path="${NVMET_CFS}/subsystems/${subsys_name}"
 	local file_path="${TMPDIR}/img"
@@ -88,10 +92,6 @@ test() {
 	local hostnqn
 	local hostid
 	local port
-
-	echo "Running ${TEST_NAME}"
-
-	_setup_nvmet
 
 	hostid="${def_hostid}"
 	hostnqn="${def_hostnqn}"
