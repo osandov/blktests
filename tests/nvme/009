@@ -36,8 +36,6 @@ test() {
 	cat "/sys/block/${nvmedev}n1/uuid"
 	cat "/sys/block/${nvmedev}n1/wwid"
 
-	udevadm settle
-
 	_nvme_disconnect_subsys "${def_subsysnqn}"
 
 	_remove_nvmet_subsystem_from_port "${port}" "${def_subsysnqn}"

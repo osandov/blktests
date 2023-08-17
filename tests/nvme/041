@@ -57,8 +57,6 @@ test() {
 			     --hostid "${def_hostid}" \
 			     --dhchap-secret "${hostkey}"
 
-	udevadm settle
-
 	_nvme_disconnect_subsys "${def_subsysnqn}"
 
 	_remove_nvmet_subsystem_from_port "${port}" "${def_subsysnqn}"

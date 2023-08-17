@@ -35,7 +35,6 @@ test() {
 	_create_nvmet_host "${def_subsysnqn}" "${def_hostnqn}"
 
 	_nvme_connect_subsys "${nvme_trtype}" "${def_subsysnqn}"
-	udevadm settle
 	nvmedev=$(_find_nvme_dev "${def_subsysnqn}")
 
 	# start fio job

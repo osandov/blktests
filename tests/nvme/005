@@ -40,8 +40,6 @@ test() {
 
 	nvmedev=$(_find_nvme_dev "${def_subsysnqn}")
 
-	udevadm settle
-
 	echo 1 > "/sys/class/nvme/${nvmedev}/reset_controller"
 
 	_nvme_disconnect_ctrl "${nvmedev}"

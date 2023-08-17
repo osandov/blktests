@@ -55,8 +55,6 @@ test() {
 				     --hostid "${def_hostid}" \
 				     --dhchap-secret "${hostkey}"
 
-		udevadm settle
-
 		_nvme_disconnect_subsys "${def_subsysnqn}"
 	done
 
@@ -70,8 +68,6 @@ test() {
 				      --hostnqn "${def_hostnqn}" \
 				      --hostid "${def_hostid}" \
 				      --dhchap-secret "${hostkey}"
-
-		udevadm settle
 
 		_nvme_disconnect_subsys "${def_subsysnqn}"
 	done

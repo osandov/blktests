@@ -61,8 +61,6 @@ test() {
 			     --dhchap-secret "${hostkey}" \
 			     --dhchap-ctrl-secret "${ctrlkey}"
 
-	udevadm settle
-
 	echo "Re-authenticate with original host key"
 
 	ctrldev=$(_find_nvme_dev "${def_subsysnqn}")
