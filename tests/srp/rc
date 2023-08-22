@@ -51,7 +51,13 @@ group_requires() {
 	_have_module ib_uverbs
 	_have_module null_blk
 	_have_module rdma_cm
-	_have_module rdma_rxe
+	if [ -n "$use_rxe" ]; then
+		_have_module rdma_rxe
+	else
+		_have_module siw
+		_have_kver 5 5
+		_have_iproute2 190404
+	fi
 	_have_module scsi_debug
 	_have_module target_core_iblock
 	_have_module target_core_mod
