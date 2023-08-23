@@ -92,6 +92,7 @@ use_blk_mq() {
 	shift
 	shift
 	kmod_params=(
+		ch_count=4
 		indirect_sg_entries=2048
 		"$@"
 	)
