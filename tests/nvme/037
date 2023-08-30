@@ -20,15 +20,14 @@ test_device() {
 	local subsys="blktests-subsystem-"
 	local iterations=10
 	local ctrldev
-	local port
 
 	for ((i = 0; i < iterations; i++)); do
-		port=$(_nvmet_passthru_target_setup "${subsys}${i}")
+		_nvmet_passthru_target_setup "${subsys}${i}"
 		nsdev=$(_nvmet_passthru_target_connect "${nvme_trtype}" \
 				"${subsys}${i}")
 
 		_nvme_disconnect_subsys "${subsys}${i}" >>"${FULL}" 2>&1
-		_nvmet_passthru_target_cleanup "${port}" "${subsys}${i}"
+		_nvmet_passthru_target_cleanup "${subsys}${i}"
 	done
 
 	echo "Test complete"

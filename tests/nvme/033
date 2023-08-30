@@ -50,16 +50,15 @@ test_device() {
 	_setup_nvmet
 
 	local nsdev
-	local port
 
-	port=$(_nvmet_passthru_target_setup "${def_subsysnqn}")
+	_nvmet_passthru_target_setup "${def_subsysnqn}"
 
 	nsdev=$(_nvmet_passthru_target_connect "${nvme_trtype}" "${def_subsysnqn}")
 
 	compare_dev_info "${nsdev}"
 
 	_nvme_disconnect_subsys "${def_subsysnqn}"
-	_nvmet_passthru_target_cleanup "${port}" "${def_subsysnqn}"
+	_nvmet_passthru_target_cleanup "${def_subsysnqn}"
 
 	echo "Test complete"
 }

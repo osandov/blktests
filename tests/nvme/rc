@@ -745,6 +745,19 @@ _remove_nvmet_subsystem_from_port() {
 	rm "${NVMET_CFS}/ports/${port}/subsystems/${nvmet_subsystem}"
 }
 
+_get_nvmet_ports() {
+	local nvmet_subsystem="$1"
+	local -n nvmet_ports="$2"
+	local cfs_path="${NVMET_CFS}/ports"
+	local sarg
+
+	sarg="s;^${cfs_path}/\([0-9]\+\)/subsystems/${nvmet_subsystem}$;\1;p"
+
+	for path in "${cfs_path}/"*"/subsystems/${nvmet_subsystem}"; do
+		nvmet_ports+=("$(echo "${path}" | sed -n -s "${sarg}")")
+	done
+}
+
 _set_nvmet_hostkey() {
 	local nvmet_hostnqn="$1"
 	local nvmet_hostkey="$2"
@@ -807,13 +820,12 @@ _find_nvme_passthru_loop_dev() {
 
 _nvmet_passthru_target_setup() {
 	local subsys_name=$1
+	local port
 
 	_create_nvmet_passthru "${subsys_name}"
 	port="$(_create_nvmet_port "${nvme_trtype}")"
 	_add_nvmet_subsys_to_port "${port}" "${subsys_name}"
 	_create_nvmet_host "${subsys_name}" "${def_hostnqn}"
-
-	echo "$port"
 }
 
 _nvmet_passthru_target_connect() {
@@ -832,11 +844,17 @@ _nvmet_passthru_target_connect() {
 }
 
 _nvmet_passthru_target_cleanup() {
-	local port=$1
-	local subsys_name=$2
+	local subsys_name=$1
+	local ports
+	local port
 
-	_remove_nvmet_subsystem_from_port "${port}" "${subsys_name}"
-	_remove_nvmet_port "${port}"
+	_get_nvmet_ports "${subsys_name}" ports
+
+	for port in "${ports[@]}"; do
+		_remove_nvmet_subsystem_from_port "${port}" "${subsys_name}"
+		_remove_nvmet_port "${port}"
+	done
+
 	_remove_nvmet_passhtru "${subsys_name}"
 	_remove_nvmet_host "${def_hostnqn}"
 }
