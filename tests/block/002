@@ -19,7 +19,7 @@ requires() {
 test() {
 	echo "Running ${TEST_NAME}"
 
-	if ! _configure_scsi_debug delay=0; then
+	if ! _configure_scsi_debug; then
 		return 1
 	fi
 
