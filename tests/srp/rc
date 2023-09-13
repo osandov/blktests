@@ -91,7 +91,10 @@ use_blk_mq() {
 
 	shift
 	shift
-	kmod_params=("$@")
+	kmod_params=(
+		indirect_sg_entries=2048
+		"$@"
+	)
 
 	(
 		cd /sys/module/dm_mod/parameters || return $?
@@ -109,7 +112,7 @@ use_blk_mq() {
 	log_out &&
 		remove_mpath_devs &&
 		stop_srp_ini &&
-		start_srp_ini indirect_sg_entries=2048 "${kmod_params[@]}" &&
+		start_srp_ini "${kmod_params[@]}" &&
 		log_in
 }
 
