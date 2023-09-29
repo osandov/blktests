@@ -31,6 +31,8 @@ connect_and_disconnect() {
 test() {
 	echo "Running ${TEST_NAME}"
 
+	local pid1 pid2 i=0
+
 	_start_nbd_server_netlink
 
 	module_load_and_unload &
@@ -52,6 +54,18 @@ test() {
 		-e "cannot create duplicate filename"; then
 			echo "Fail"
 	fi
+
+	# Ensure nbd-client completion and clean up left connection
+	# shellcheck disable=SC2009
+	while ps | grep -qe nbd-client; do
+		sleep .5
+		if ((i == 10)); then
+			echo "nbd-client process is left"
+			break
+		fi
+		i=$((i + 1))
+	done
+	_netlink_disconnect
 
 	echo "Test complete"
 }
