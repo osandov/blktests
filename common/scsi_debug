@@ -25,6 +25,19 @@ _scsi_debug_key_path() {
 	echo "$path"
 }
 
+_have_scsi_debug_group_number_stats() {
+	local ret=0
+
+	modprobe -qr scsi_debug >&/dev/null
+	modprobe -q scsi_debug delay=0 >&/dev/null
+	if ! [[ -e ${SD_PSEUDO_PATH}/group_number_stats ]]; then
+		SKIP_REASONS+=("scsi_debug does not support group number statistics")
+		ret=1
+	fi
+	modprobe -qr scsi_debug >&/dev/null
+	return ${ret}
+}
+
 declare -a SCSI_DEBUG_HOSTS
 declare -a SCSI_DEBUG_TARGETS
 declare -a SCSI_DEBUG_DEVICES
