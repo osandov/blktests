@@ -44,7 +44,11 @@ _nvme_requires() {
 		_have_driver nvmet-rdma
 		_have_configfs
 		_have_program rdma
-		_have_driver rdma_rxe || _have_driver siw
+		if [ -n "$use_rxe" ]; then
+			_have_driver rdma_rxe
+		else
+			_have_driver siw
+		fi
 		;;
 	fc)
 		_have_driver nvme-fc
