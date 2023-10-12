@@ -21,15 +21,16 @@ test() {
 	local port
 	local iterations="${nvme_num_iter}"
 
-	truncate -s "${nvme_img_size}" "${def_file_path}"
+	truncate -s "${nvme_img_size}" "$(_nvme_def_file_path)"
 
 	local genctr=1
 
-	_create_nvmet_subsystem "${def_subsysnqn}" "${def_file_path}" \
+	_create_nvmet_subsystem "${def_subsysnqn}" "$(_nvme_def_file_path)" \
 		"${def_subsys_uuid}"
 
 	for ((i = 2; i <= iterations; i++)); do
-		_create_nvmet_ns "${def_subsysnqn}" "${i}" "${def_file_path}"
+		_create_nvmet_ns "${def_subsysnqn}" "${i}" \
+				 "$(_nvme_def_file_path)"
 	done
 
 	port="$(_create_nvmet_port "${nvme_trtype}")"
@@ -46,7 +47,7 @@ test() {
 
 	_remove_nvmet_subsystem "${def_subsysnqn}"
 
-	rm "${def_file_path}"
+	rm "$(_nvme_def_file_path)"
 
 	echo "Test complete"
 }

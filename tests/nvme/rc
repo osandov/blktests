@@ -18,10 +18,15 @@ def_hostid="0f01fb42-9f7f-4856-b0b3-51e60b8de349"
 def_hostnqn="nqn.2014-08.org.nvmexpress:uuid:${def_hostid}"
 export def_subsysnqn="blktests-subsystem-1"
 export def_subsys_uuid="91fdba0d-f87b-4c25-b80f-db7be1418b9e"
-export def_file_path="${TMPDIR}/img"
 nvme_trtype=${nvme_trtype:-"loop"}
 nvme_img_size=${nvme_img_size:-"1G"}
 nvme_num_iter=${nvme_num_iter:-"1000"}
+
+# TMPDIR can not be referred out of test() or test_device() context. Instead of
+# global variable def_flie_path, use this getter function.
+_nvme_def_file_path() {
+	echo "${TMPDIR}/img"
+}
 
 _nvme_requires() {
 	_have_program nvme
@@ -304,11 +309,11 @@ _cleanup_blkdev() {
 	local blkdev
 	local dev
 
-	blkdev="$(losetup -l | awk '$6 == "'"${def_file_path}"'" { print $1 }')"
+	blkdev="$(losetup -l | awk '$6 == "'"$(_nvme_def_file_path)"'" { print $1 }')"
 	for dev in ${blkdev}; do
 		losetup -d "${dev}"
 	done
-	rm -f "${def_file_path}"
+	rm -f "$(_nvme_def_file_path)"
 }
 
 _cleanup_nvmet() {
@@ -863,11 +868,11 @@ _nvmet_target_setup() {
 		esac
 	done
 
-	truncate -s "${nvme_img_size}" "${def_file_path}"
+	truncate -s "${nvme_img_size}" "$(_nvme_def_file_path)"
 	if [[ "${blkdev_type}" == "device" ]]; then
-		blkdev="$(losetup -f --show "${def_file_path}")"
+		blkdev="$(losetup -f --show "$(_nvme_def_file_path)")"
 	else
-		blkdev="${def_file_path}"
+		blkdev="$(_nvme_def_file_path)"
 	fi
 
 	_create_nvmet_subsystem "${def_subsysnqn}" "${blkdev}" \
