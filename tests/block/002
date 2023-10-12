@@ -23,7 +23,7 @@ test() {
 		return 1
 	fi
 
-	blktrace -D "$TMP_DIR" "/dev/${SCSI_DEBUG_DEVICES[0]}" >"$FULL" 2>&1 &
+	blktrace -D "$TMPDIR" "/dev/${SCSI_DEBUG_DEVICES[0]}" >"$FULL" 2>&1 &
 	sleep 0.5
 	echo 1 > "/sys/block/${SCSI_DEBUG_DEVICES[0]}/device/delete"
 	{ kill $!; wait; } >/dev/null 2>/dev/null
