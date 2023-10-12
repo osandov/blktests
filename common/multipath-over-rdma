@@ -13,6 +13,7 @@ fio_aux_path=/tmp/fio-state-files
 memtotal=$(sed -n 's/^MemTotal:[[:blank:]]*\([0-9]*\)[[:blank:]]*kB$/\1/p' /proc/meminfo)
 max_ramdisk_size=$((1<<25))
 use_rxe=${use_rxe:-""}
+use_hw_rdma=${use_hw_rdma:-""}
 ramdisk_size=$((memtotal*(1024/16)))  # in bytes
 if [ $ramdisk_size -gt $max_ramdisk_size ]; then
 	ramdisk_size=$max_ramdisk_size
@@ -439,6 +440,23 @@ stop_soft_rdma() {
 	} >>"$FULL"
 }
 
+start_rdma() {
+	if [[ -n "$use_rxe" && -n "$use_hw_rdma" ]]; then
+		echo "The variables use_rxe and use_hw_rdma must not be enable at the same time."
+		return 1
+	fi
+
+	if [ -z "$use_hw_rdma" ]; then
+		start_soft_rdma
+	fi
+}
+
+stop_rdma() {
+	if [ -z "$use_hw_rdma" ]; then
+		stop_soft_rdma
+	fi
+}
+
 # Look up the block device below the filesystem for directory $1.
 block_dev_of_dir() {
 	df "$1" | {
@@ -580,7 +598,7 @@ configure_null_blk() {
 }
 
 setup_rdma() {
-	start_soft_rdma
+	start_rdma
 	(
 		echo "RDMA interfaces:"
 		cd /sys/class/infiniband &&
@@ -599,7 +617,7 @@ teardown_uncond() {
 	killall -9 multipathd >&/dev/null
 	rm -f /etc/multipath.conf
 	stop_target
-	stop_soft_rdma
+	stop_rdma
 	_exit_null_blk
 }
 

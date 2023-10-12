@@ -46,7 +46,7 @@ _nvme_requires() {
 		_have_program rdma
 		if [ -n "$use_rxe" ]; then
 			_have_driver rdma_rxe
-		else
+		elif [ -z "$use_hw_rdma" ]; then
 			_have_driver siw
 		fi
 		;;
@@ -372,7 +372,7 @@ _cleanup_nvmet() {
 	fi
 	modprobe -rq nvmet 2>/dev/null
 	if [[ "${nvme_trtype}" == "rdma" ]]; then
-		stop_soft_rdma
+		stop_rdma
 	fi
 
 	_cleanup_blkdev
@@ -386,7 +386,7 @@ _setup_nvmet() {
 	fi
 	modprobe -q nvme-"${nvme_trtype}"
 	if [[ "${nvme_trtype}" == "rdma" ]]; then
-		start_soft_rdma
+		start_rdma
 		for i in $(rdma_network_interfaces)
 		do
 			if [[ "${nvme_adrfam}" == "ipv6" ]]; then
@@ -554,7 +554,11 @@ _nvme_connect_subsys() {
 		ARGS+=(--ctrl-loss-tmo="${ctrl_loss_tmo}")
 	fi
 
-	nvme connect "${ARGS[@]}" 2> /dev/null
+	if ! nvme connect "${ARGS[@]}" 2> /dev/null; then
+		if [[ -n "$use_hw_rdma" ]]; then
+			echo "Check RDMA hardware set up; use_hw_rdma is enabledand 'nvme connect' failed."
+		fi
+	fi
 
 	# Wait until device file and uuid/wwid sysfs attributes get ready for
 	# all namespaces.

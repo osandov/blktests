@@ -113,7 +113,7 @@ The NVMe tests can be additionally parameterized via environment variables.
 ### Running nvme-rdma and SRP tests
 
 These tests will use the siw (soft-iWARP) driver by default. The rdma_rxe
-(soft-RoCE) driver is also supported.
+(soft-RoCE) driver and hardware RDMA drivers are also supported.
 
 ```sh
 To use the siw driver:
@@ -123,6 +123,13 @@ nvme_trtype=rdma ./check nvme/
 To use the rdma_rxe driver:
 use_rxe=1 nvme_trtype=rdma ./check nvme/
 use_rxe=1 ./check srp/
+
+To use hardware RDMA drivers, set up hardware RDMA beforehand:
+use_hw_rdma=1 nvme_trtype=rdma ./check nvme/
+use_hw_rdma=1 ./check srp/
+
+Note: The variables use_rxe and use_hw_rdma must not be enabled at the same time.
+Also, Need to make sure to unload the hardware RDMA drivers when testing siw or rdma_rxe.
 ```
 
 ### Normal user
