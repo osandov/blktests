@@ -27,8 +27,7 @@ test() {
 	_nvme_connect_subsys "${nvme_trtype}" "${def_subsysnqn}"
 
 	nvmedev=$(_find_nvme_dev "${def_subsysnqn}")
-	cat "/sys/block/${nvmedev}n1/uuid"
-	cat "/sys/block/${nvmedev}n1/wwid"
+	_check_uuid "${nvmedev}"
 
 	if ! nvme ns-descs "/dev/${nvmedev}" -n 1 >> "$FULL" 2>&1; then
 		echo "ERROR: ns-desc failed"
