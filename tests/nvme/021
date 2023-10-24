@@ -33,7 +33,7 @@ test() {
 		echo "ERROR: device not listed"
 	fi
 
-	_nvme_disconnect_subsys "${def_subsysnqn}" >> "$FULL" 2>&1
+	_nvme_disconnect_subsys "${def_subsysnqn}"
 
 	_nvmet_target_cleanup
 
