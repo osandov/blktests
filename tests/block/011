@@ -38,6 +38,8 @@ device_requires() {
 test_device() {
 	echo "Running ${TEST_NAME}"
 
+	local pdev size rescan=false state i
+
 	pdev="$(_get_pci_dev_from_blkdev)"
 
 	if _test_dev_is_rotational; then
@@ -60,17 +62,35 @@ test_device() {
 
 	echo "Test complete"
 
-	# This test triggers NVME controller resets. When any failure happens
-	# during the resets, the driver marks the NVME block devices with zero
-	# capacity. Then following tests fail with the zero capacity devices. To
-	# get back the correct capacity, remove and rescan the devices.
+	# This test triggers NVME controller resets. When failures happen during
+	# the resets, the driver marks the NVME block devices as zero capacity.
+	# Remove and rescan the devices to regain the correct capacity.
 	if ((!$(<"$TEST_DEV_SYSFS/size"))); then
-		echo "$TEST_DEV has zero capacity" >> "$FULL"
-		if [[ -w $TEST_DEV_SYSFS/device/device/remove ]] &&
-			   [[ -w /sys/bus/pci/rescan ]]; then
-			echo "Rescan to tegain the correct capacity" >> "$FULL"
-			echo 1 > "$TEST_DEV_SYSFS/device/device/remove"
-			echo 1 > /sys/bus/pci/rescan
+		echo "$TEST_DEV has zero capacity. Rescan it." >> "$FULL"
+		rescan=true
+	fi
+
+	# This test case often makes NVME or HDDs connected to HBAs in offline
+	# or dead mode. Remove and rescan the devices to make them online again.
+	if state=$({ cat "$TEST_DEV_SYSFS/device/state"; } 2>/dev/null); then
+		if [[ $state == offline || $state == dead ]]; then
+			echo "$TEST_DEV is $state. Rescan it." >> "$FULL"
+			rescan=true
 		fi
+	fi
+
+	if [[ $rescan == true ]]; then
+		if [[ -w /sys/bus/pci/devices/$pdev/remove ]] &&
+			   [[ -w /sys/bus/pci/rescan ]]; then
+			echo 1 > "/sys/bus/pci/devices/$pdev/remove"
+			echo 1 > /sys/bus/pci/rescan
+		else
+			echo "Can not rescan PCI device for recovery"
+			return 1
+		fi
+		for ((i = 0; i < 10; i++)); do
+			[[ -w $TEST_DEV ]] && break
+			sleep 5
+		done
 	fi
 }
