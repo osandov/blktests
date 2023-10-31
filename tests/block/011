@@ -49,6 +49,7 @@ test_device() {
 	fi
 
 	# start fio job
+	: "${TIMEOUT:=1200}"
 	_run_fio_rand_io --filename="$TEST_DEV" --size="$size" \
 			--ignore_error=EIO,ENXIO,ENODEV &
 
