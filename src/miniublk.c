@@ -1440,6 +1440,8 @@ static int ublk_loop_tgt_init(struct ublk_dev *dev)
 		p.basic.physical_bs_shift = ilog2(pbs);
 	} else if (S_ISREG(st.st_mode)) {
 		bytes = st.st_size;
+		p.basic.logical_bs_shift = ilog2(st.st_blksize);
+		p.basic.physical_bs_shift = ilog2(st.st_blksize);
 	} else {
 		bytes = 0;
 	}
@@ -1512,6 +1514,8 @@ static int ublk_loop_tgt_recover(struct ublk_dev *dev)
 			return -1;
 	} else if (S_ISREG(st.st_mode)) {
 		bytes = st.st_size;
+		bs = st.st_blksize;
+		pbs = st.st_blksize;
 	} else {
 		bytes = 0;
 	}
