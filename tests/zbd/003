@@ -3,7 +3,7 @@
 # Copyright (C) 2018 Western Digital Corporation or its affiliates.
 #
 # Confirm that reset zone command for 2 contiguous sequential write
-# requried zones works as expected.
+# required zones works as expected.
 
 . tests/zbd/rc
 
@@ -62,7 +62,7 @@ test_device() {
 	_get_blkzone_report "${TEST_DEV}" || return $?
 	for i in "${target_zones[@]}"; do
 		if [[ ${ZONE_WPTRS[$i]} -ne 8 ]]; then
-			echo -n "Unexpected write poiter position in zone ${i} "
+			echo -n "Unexpected write pointer position in zone ${i} "
 			echo "wp: ${ZONE_WPTRS[i]}"
 			return 1
 		fi
@@ -76,7 +76,7 @@ test_device() {
 	_get_blkzone_report "${TEST_DEV}" || return $?
 	for i in "${target_zones[@]}"; do
 		if [[ ${ZONE_WPTRS[i]} -ne 0 ]]; then
-			echo -n "Unexpected non-zero write poiter in zone ${i} "
+			echo -n "Unexpected non-zero write pointer in zone ${i} "
 			echo "wp: ${ZONE_WPTRS[i]}"
 			return 1
 		fi

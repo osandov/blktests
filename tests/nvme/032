@@ -4,7 +4,7 @@
 #
 # Test nvme pci adapter rescan/reset/remove operation during I/O
 #
-# Regression test for bellow two commits:
+# Regression test for below two commits:
 # http://lists.infradead.org/pipermail/linux-nvme/2017-May/010367.html
 # 986f75c876db nvme: avoid to use blk_mq_abort_requeue_list()
 # 806f026f9b90 nvme: use blk_mq_start_hw_queues() in nvme_kill_queues()

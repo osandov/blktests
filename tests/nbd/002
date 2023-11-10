@@ -95,7 +95,7 @@ test() {
 	udevadm settle
 
 	if  ! stat /dev/nbd0p1 >/dev/null 2>&1; then
-		echo "Didn't have parition on the netlink path"
+		echo "Didn't have partition on the netlink path"
 		nbd-client -L -d /dev/nbd0 >> "$FULL" 2>&1
 		_stop_nbd_server
 		return 1

@@ -3,7 +3,7 @@
 # Copyright (C) 2018 Western Digital Corporation or its affiliates.
 #
 # Check kernel splits write operations across a zone border. Select two
-# contiguous sequential write required zones and confirm write oprations
+# contiguous sequential write required zones and confirm write operations
 # across the two zones succeed.
 
 . tests/zbd/rc

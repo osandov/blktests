@@ -50,7 +50,7 @@ test() {
 		fi
 	done
 
-	# There might be possibilty of some random process freeing up memory at
+	# There might be possibility of some random process freeing up memory at
 	# same time nullblk is unloaded.
 	# we consider 3/5 times to be positive.
 	if ((mem_leak > 3)); then

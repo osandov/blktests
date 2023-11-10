@@ -138,7 +138,7 @@ _configure_scsi_debug() {
 		value=${o#*=}
 		values+=("${value}")
 		if ! path=$(_scsi_debug_key_path "$key"); then
-			echo "sysfs to write $key is not avaialbe"
+			echo "sysfs to write $key is not available"
 			return 1
 		fi
 		if [[ $key == add_host ]]; then

@@ -410,7 +410,7 @@ _require_test_dev_is_partition() {
 
 _require_normal_user() {
 	if ! id "$NORMAL_USER" >/dev/null 2>&1; then
-		SKIP_REASONS+=("valid NORMAL_USER is not specfied")
+		SKIP_REASONS+=("valid NORMAL_USER is not specified")
 		return 1
 	fi
 	return 0

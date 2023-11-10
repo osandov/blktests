@@ -34,7 +34,7 @@ test() {
 	xfs_io -c "pwrite -S 0xbb -b 2M 2M 10M" -f "$dev" >>"$FULL"
 
 	blkdiscard "$dev"
-	# After device was fully discarded, read sould return all zeroes
+	# After device was fully discarded, read should return all zeroes
 	dd if="$dev" bs=4k  2>>"$FULL" | hexdump
 	dd if="$dev" bs=4M iflag=direct 2>>"$FULL" | hexdump
 
