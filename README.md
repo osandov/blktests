@@ -26,6 +26,7 @@ Some tests require the following:
 - multipath-tools (Debian, openSUSE, Arch Linux) or device-mapper-multipath
   (Fedora)
 - dmsetup (Debian) or device-mapper (Fedora, openSUSE, Arch Linux)
+- rublk (`cargo install --version=^0.1 rublk`) for ublk test
 
 Build blktests with `make`. Optionally, install it to a known location with
 `make install` (`/usr/local/blktests` by default, but this can be changed by

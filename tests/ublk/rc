@@ -14,4 +14,8 @@ group_requires() {
 	_have_fio
 }
 
-export UBLK_PROG="src/miniublk"
+if which rublk > /dev/null 2>&1; then
+	export UBLK_PROG="src/rublk_wrapper.sh"
+else
+	export UBLK_PROG="src/miniublk"
+fi

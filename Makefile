@@ -19,7 +19,7 @@ SHELLCHECK_EXCLUDE := SC2119
 
 check:
 	shellcheck -x -e $(SHELLCHECK_EXCLUDE) -f gcc check new common/* \
-		tests/*/rc tests/*/[0-9]*[0-9]
+		tests/*/rc tests/*/[0-9]*[0-9] src/*.sh
 	! grep TODO tests/*/rc tests/*/[0-9]*[0-9]
 	! find -name '*.out' -perm /u=x+g=x+o=x -printf '%p is executable\n' | grep .
 
