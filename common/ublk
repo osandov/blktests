@@ -8,19 +8,19 @@
 
 _have_ublk() {
 	_have_driver ublk_drv
-	_have_src_program miniublk
+	_have_program "${UBLK_PROG}"
 }
 
 _remove_ublk_devices() {
-	src/miniublk del -a
+	${UBLK_PROG} del -a
 }
 
 _get_ublk_dev_state() {
-	src/miniublk list -n "$1" | grep "state" | awk '{print $11}'
+	${UBLK_PROG} list -n "$1" | grep "state" | awk '{print $11}'
 }
 
 _get_ublk_daemon_pid() {
-	src/miniublk list -n "$1" | grep "pid" | awk '{print $7}'
+	${UBLK_PROG} list -n "$1" | grep "pid" | awk '{print $7}'
 }
 
 _init_ublk() {
