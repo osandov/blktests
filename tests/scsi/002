@@ -7,7 +7,7 @@
 
 . tests/scsi/rc
 
-DESCRIPTION="perfom a SG_DXFER_FROM_DEV from the /dev/sg read-write interface"
+DESCRIPTION="perform a SG_DXFER_FROM_DEV from the /dev/sg read-write interface"
 QUICK=1
 
 requires() {
