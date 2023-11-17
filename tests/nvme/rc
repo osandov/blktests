@@ -959,6 +959,30 @@ _check_genctr() {
 	echo "${genctr}"
 }
 
+_check_uuid() {
+	local nvmedev=$1
+	local nr_nsid=0
+
+	for ns in "/sys/block/${nvmedev}n"* ; do
+		[ -e "${ns}/wwid" ] || continue
+		nr_nsid=$((nr_nsid + 1))
+		[ -e "${ns}/uuid" ] || continue
+		uuid=$(cat "${ns}/uuid")
+		wwid=$(cat "${ns}/wwid")
+		if [ "${uuid}" != "${wwid#uuid.}" ]; then
+			echo "UUID ${uuid} mismatch (wwid ${wwid})"
+			return 1
+		elif [ "${uuid}" != "${def_subsys_uuid}" ]; then
+			echo "UUID ${uuid} mismatch with ${def_subsys_uuid})"
+			return 1
+		fi
+	done
+	if [ $nr_nsid -eq 0 ] ; then
+		echo "No namespaces found"
+		return 1
+	fi
+}
+
 declare -A NS_DEV_FAULT_INJECT_SAVE
 declare -A CTRL_DEV_FAULT_INJECT_SAVE
 

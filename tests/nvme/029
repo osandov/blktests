@@ -60,8 +60,7 @@ test() {
 	_nvme_connect_subsys "${nvme_trtype}" "${def_subsysnqn}"
 
 	nvmedev=$(_find_nvme_dev "${def_subsysnqn}")
-	cat "/sys/block/${nvmedev}n1/uuid"
-	cat "/sys/block/${nvmedev}n1/wwid"
+	_check_uuid "${nvmedev}"
 
 	local dev="/dev/${nvmedev}n1"
 	test_user_io "$dev" 1 512 > "$FULL" 2>&1 || echo FAIL
