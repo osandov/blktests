@@ -1,4 +1,4 @@
 Running nvme/019
 NVMe DSM: success
-NQN:blktests-subsystem-1 disconnected 1 controller(s)
+disconnected 1 controller(s)
 Test complete

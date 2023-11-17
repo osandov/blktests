@@ -430,7 +430,8 @@ _nvme_disconnect_ctrl() {
 _nvme_disconnect_subsys() {
 	local subsysnqn="$1"
 
-	nvme disconnect -n "${subsysnqn}"
+	nvme disconnect -n "${subsysnqn}" |& tee -a "$FULL" |
+		grep -o "disconnected.*"
 }
 
 _nvme_connect_subsys() {
