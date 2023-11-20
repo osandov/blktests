@@ -155,6 +155,22 @@ _require_nvme_cli_auth() {
 	return 0
 }
 
+_require_kernel_nvme_fabrics_feature() {
+	local feature="$1"
+
+	_have_driver nvme-fabrics || return 1
+
+	if ! [[ -r /dev/nvme-fabrics ]]; then
+		SKIP_REASONS+=("/dev/nvme-fabrics not available")
+		return 1;
+	fi
+	if ! grep -qe "${feature}" /dev/nvme-fabrics; then
+		SKIP_REASONS+=("nvme-fabrics does not support ${feature}")
+		return 1;
+	fi
+	return 0
+}
+
 _test_dev_nvme_ctrl() {
 	echo "/dev/char/$(cat "${TEST_DEV_SYSFS}/device/dev")"
 }
