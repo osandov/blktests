@@ -10,6 +10,12 @@ DESCRIPTION="check that LOOP_CONFIGURE sends uevents for partitions"
 
 QUICK=1
 
+requires() {
+	if ! udevadm control --ping >& /dev/null; then
+		SKIP_REASONS+=("udevadm control does not support --ping option")
+	fi
+}
+
 test() {
 	echo "Running ${TEST_NAME}"
 
