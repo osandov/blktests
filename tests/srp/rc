@@ -53,7 +53,7 @@ group_requires() {
 	_have_module rdma_cm
 	if [ -n "$use_rxe" ]; then
 		_have_module rdma_rxe
-	else
+	elif [ -z "$use_hw_rdma" ]; then
 		_have_module siw
 		_have_kver 5 5
 		_have_iproute2 190404
