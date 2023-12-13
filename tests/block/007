@@ -58,14 +58,18 @@ test_device() {
 	run_fio_job 1
 
 	# switch to auto-hybrid polling, run job
-	FIO_PERF_PREFIX="auto hybrid poll "
 	_test_dev_queue_set io_poll_delay 0
-	run_fio_job 1
+	if [[ $(_test_dev_queue_get io_poll_delay) == '0' ]]; then
+		FIO_PERF_PREFIX="auto hybrid poll "
+		run_fio_job 1
+	fi
 
 	# switch to explicit delay polling, run job
-	FIO_PERF_PREFIX="fixed hybrid poll "
 	_test_dev_queue_set io_poll_delay 4
-	run_fio_job 1
+	if [[ $(_test_dev_queue_get io_poll_delay) == '4' ]]; then
+		FIO_PERF_PREFIX="fixed hybrid poll "
+		run_fio_job 1
+	fi
 
 	echo "Test complete"
 }
