@@ -10,6 +10,21 @@ _have_null_blk() {
 	_have_driver null_blk
 }
 
+_have_null_blk_feature() {
+	# Ensure that null_blk driver is built-in or loaded
+	if ! [[ -d /sys/module/null_blk ]]; then
+		if ! modprobe -q null_blk; then
+			return 1
+		fi
+		if [[ ! "${MODULES_TO_UNLOAD[*]}" =~ null_blk ]]; then
+			MODULES_TO_UNLOAD+=(null_blk)
+		fi
+	fi
+
+	# Check that null_blk has the specified feature
+	grep -qe "$1" /sys/kernel/config/nullb/features
+}
+
 _remove_null_blk_devices() {
 	if [[ -d /sys/kernel/config/nullb ]]; then
 		find /sys/kernel/config/nullb -mindepth 1 -maxdepth 1 \
