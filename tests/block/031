@@ -11,30 +11,43 @@ DESCRIPTION="do IO on null-blk with a host tag set"
 TIMED=1
 
 requires() {
-	_have_fio && _have_null_blk && _have_module_param null_blk shared_tag_bitmap
+	_have_fio
+	_have_null_blk
+	if ! _have_null_blk_feature shared_tag_bitmap; then
+		_have_module_param null_blk shared_tag_bitmap
+	fi
 }
 
 test() {
 	local fio_status bs=512
+	local -a opts=(nullb1 completion_nsec=0 blocksize="$bs" size=1 \
+			      submit_queues="$(nproc)" memory_backed=1)
 
 	: "${TIMEOUT:=30}"
-	if ! _init_null_blk nr_devices=0 shared_tag_bitmap=1; then
-		echo "Loading null_blk failed"
-		return 1
+	# _configure_null_blk() sets null_blk parameters via configfs, while
+	# _init_null_blk() sets null_blk parameters as module parameters. Old
+	# kernels require shared_tag_bitmap as a module parameter. In that case,
+	# call _init_null_blk() for shared_tag_bitmap.
+	if _have_null_blk_feature shared_tag_bitmap; then
+		opts+=(shared_tag_bitmap=1)
+	else
+		if ! _init_null_blk shared_tag_bitmap=1; then
+			echo "Loading null_blk failed"
+			return 1
+		fi
 	fi
-	if ! _configure_null_blk nullb0 completion_nsec=0 blocksize=$bs size=1\
-	     submit_queues="$(nproc)" memory_backed=1 power=1; then
+	if ! _configure_null_blk "${opts[@]}" power=1; then
 		echo "Configuring null_blk failed"
 		return 1
 	fi
 	fio --verify=md5 --rw=randwrite --bs=$bs --loops=$((10**6)) \
 		--iodepth=64 --group_reporting --sync=1 --direct=1 \
 		--ioengine=libaio --runtime="${TIMEOUT}" --thread \
-		--name=block-031 --filename=/dev/nullb0 \
+		--name=block-031 --filename=/dev/nullb1 \
 		--output="${RESULTS_DIR}/block/fio-output-031.txt" \
 		>>"$FULL"
 	fio_status=$?
-	rmdir /sys/kernel/config/nullb/nullb0
+	rmdir /sys/kernel/config/nullb/nullb1
 	_exit_null_blk
 	case $fio_status in
 		0) echo "Passed";;
