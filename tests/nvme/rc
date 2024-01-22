@@ -576,7 +576,7 @@ _nvme_connect_subsys() {
 		ARGS+=(--ctrl-loss-tmo="${ctrl_loss_tmo}")
 	fi
 
-	nvme connect "${ARGS[@]}" 2> /dev/null
+	nvme connect "${ARGS[@]}" 2> /dev/null | grep -v "connecting to device:"
 
 	# Wait until device file and uuid/wwid sysfs attributes get ready for
 	# all namespaces.
