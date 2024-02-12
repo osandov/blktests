@@ -356,7 +356,7 @@ _cleanup_nvmet() {
 			if [[ "$transport" != "fc" ]]; then
 				echo "WARNING: Test did not clean up ${nvme_trtype} device: ${dev}"
 			fi
-			_nvme_disconnect_ctrl "${dev}"
+			_nvme_disconnect_ctrl "${dev}" 2>/dev/null
 		fi
 	done
 
