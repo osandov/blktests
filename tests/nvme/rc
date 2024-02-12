@@ -189,57 +189,6 @@ _nvme_calc_rand_io_size() {
 	echo "${io_size_kb}k"
 }
 
-_have_nvme_cli_context() {
-	# ignore all non-fc transports for now
-	if [[ "${nvme_trtype}" != "fc" ]] ||
-	   ! nvme connect --help 2>&1 | grep -q -- '--context=<STR>' > /dev/null; then
-		return 1
-	fi
-	return 0
-}
-
-_setup_nvme_cli() {
-	local local_wwnn="${1}"
-	local local_wwpn="${2}"
-	local remote_wwnn="${3}"
-	local remote_wwpn="${4}"
-
-	if ! _have_nvme_cli_context; then
-		return
-	fi
-
-	mkdir -p /run/nvme
-	cat >> /run/nvme/blktests.json <<-EOF
-	[
-	  {
-	    "hostnqn": "${def_hostnqn}",
-	    "hostid": "${def_hostid}",
-	    "subsystems": [
-	      {
-	        "application": "blktests",
-	        "nqn": "blktests-subsystem-1",
-	        "ports": [
-	          {
-	            "transport": "fc",
-	            "traddr": "nn-${remote_wwnn}:pn-${remote_wwpn}",
-	            "host_traddr": "nn-${local_wwnn}:pn-${local_wwpn}"
-	          }
-	        ]
-	      }
-	    ]
-	  }
-	]
-	EOF
-}
-
-_cleanup_nvme_cli() {
-	if ! _have_nvme_cli_context; then
-		return
-	fi
-
-	rm -f /run/nvme/blktests.json
-}
-
 _nvme_fcloop_add_rport() {
 	local local_wwnn="$1"
 	local local_wwpn="$2"
@@ -271,9 +220,6 @@ _setup_fcloop() {
 	local local_wwpn="${2:-$def_local_wwpn}"
 	local remote_wwnn="${3:-$def_remote_wwnn}"
 	local remote_wwpn="${4:-$def_remote_wwpn}"
-
-	_setup_nvme_cli "${local_wwnn}" "${local_wwpn}" \
-			"${remote_wwnn}" "${remote_wwpn}"
 
 	_nvme_fcloop_add_tport "${remote_wwnn}" "${remote_wwpn}"
 	_nvme_fcloop_add_lport "${local_wwnn}" "${local_wwpn}"
@@ -317,8 +263,6 @@ _cleanup_fcloop() {
 	_nvme_fcloop_del_lport "${local_wwnn}" "${local_wwpn}"
 	_nvme_fcloop_del_rport "${local_wwnn}" "${local_wwpn}" \
 			       "${remote_wwnn}" "${remote_wwpn}"
-
-	_cleanup_nvme_cli
 }
 
 _cleanup_blkdev() {
@@ -544,9 +488,6 @@ _nvme_connect_subsys() {
 	subsysnqn="$2"
 
 	ARGS=(-t "${trtype}" -n "${subsysnqn}")
-	if _have_nvme_cli_context; then
-		ARGS+=(--context="blktests")
-	fi
 	if [[ "${trtype}" == "fc" ]] ; then
 		ARGS+=(-a "${traddr}" -w "${host_traddr}")
 	elif [[ "${trtype}" != "loop" ]]; then
@@ -618,9 +559,6 @@ _nvme_discover() {
 	ARGS=(-t "${trtype}")
 	ARGS+=(--hostnqn="${def_hostnqn}")
 	ARGS+=(--hostid="${def_hostid}")
-	if _have_nvme_cli_context; then
-		ARGS+=(--context="blktests")
-	fi
 	if [[ "${trtype}" = "fc" ]]; then
 		ARGS+=(-a "${traddr}" -w "${host_traddr}")
 	elif [[ "${trtype}" != "loop" ]]; then
