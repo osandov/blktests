@@ -943,6 +943,23 @@ _check_uuid() {
 
 declare -A NS_DEV_FAULT_INJECT_SAVE
 declare -A CTRL_DEV_FAULT_INJECT_SAVE
+ns_dev_passthru_logging=off
+ctrl_dev_passthru_logging=off
+
+_nvme_passthru_logging_setup()
+{
+	ctrl_dev_passthru_logging=$(cat /sys/class/nvme/"$2"/passthru_err_log_enabled)
+	ns_dev_passthru_logging=$(cat /sys/class/nvme/"$2"/"$1"/passthru_err_log_enabled)
+
+	_nvme_disable_passthru_admin_error_logging "$2"
+	_nvme_disable_passthru_io_error_logging "$1" "$2"
+}
+
+_nvme_passthru_logging_cleanup()
+{
+	echo $ctrl_dev_passthru_logging > /sys/class/nvme/"$2"/passthru_err_log_enabled
+	echo $ns_dev_passthru_logging > /sys/class/nvme/"$2"/"$1"/passthru_err_log_enabled
+}
 
 _nvme_err_inject_setup()
 {
@@ -983,6 +1000,26 @@ _nvme_disable_err_inject()
 {
         echo 0 > /sys/kernel/debug/"$1"/fault_inject/probability
         echo 0 > /sys/kernel/debug/"$1"/fault_inject/times
+}
+
+_nvme_enable_passthru_admin_error_logging()
+{
+	echo on > /sys/class/nvme/"$1"/passthru_err_log_enabled
+}
+
+_nvme_enable_passthru_io_error_logging()
+{
+	echo on > /sys/class/nvme/"$2"/"$1"/passthru_err_log_enabled
+}
+
+_nvme_disable_passthru_admin_error_logging()
+{
+	echo off > /sys/class/nvme/"$1"/passthru_err_log_enabled
+}
+
+_nvme_disable_passthru_io_error_logging()
+{
+	echo off > /sys/class/nvme/"$2"/"$1"/passthru_err_log_enabled
 }
 
 _nvme_reset_ctrl() {
