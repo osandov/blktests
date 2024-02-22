@@ -19,12 +19,12 @@ test() {
 	_start_nbd_server
 	nbd-client -L -N export localhost /dev/nbd0 >> "$FULL" 2>&1
 	parted -s /dev/nbd0 print 2>> "$FULL" | grep 'Disk /dev/nbd0'
-	lsblk -n /dev/nbd0
+	lsblk --raw --noheadings /dev/nbd0
 
 	echo "Setting size to 1gib"
 	src/nbdsetsize /dev/nbd0 1073741824
 
-	lsblk -n /dev/nbd0
+	lsblk --raw --noheadings /dev/nbd0
 	parted -s /dev/nbd0 print 2>> "$FULL" | grep 'Disk /dev/nbd0'
 
 	nbd-client -d /dev/nbd0 >> "$FULL" 2>&1
