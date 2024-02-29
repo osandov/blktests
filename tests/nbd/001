@@ -18,6 +18,8 @@ test() {
 	echo "Running ${TEST_NAME}"
 	_start_nbd_server
 	nbd-client -L -N export localhost /dev/nbd0 >> "$FULL" 2>&1
+	udevadm settle
+
 	parted -s /dev/nbd0 print 2>> "$FULL" | grep 'Disk /dev/nbd0'
 	lsblk --raw --noheadings /dev/nbd0
 
