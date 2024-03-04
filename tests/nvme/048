@@ -69,9 +69,8 @@ set_nvmet_attr_qid_max() {
 }
 
 set_qid_max() {
-	local port="$1"
-	local subsys_name="$2"
-	local qid_max="$3"
+	local subsys_name="$1"
+	local qid_max="$2"
 
 	set_nvmet_attr_qid_max "${subsys_name}" "${qid_max}"
 	nvmf_wait_for_state "${subsys_name}" "live" || return 1
@@ -100,8 +99,8 @@ test() {
 		if ! nvmf_wait_for_state "${def_subsysnqn}" "live" ; then
 			echo FAIL
 		else
-			set_qid_max "${port}" "${def_subsysnqn}" 1 || echo FAIL
-			set_qid_max "${port}" "${def_subsysnqn}" 2 || echo FAIL
+			set_qid_max "${def_subsysnqn}" 1 || echo FAIL
+			set_qid_max "${def_subsysnqn}" 2 || echo FAIL
 		fi
 
 		_nvme_disconnect_subsys "${def_subsysnqn}"
