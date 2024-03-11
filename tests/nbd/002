@@ -84,6 +84,7 @@ test() {
 	# Do it with netlink
 	echo "Testing the netlink path"
 	nbd-client -L -N export localhost /dev/nbd0 >> "$FULL" 2>&1
+	udevadm settle
 
 	if ! _wait_for_nbd_connect; then
 		echo "Connect didn't happen?"
