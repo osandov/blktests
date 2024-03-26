@@ -180,10 +180,13 @@ _run_fio() {
 		args+=("--runtime=$TIMEOUT")
 	fi
 
-	if ! fio "${args[@]}" "$@"; then
-		echo "fio exited with status $?"
+	fio "${args[@]}" "$@"
+	local rc=$?
+	if [ $rc != 0 ]; then
+		echo "fio exited with status $rc"
 		cat "$TMPDIR"/fio_perf
 	fi
+	return $rc
 }
 
 # Wrapper around _run_fio used if you need some I/O but don't really care much
