@@ -20,16 +20,15 @@ test() {
 
 	_setup_nvmet
 
-	local nvmedev
+	local ns
 
 	_nvmet_target_setup --blkdev file
 
 	_nvme_connect_subsys
 
-	nvmedev=$(_find_nvme_dev "${def_subsysnqn}")
-	_check_uuid "${nvmedev}"
+	ns=$(_find_nvme_ns "${def_subsys_uuid}")
 
-	if ! nvme list 2>> "$FULL" | grep -q "${nvmedev}n1"; then
+	if ! nvme list 2>> "$FULL" | grep -q "/dev/${ns}"; then
 		echo "ERROR: device not listed"
 	fi
 

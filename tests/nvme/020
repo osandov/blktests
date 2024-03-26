@@ -19,7 +19,7 @@ test() {
 
 	_setup_nvmet
 
-	local nvmedev
+	local ns
 	local nblk_range="10,10,10,10,10,10,10,10,10,10"
 	local sblk_range="100,200,300,400,500,600,700,800,900,1000"
 
@@ -27,10 +27,9 @@ test() {
 
 	_nvme_connect_subsys
 
-	nvmedev=$(_find_nvme_dev "${def_subsysnqn}")
-	_check_uuid "${nvmedev}"
+	ns=$(_find_nvme_ns "${def_subsys_uuid}")
 
-	nvme dsm "/dev/${nvmedev}" --namespace-id 1 --ad \
+	nvme dsm "/dev/${ns}" --ad \
 		--slbs "${sblk_range}" --blocks "${nblk_range}"
 
 	_nvme_disconnect_subsys

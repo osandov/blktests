@@ -53,15 +53,11 @@ test() {
 
 	_setup_nvmet
 
-	local nvmedev
 	local reset_nr_hugepages=false
 
 	_nvmet_target_setup
 
 	_nvme_connect_subsys
-
-	nvmedev=$(_find_nvme_dev "${def_subsysnqn}")
-	_check_uuid "${nvmedev}"
 
 	# nvme-cli may fail to allocate linear memory for rather large IO buffers.
 	# Increase nr_hugepages to allow nvme-cli to try the linear memory allocation
@@ -72,7 +68,8 @@ test() {
 		reset_nr_hugepages=true
 	fi
 
-	local dev="/dev/${nvmedev}n1"
+	local dev
+	dev="/dev/$(_find_nvme_ns "${def_subsys_uuid}")"
 	test_user_io "$dev" 1 512 > "$FULL" 2>&1 || echo FAIL
 	test_user_io "$dev" 1 511 > "$FULL" 2>&1 || echo FAIL
 	test_user_io "$dev" 1 513 > "$FULL" 2>&1 || echo FAIL

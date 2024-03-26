@@ -20,17 +20,16 @@ test() {
 
 	_setup_nvmet
 
-	local nvmedev
+	local ns
 
 	_nvmet_target_setup --blkdev file
 
 	_nvme_connect_subsys
 
-	nvmedev=$(_find_nvme_dev "${def_subsysnqn}")
-	_check_uuid "${nvmedev}"
+	ns=$(_find_nvme_ns "${def_subsys_uuid}")
 
 	_run_fio_verify_io --size="${nvme_img_size}" \
-		--filename="/dev/${nvmedev}n1"
+		--filename="$/dev/{ns}"
 
 	_nvme_disconnect_subsys
 

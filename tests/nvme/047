@@ -22,7 +22,7 @@ test() {
 
 	_setup_nvmet
 
-	local nvmedev
+	local ns
 	local rand_io_size
 
 	_nvmet_target_setup
@@ -30,10 +30,10 @@ test() {
 	_nvme_connect_subsys \
 		--nr-write-queues 1 || echo FAIL
 
-	nvmedev=$(_find_nvme_dev "${def_subsysnqn}")
+	ns=$(_find_nvme_ns "${def_subsys_uuid}")
 
 	rand_io_size="$(_nvme_calc_rand_io_size 4M)"
-	_run_fio_rand_io --filename="/dev/${nvmedev}n1" --size="${rand_io_size}"
+	_run_fio_rand_io --filename="/dev/${ns}" --size="${rand_io_size}"
 
 	_nvme_disconnect_subsys >> "$FULL" 2>&1
 
@@ -41,7 +41,7 @@ test() {
 		--nr-write-queues 1 \
 		--nr-poll-queues 1 || echo FAIL
 
-	_run_fio_rand_io --filename="/dev/${nvmedev}n1" --size="${rand_io_size}"
+	_run_fio_rand_io --filename="/dev/${ns}" --size="${rand_io_size}"
 
 	_nvme_disconnect_subsys >> "$FULL" 2>&1
 

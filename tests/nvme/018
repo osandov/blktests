@@ -21,21 +21,20 @@ test() {
 
 	_setup_nvmet
 
-	local nvmedev
+	local ns
+	local sectors
+	local bs
 
 	_nvmet_target_setup --blkdev file
 
 	_nvme_connect_subsys
 
-	nvmedev=$(_find_nvme_dev "${def_subsysnqn}")
-	_check_uuid "${nvmedev}"
+	ns=$(_find_nvme_ns "${def_subsys_uuid}")
 
-	local sectors
-	local bs
-	sectors="$(blockdev --getsz "/dev/${nvmedev}n1")"
-	bs="$(blockdev --getbsz "/dev/${nvmedev}n1")"
+	sectors="$(blockdev --getsz "/dev/${ns}")"
+	bs="$(blockdev --getbsz "/dev/${ns}")"
 
-	nvme read "/dev/${nvmedev}n1" --start-block "$sectors" \
+	nvme read "/dev/${ns}" --start-block "$sectors" \
 		--block-count 0 --data-size "$bs" &>"$FULL" \
 		&& echo "ERROR: nvme read for out of range LBA was not rejected"
 

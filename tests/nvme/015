@@ -20,7 +20,7 @@ test() {
 
 	_setup_nvmet
 
-	local nvmedev
+	local ns
 	local size
 	local bs
 	local count
@@ -29,17 +29,16 @@ test() {
 
 	_nvme_connect_subsys
 
-	nvmedev=$(_find_nvme_dev "${def_subsysnqn}")
-	_check_uuid "${nvmedev}"
+	ns=$(_find_nvme_ns "${def_subsys_uuid}")
 
-	size="$(blockdev --getsize64 "/dev/${nvmedev}n1")"
-	bs="$(blockdev --getbsz "/dev/${nvmedev}n1")"
+	size="$(blockdev --getsize64 "/dev/${ns}")"
+	bs="$(blockdev --getbsz "/dev/${ns}")"
 	count=$((size / bs))
 
-	dd if=/dev/urandom of="/dev/${nvmedev}n1" \
+	dd if=/dev/urandom of="/dev/${ns}" \
 		count="${count}" bs="${bs}" status=none
 
-	nvme flush "/dev/${nvmedev}n1" --namespace-id 1
+	nvme flush "/dev/${ns}"
 
 	_nvme_disconnect_subsys
 

@@ -23,15 +23,17 @@ test() {
 
 	local nvmedev
 	local fio_pid
+	local ns
 
 	_nvmet_target_setup
 
 	_nvme_connect_subsys
 	nvmedev=$(_find_nvme_dev "${def_subsysnqn}")
+	ns=$(_find_nvme_ns "${def_subsys_uuid}")
 
 	# start fio job
 	echo "starting background fio"
-	_run_fio_rand_io --filename="/dev/${nvmedev}n1" \
+	_run_fio_rand_io --filename="/dev/${ns}" \
 		--group_reporting --ramp_time=5 \
 		--time_based --runtime=1d &> /dev/null &
 	fio_pid=$!

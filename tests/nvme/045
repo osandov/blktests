@@ -33,6 +33,7 @@ test() {
 	local new_ctrlkey
 	local ctrldev
 	local rand_io_size
+	local ns
 
 	hostkey="$(nvme gen-dhchap-key -n ${def_subsysnqn} 2> /dev/null)"
 	if [ -z "$hostkey" ] ; then
@@ -100,10 +101,10 @@ test() {
 
 	echo "${new_hostkey}" > "${hostkey_file}"
 
-	nvmedev=$(_find_nvme_dev "${def_subsysnqn}")
+	ns=$(_find_nvme_ns "${def_subsys_uuid}")
 
 	rand_io_size="$(_nvme_calc_rand_io_size 4m)"
-	_run_fio_rand_io --size="${rand_io_size}" --filename="/dev/${nvmedev}n1"
+	_run_fio_rand_io --size="${rand_io_size}" --filename="/dev/${ns}"
 
 	_nvme_disconnect_subsys
 	_nvmet_target_cleanup

@@ -23,16 +23,15 @@ test() {
 
 	_setup_nvmet
 
-	local nvmedev
+	local ns
 
 	_nvmet_target_setup --blkdev file
 
 	_nvme_connect_subsys
 
-	nvmedev=$(_find_nvme_dev "${def_subsysnqn}")
-	_check_uuid "${nvmedev}"
+	ns=$(_find_nvme_ns "${def_subsys_uuid}")
 
-	if ! _xfs_run_fio_verify_io "/dev/${nvmedev}n1"; then
+	if ! _xfs_run_fio_verify_io "$/dev/{ns}"; then
 		echo "FAIL: fio verify failed"
 	fi
 
