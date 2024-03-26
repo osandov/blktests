@@ -53,7 +53,7 @@ test_device() {
 
 	_nvmet_passthru_target_setup
 
-	nsdev=$(_nvmet_passthru_target_connect "${def_subsysnqn}")
+	nsdev=$(_nvmet_passthru_target_connect)
 
 	compare_dev_info "${nsdev}"
 

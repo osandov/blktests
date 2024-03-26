@@ -23,7 +23,7 @@ test_device() {
 	local nsdev
 
 	_nvmet_passthru_target_setup
-	nsdev=$(_nvmet_passthru_target_connect "${def_subsysnqn}")
+	nsdev=$(_nvmet_passthru_target_connect)
 
 	_run_fio_verify_io --size="${nvme_img_size}" --filename="${nsdev}"
 

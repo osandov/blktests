@@ -21,7 +21,7 @@ test_device() {
 	local ctrldev
 
 	_nvmet_passthru_target_setup
-	nsdev=$(_nvmet_passthru_target_connect "${def_subsysnqn}")
+	nsdev=$(_nvmet_passthru_target_connect)
 
 	ctrldev=$(_find_nvme_dev "${def_subsysnqn}")
 
