@@ -23,8 +23,7 @@ test_device() {
 
 	for ((i = 0; i < iterations; i++)); do
 		_nvmet_passthru_target_setup "${subsys}${i}"
-		nsdev=$(_nvmet_passthru_target_connect "${nvme_trtype}" \
-				"${subsys}${i}")
+		nsdev=$(_nvmet_passthru_target_connect "${subsys}${i}")
 
 		_nvme_disconnect_subsys "${subsys}${i}" >>"${FULL}" 2>&1
 		_nvmet_passthru_target_cleanup "${subsys}${i}"
