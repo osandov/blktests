@@ -408,7 +408,6 @@ _nvme_disconnect_subsys() {
 
 _nvme_connect_subsys() {
 	local positional_args=()
-	local trtype=""
 	local subsysnqn=""
 	local hostnqn="$def_hostnqn"
 	local hostid="$def_hostid"
@@ -478,13 +477,12 @@ _nvme_connect_subsys() {
 
 	set -- "${positional_args[@]}"
 
-	trtype="$1"
-	subsysnqn="$2"
+	subsysnqn="$1"
 
-	ARGS=(--transport "${trtype}" --nqn "${subsysnqn}")
-	if [[ "${trtype}" == "fc" ]] ; then
+	ARGS=(--transport "${nvme_trtype}" --nqn "${subsysnqn}")
+	if [[ "${nvme_trtype}" == "fc" ]] ; then
 		ARGS+=(--traddr "${def_traddr}" --host-traddr "${def_host_traddr}")
-	elif [[ "${trtype}" != "loop" ]]; then
+	elif [[ "${nvme_trtype}" != "loop" ]]; then
 		ARGS+=(--traddr "${def_traddr}" --trsvcid "${def_trsvcid}")
 	fi
 	ARGS+=(--hostnqn="${hostnqn}")
@@ -902,7 +900,7 @@ _nvmet_passthru_target_connect() {
 	local trtype=$1
 	local subsys_name=$2
 
-	_nvme_connect_subsys "${trtype}" "${subsys_name}" --no-wait || return
+	_nvme_connect_subsys "${subsys_name}" --no-wait || return
 	nsdev=$(_find_nvme_passthru_loop_dev "${subsys_name}")
 
 	# The following tests can race with the creation

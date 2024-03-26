@@ -99,7 +99,7 @@ test() {
 	_nvmet_target_setup --blkdev file
 
 	if [[ -f "${cfs_path}/attr_qid_max" ]] ; then
-		_nvme_connect_subsys "${nvme_trtype}" "${def_subsysnqn}" \
+		_nvme_connect_subsys "${def_subsysnqn}" \
 					--hostnqn "${def_hostnqn}" \
 					--hostid "${def_hostid}" \
 					--keep-alive-tmo 1 \

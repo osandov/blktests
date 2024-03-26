@@ -27,7 +27,7 @@ test() {
 
 	_nvmet_target_setup
 
-	_nvme_connect_subsys "${nvme_trtype}" "${def_subsysnqn}" \
+	_nvme_connect_subsys \
 		--nr-write-queues 1 || echo FAIL
 
 	nvmedev=$(_find_nvme_dev "${def_subsysnqn}")
@@ -37,7 +37,7 @@ test() {
 
 	_nvme_disconnect_subsys "${def_subsysnqn}" >> "$FULL" 2>&1
 
-	_nvme_connect_subsys "${nvme_trtype}" "${def_subsysnqn}" \
+	_nvme_connect_subsys "${def_subsysnqn}" \
 		--nr-write-queues 1 \
 		--nr-poll-queues 1 || echo FAIL
 

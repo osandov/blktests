@@ -45,7 +45,7 @@ test() {
 
 		_set_nvmet_hash "${def_hostnqn}" "${hash}"
 
-		_nvme_connect_subsys "${nvme_trtype}" "${def_subsysnqn}" \
+		_nvme_connect_subsys "${def_subsysnqn}" \
 				     --hostnqn "${def_hostnqn}" \
 				     --hostid "${def_hostid}" \
 				     --dhchap-secret "${hostkey}"
@@ -59,7 +59,7 @@ test() {
 
 		_set_nvmet_dhgroup "${def_hostnqn}" "${dhgroup}"
 
-		_nvme_connect_subsys "${nvme_trtype}" "${def_subsysnqn}" \
+		_nvme_connect_subsys "${def_subsysnqn}" \
 				      --hostnqn "${def_hostnqn}" \
 				      --hostid "${def_hostid}" \
 				      --dhchap-secret "${hostkey}"
