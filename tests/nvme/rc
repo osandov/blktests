@@ -899,13 +899,26 @@ _nvmet_target_cleanup() {
 }
 
 _nvmet_passthru_target_setup() {
-	local subsys_name=$1
+	local subsysnqn="$def_subsysnqn"
 	local port
 
-	_create_nvmet_passthru "${subsys_name}"
+	while [[ $# -gt 0 ]]; do
+		case $1 in
+			--subsysnqn)
+				subsysnqn="$2"
+				shift 2
+				;;
+			*)
+				echo "WARNING: unknown argument: $1"
+				shift
+				;;
+		esac
+	done
+
+	_create_nvmet_passthru "${subsysnqn}"
 	port="$(_create_nvmet_port "${nvme_trtype}")"
-	_add_nvmet_subsys_to_port "${port}" "${subsys_name}"
-	_create_nvmet_host "${subsys_name}" "${def_hostnqn}"
+	_add_nvmet_subsys_to_port "${port}" "${subsysnqn}"
+	_create_nvmet_host "${subsysnqn}" "${def_hostnqn}"
 }
 
 _nvmet_passthru_target_connect() {
@@ -923,18 +936,31 @@ _nvmet_passthru_target_connect() {
 }
 
 _nvmet_passthru_target_cleanup() {
-	local subsys_name=$1
+	local subsysnqn="$def_subsysnqn"
 	local ports
 	local port
 
-	_get_nvmet_ports "${subsys_name}" ports
+	while [[ $# -gt 0 ]]; do
+		case $1 in
+			--subsysnqn)
+				subsysnqn="$2"
+				shift 2
+				;;
+			*)
+				echo "WARNING: unknown argument: $1"
+				shift
+				;;
+		esac
+	done
+
+	_get_nvmet_ports "${subsysnqn}" ports
 
 	for port in "${ports[@]}"; do
-		_remove_nvmet_subsystem_from_port "${port}" "${subsys_name}"
+		_remove_nvmet_subsystem_from_port "${port}" "${subsysnqn}"
 		_remove_nvmet_port "${port}"
 	done
 
-	_remove_nvmet_passhtru "${subsys_name}"
+	_remove_nvmet_passhtru "${subsysnqn}"
 	_remove_nvmet_host "${def_hostnqn}"
 }
 

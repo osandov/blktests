@@ -51,14 +51,14 @@ test_device() {
 
 	local nsdev
 
-	_nvmet_passthru_target_setup "${def_subsysnqn}"
+	_nvmet_passthru_target_setup
 
 	nsdev=$(_nvmet_passthru_target_connect "${def_subsysnqn}")
 
 	compare_dev_info "${nsdev}"
 
 	_nvme_disconnect_subsys
-	_nvmet_passthru_target_cleanup "${def_subsysnqn}"
+	_nvmet_passthru_target_cleanup
 
 	echo "Test complete"
 }

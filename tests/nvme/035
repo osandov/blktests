@@ -28,7 +28,7 @@ test_device() {
 	local ctrldev
 	local nsdev
 
-	_nvmet_passthru_target_setup "${def_subsysnqn}"
+	_nvmet_passthru_target_setup
 	nsdev=$(_nvmet_passthru_target_connect "${def_subsysnqn}")
 
 	if ! _xfs_run_fio_verify_io "${nsdev}" "${nvme_img_size}"; then
@@ -36,7 +36,7 @@ test_device() {
 	fi
 
 	_nvme_disconnect_subsys
-	_nvmet_passthru_target_cleanup "${def_subsysnqn}"
+	_nvmet_passthru_target_cleanup
 
 	echo "Test complete"
 }
