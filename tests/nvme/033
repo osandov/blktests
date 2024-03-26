@@ -57,7 +57,7 @@ test_device() {
 
 	compare_dev_info "${nsdev}"
 
-	_nvme_disconnect_subsys "${def_subsysnqn}"
+	_nvme_disconnect_subsys
 	_nvmet_passthru_target_cleanup "${def_subsysnqn}"
 
 	echo "Test complete"

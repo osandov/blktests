@@ -41,12 +41,11 @@ test() {
 		fi
 		_set_nvmet_hostkey "${def_hostnqn}" "${hostkey}"
 
-		_nvme_connect_subsys "${def_subsysnqn}" \
-				     --hostnqn "${def_hostnqn}" \
+		_nvme_connect_subsys --hostnqn "${def_hostnqn}" \
 				     --hostid "${def_hostid}" \
 				     --dhchap-secret "${hostkey}"
 
-		_nvme_disconnect_subsys "${def_subsysnqn}"
+		_nvme_disconnect_subsys
 	done
 
 	for key_len in 32 48 64; do
@@ -58,12 +57,11 @@ test() {
 		fi
 		_set_nvmet_hostkey "${def_hostnqn}" "${hostkey}"
 
-		_nvme_connect_subsys "${def_subsysnqn}" \
-				     --hostnqn "${def_hostnqn}" \
+		_nvme_connect_subsys --hostnqn "${def_hostnqn}" \
 				     --hostid "${def_hostid}" \
 				     --dhchap-secret "${hostkey}"
 
-		_nvme_disconnect_subsys "${def_subsysnqn}"
+		_nvme_disconnect_subsys
 	done
 
 	_nvmet_target_cleanup

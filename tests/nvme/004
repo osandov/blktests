@@ -24,13 +24,13 @@ test() {
 
 	_nvmet_target_setup
 
-	_nvme_connect_subsys "${def_subsysnqn}"
+	_nvme_connect_subsys
 
 	local nvmedev
 	nvmedev=$(_find_nvme_dev "${def_subsysnqn}")
 	_check_uuid "${nvmedev}"
 
-	_nvme_disconnect_subsys ${def_subsysnqn}
+	_nvme_disconnect_subsys
 
 	_nvmet_target_cleanup
 

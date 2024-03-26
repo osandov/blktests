@@ -51,8 +51,7 @@ test() {
 
 	_set_nvmet_dhgroup "${def_hostnqn}" "ffdhe2048"
 
-	_nvme_connect_subsys "${def_subsysnqn}" \
-			     --hostnqn "${def_hostnqn}" \
+	_nvme_connect_subsys --hostnqn "${def_hostnqn}" \
 			     --hostid "${def_hostid}" \
 			     --dhchap-secret "${hostkey}" \
 			     --dhchap-ctrl-secret "${ctrlkey}"
@@ -108,8 +107,7 @@ test() {
 	rand_io_size="$(_nvme_calc_rand_io_size 4m)"
 	_run_fio_rand_io --size="${rand_io_size}" --filename="/dev/${nvmedev}n1"
 
-	_nvme_disconnect_subsys "${def_subsysnqn}"
-
+	_nvme_disconnect_subsys
 	_nvmet_target_cleanup
 
 	echo "Test complete"

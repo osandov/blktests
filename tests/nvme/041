@@ -38,20 +38,18 @@ test() {
 
 	# Test unauthenticated connection (should fail)
 	echo "Test unauthenticated connection (should fail)"
-	_nvme_connect_subsys "${def_subsysnqn}" \
-			     --hostnqn "${def_hostnqn}" \
+	_nvme_connect_subsys --hostnqn "${def_hostnqn}" \
 			     --hostid "${def_hostid}"
 
-	_nvme_disconnect_subsys "${def_subsysnqn}"
+	_nvme_disconnect_subsys
 
 	# Test authenticated connection
 	echo "Test authenticated connection"
-	_nvme_connect_subsys "${def_subsysnqn}" \
-			     --hostnqn "${def_hostnqn}" \
+	_nvme_connect_subsys --hostnqn "${def_hostnqn}" \
 			     --hostid "${def_hostid}" \
 			     --dhchap-secret "${hostkey}"
 
-	_nvme_disconnect_subsys "${def_subsysnqn}"
+	_nvme_disconnect_subsys
 
 	_nvmet_target_cleanup
 

@@ -25,7 +25,8 @@ test_device() {
 		_nvmet_passthru_target_setup "${subsys}${i}"
 		nsdev=$(_nvmet_passthru_target_connect "${subsys}${i}")
 
-		_nvme_disconnect_subsys "${subsys}${i}" >>"${FULL}" 2>&1
+		_nvme_disconnect_subsys \
+			--subsysnqn "${subsys}${i}" >>"${FULL}" 2>&1
 		_nvmet_passthru_target_cleanup "${subsys}${i}"
 	done
 

@@ -27,7 +27,7 @@ test_device() {
 
 	_run_fio_verify_io --size="${nvme_img_size}" --filename="${nsdev}"
 
-	_nvme_disconnect_subsys "${def_subsysnqn}"
+	_nvme_disconnect_subsys
 	_nvmet_passthru_target_cleanup "${def_subsysnqn}"
 
 	echo "Test complete"
