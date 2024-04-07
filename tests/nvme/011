@@ -29,7 +29,7 @@ test() {
 	ns=$(_find_nvme_ns "${def_subsys_uuid}")
 
 	_run_fio_verify_io --size="${nvme_img_size}" \
-		--filename="$/dev/{ns}"
+		--filename="/dev/${ns}"
 
 	_nvme_disconnect_subsys
 
