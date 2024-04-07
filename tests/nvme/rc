@@ -1053,8 +1053,8 @@ _nvme_passthru_logging_setup()
 
 _nvme_passthru_logging_cleanup()
 {
-	echo $ctrl_dev_passthru_logging > /sys/class/nvme/"$2"/passthru_err_log_enabled
-	echo $ns_dev_passthru_logging > /sys/class/nvme/"$2"/"$1"/passthru_err_log_enabled
+	echo "$ctrl_dev_passthru_logging" > /sys/class/nvme/"$2"/passthru_err_log_enabled
+	echo "$ns_dev_passthru_logging" > /sys/class/nvme/"$2"/"$1"/passthru_err_log_enabled
 }
 
 _nvme_err_inject_setup()
