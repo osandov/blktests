@@ -1,0 +1,54 @@
+#!/bin/bash
+# SPDX-License-Identifier: GPL-3.0+
+# Copyright (C) 2024 Ming Lei
+#
+# blk-cgroup is usually initialized in disk allocation code, and
+# de-initialized in disk release code. And scsi disk rebind needs
+# to re-allocate/re-add disk, meantime request queue is kept as
+# live during the whole cycle.
+#
+# Add this test for covering blk-cgroup & disk rebind. It confirms the kernel
+# fix 8b8ace080319 ("block: fix q->blkg_list corruption during disk rebind").
+
+. tests/block/rc
+. common/scsi_debug
+. common/cgroup
+
+DESCRIPTION="test cgroup vs. scsi_debug rebind"
+QUICK=1
+
+requires() {
+	_have_cgroup2_controller io
+	_have_scsi_debug
+}
+
+scsi_debug_rebind() {
+	if ! _configure_scsi_debug; then
+		return
+	fi
+
+	_init_cgroup2
+
+	echo "+io" > "/sys/fs/cgroup/cgroup.subtree_control"
+	echo "+io" > "$CGROUP2_DIR/cgroup.subtree_control"
+	mkdir -p "$CGROUP2_DIR/${TEST_NAME}"
+
+	local dev dev_path hctl
+	dev=${SCSI_DEBUG_DEVICES[0]}
+	dev_path="$(realpath "/sys/block/${dev}/device")"
+	hctl="$(basename "$dev_path")"
+
+	echo -n "${hctl}" > "/sys/bus/scsi/drivers/sd/unbind"
+	echo -n "${hctl}" > "/sys/bus/scsi/drivers/sd/bind"
+
+	_exit_cgroup2
+	_exit_scsi_debug
+}
+
+test() {
+	echo "Running ${TEST_NAME}"
+
+	scsi_debug_rebind
+
+	echo "Test complete"
+}
