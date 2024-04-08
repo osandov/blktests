@@ -35,7 +35,7 @@ test() {
 	bs="$(blockdev --getbsz "/dev/${ns}")"
 	count=$((size / bs))
 
-	dd if=/dev/urandom of="$/dev/{ns}" \
+	dd if=/dev/urandom of="/dev/${ns}" \
 		count="${count}" bs="${bs}" status=none
 
 	nvme flush "/dev/${ns}"
