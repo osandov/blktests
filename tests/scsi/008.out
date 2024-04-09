@@ -1,0 +1,26 @@
+Running scsi/008
+Direct I/O (pvsync)
+1
+2
+3
+4
+5
+Direct I/O (libaio)
+1
+2
+3
+4
+5
+Direct I/O (io_uring)
+1
+2
+3
+4
+5
+Buffered I/O (pvsync)
+1
+2
+3
+4
+5
+Test complete

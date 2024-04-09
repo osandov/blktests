@@ -1,0 +1,81 @@
+#!/bin/bash
+# SPDX-License-Identifier: GPL-3.0+
+# Copyright (C) 2024 Google LLC
+
+. tests/scsi/rc
+. common/scsi_debug
+
+DESCRIPTION="test block data lifetime support"
+QUICK=1
+
+requires() {
+	_have_scsi_debug_group_number_stats
+	# For patch "Fall back to F_SET_RW_HINT if F_SET_FILE_RW_HINT is not
+	# supported"
+	# (https://github.com/axboe/fio/commit/0cfea592fedf0011e695a604a6961e9cbc1fe9b6).
+	_have_fio_ver 3 37
+}
+
+submit_io() {
+	local stats_attr=/sys/bus/pseudo/drivers/scsi_debug/group_number_stats
+	echo "$1 ($3)"
+	echo "$*" >>"${FULL}"
+	local direct_io=$2
+	echo 0 > "${stats_attr}" &&
+	local fio_args wh &&
+	for wh in none short medium long extreme; do
+		if [ "${direct_io}" = 0 ]; then
+			sync
+			echo 1 > /proc/sys/vm/drop_caches
+		fi
+		fio_args=(
+			--buffer_pattern='"'"$wh"'"'
+			--direct="${direct_io}"
+			--disable_clat=1
+			--disable_slat=1
+			--end_fsync=$((1 - direct_io))
+			--filename="${dev}"
+			--group_reporting=1
+			--gtod_reduce=1
+			--ioengine="$3"
+			--ioscheduler=none
+			--name=whint_"$wh"
+			--norandommap
+			--rw=randwrite
+			--size=4M
+			--thread=1
+			--write_hint="$wh"
+		)
+		echo "fio ${fio_args[*]}" >>"${FULL}" 2>&1
+		fio "${fio_args[@]}" >>"${FULL}" 2>&1 || return $?
+	done &&
+	grep -v ' 0$' "${stats_attr}" >> "${FULL}"
+	while read -r group count; do
+		if [ "$count" -gt 0 ]; then echo "$group"; fi
+	done < "${stats_attr}"
+}
+
+test() {
+	echo "Running ${TEST_NAME}"
+
+	local scsi_debug_params=(
+		delay=0
+	)
+	_configure_scsi_debug "${scsi_debug_params[@]}" &&
+	local dev="/dev/${SCSI_DEBUG_DEVICES[0]}" fail &&
+	ls -ldi "${dev}" >>"${FULL}" &&
+	submit_io "Direct I/O" 1 pvsync &&
+	submit_io "Direct I/O" 1 libaio &&
+	submit_io "Direct I/O" 1 io_uring &&
+	submit_io "Buffered I/O" 0 pvsync ||
+	fail=true
+
+	_exit_scsi_debug
+
+	if [ -z "$fail" ]; then
+		echo "Test complete"
+	else
+		echo "Test failed"
+		return 1
+	fi
+}
