@@ -73,6 +73,8 @@ test() {
 	local iops1 iops2 rest
 	read -r iops1 iops2 rest \
 	     <<<"$(sed -n 's/.*IOPS=\([0-9]*\).*/\1/p' <"${fio_output}" | xargs)"
+	TEST_RUN["IOPS for   1 ms completion time"]=$iops1
+	TEST_RUN["IOPS for 100 ms completion time"]=$iops2
 	if [ -z "$iops1" ] || [ -z "$iops2" ] ||
 			[ "$iops1" -lt "$iops2" ]; then
 		echo "Error: IOPS too low ($iops1; $iops2)"
