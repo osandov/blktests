@@ -1,0 +1,82 @@
+#!/bin/bash
+# SPDX-License-Identifier: GPL-3.0+
+# Copyright 2024 Google LLC
+#
+# Test fairness if hardware queues share a tag set across request queues.
+
+. tests/block/rc
+. common/null_blk
+
+DESCRIPTION="shared tag set fairness"
+TIMED=1
+
+requires() {
+	_have_fio
+	_have_module null_blk
+	_have_module_param null_blk shared_tags
+}
+
+test() {
+	local runtime=${TIMEOUT:-30}
+
+	echo "Running ${TEST_NAME}"
+
+	local nullb_params=(
+		blocking=1
+		irqmode=2
+		nr_devices=0
+		shared_tags=1
+	)
+	if ! _init_null_blk "${nullb_params[@]}"; then
+		echo "Loading null_blk failed"
+		return 1
+	fi
+	local nullb_params=(
+		completion_nsec=$((10**6)) # 1 ms
+		hw_queue_depth=64
+		memory_backed=1
+		size=1                     # MiB
+		submit_queues=1
+		power=1
+	)
+	if ! _configure_null_blk nullb0 "${nullb_params[@]}"; then
+		echo "Configuring null_blk failed (1/2)"
+		return 1
+	fi
+	local nullb_params=(
+		completion_nsec=$((10**8)) # 100 ms
+		hw_queue_depth=64
+		memory_backed=1
+		size=1                     # MiB
+		submit_queues=1
+		power=1
+	)
+	if ! _configure_null_blk nullb1 "${nullb_params[@]}"; then
+		echo "Configuring null_blk failed (2/2)"
+		return 1
+	fi
+	local fio_output=${RESULTS_DIR}/block/fio-output-block-035.txt
+	fio --rw=randwrite --ioengine=io_uring --iodepth=64 \
+		--direct=1 --runtime="${runtime}" --time_based=1 \
+		--significant_figures=9 \
+		--name=nullb0 --filename=/dev/nullb0 \
+		--name=nullb1 --filename=/dev/nullb1 \
+		--output="${fio_output}" \
+		>>"$FULL" 2>&1
+	local fio_status=$?
+	rmdir /sys/kernel/config/nullb/nullb*
+	_exit_null_blk
+	if [ $fio_status != 0 ]; then
+		echo "Failed (fio status = $fio_status)"
+		return
+	fi
+	local iops1 iops2 rest
+	read -r iops1 iops2 rest \
+	     <<<"$(sed -n 's/.*IOPS=\([0-9]*\).*/\1/p' <"${fio_output}" | xargs)"
+	if [ -z "$iops1" ] || [ -z "$iops2" ] ||
+			[ "$iops1" -lt "$iops2" ]; then
+		echo "Error: IOPS too low ($iops1; $iops2)"
+		return 1
+	fi
+	echo "Passed"
+}
