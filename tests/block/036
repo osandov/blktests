@@ -1,0 +1,87 @@
+#!/bin/bash
+# SPDX-License-Identifier: GPL-3.0+
+# Copyright (C) 2024 Google LLC
+#
+# Regression test for BLKRRPART.
+#
+# If we fail to read the partition table due to bad sector or other IO
+# failures, running "blockdev --rereadpt" should fail and return -EIO.
+# On a buggy kernel, it passes unexpectedly.
+
+. tests/block/rc
+
+DESCRIPTION="test return EIO from BLKRRPART for whole-dev"
+QUICK=1
+
+DEBUGFS_MNT="/sys/kernel/debug/fail_make_request"
+PROBABILITY=0
+TIMES=0
+VERBOSE=0
+MAKE_FAIL=0
+
+_have_debugfs() {
+	if [[ ! -d "${DEBUGFS_MNT}" ]]; then
+		SKIP_REASONS+=("debugfs does not exist")
+		return 1
+	fi
+	return 0
+}
+
+requires() {
+	_have_debugfs
+}
+
+save_fail_make_request()
+{
+	# Save existing global fail_make_request settings
+	PROBABILITY=$(cat "${DEBUGFS_MNT}"/probability)
+	TIMES=$(cat "${DEBUGFS_MNT}"/times)
+	VERBOSE=$(cat "${DEBUGFS_MNT}"/verbose)
+
+	# Save TEST_DEV make-it-fail setting
+	MAKE_FAIL=$(cat "${TEST_DEV_SYSFS}"/make-it-fail)
+}
+
+allow_fail_make_request()
+{
+	# Allow global fail_make_request feature
+	echo 100 > "${DEBUGFS_MNT}"/probability
+	echo 9999999 > "${DEBUGFS_MNT}"/times
+	echo 0 > "${DEBUGFS_MNT}"/verbose
+
+	# Force TEST_DEV device failure
+	echo 1 > "${TEST_DEV_SYSFS}"/make-it-fail
+}
+
+restore_fail_make_request()
+{
+	echo "${MAKE_FAIL}" > "${TEST_DEV_SYSFS}"/make-it-fail
+
+	# Disallow global fail_make_request feature
+	echo "${PROBABILITY}" > "${DEBUGFS_MNT}"/probability
+	echo "${TIMES}" > "${DEBUGFS_MNT}"/times
+	echo "${VERBOSE}" > "${DEBUGFS_MNT}"/verbose
+}
+
+test_device() {
+	echo "Running ${TEST_NAME}"
+
+	# Save configuration
+	save_fail_make_request
+
+	# set up device for failure
+	allow_fail_make_request
+
+	# Check rereading partitions on bad disk cannot open $TEST_DEV: Input/output error
+	blockdev --rereadpt "${TEST_DEV}" &> "$FULL"
+	if grep -q "Input/output error" "$FULL"; then
+		echo "Return EIO for BLKRRPART on bad disk"
+	else
+		echo "Did not return EIO for BLKRRPART on bad disk"
+	fi
+
+	# Restore TEST_DEV device to original state
+	restore_fail_make_request
+
+	echo "Test complete"
+}
