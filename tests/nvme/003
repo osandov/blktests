@@ -22,7 +22,6 @@ test() {
 
 	_setup_nvmet
 
-
 	_nvmet_target_setup
 
 	_nvme_connect_subsys --subsysnqn "nqn.2014-08.org.nvmexpress.discovery"
