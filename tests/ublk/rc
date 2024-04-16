@@ -6,16 +6,9 @@
 
 . common/rc
 . common/ublk
-. common/fio
 
 group_requires() {
 	_have_root
 	_have_ublk
 	_have_fio
 }
-
-if which rublk > /dev/null 2>&1; then
-	export UBLK_PROG="src/rublk_wrapper.sh"
-else
-	export UBLK_PROG="src/miniublk"
-fi

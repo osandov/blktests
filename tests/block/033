@@ -17,7 +17,7 @@ requires() {
 }
 
 test() {
-	local ublk_prog="src/miniublk"
+	local UBLK_PROG="src/miniublk"
 
 	echo "Running ${TEST_NAME}"
 
@@ -25,15 +25,15 @@ test() {
 		return 1
 	fi
 
-	${ublk_prog} add -t null -n 0 > "$FULL"
+	${UBLK_PROG} add -t null -n 0 > "$FULL"
 	udevadm settle
-	if ! ${ublk_prog} list -n 0 >> "$FULL"; then
+	if ! ${UBLK_PROG} list -n 0 >> "$FULL"; then
 		echo "fail to list dev"
 	fi
 	if ! dd if=/dev/ublkb0 iflag=direct of=/dev/null bs=1M count=512 >> "$FULL" 2>&1; then
 		echo "fail io"
 	fi
-	${ublk_prog} del -n 0 >> "$FULL"
+	${UBLK_PROG} del -n 0 >> "$FULL"
 
 	_exit_ublk
 
