@@ -21,6 +21,8 @@ requires() {
 }
 
 test() {
+	local pass i
+
 	echo "Running ${TEST_NAME}"
 	_start_nbd_server
 	{
@@ -64,7 +66,15 @@ test() {
 
 	udevadm settle
 
-	if ! stat /dev/nbd0p1 >> "$FULL" 2>&1; then
+	pass=false
+	for ((i = 0; i < 3; i++)); do
+		if stat /dev/nbd0p1 >> "$FULL" 2>&1; then
+			pass=true
+			break
+		fi
+		sleep 1
+	done
+	if [[ $pass != true ]]; then
 		echo "Didn't have partition on ioctl path"
 		nbd-client -nonetlink -d /dev/nbd0 >> "$FULL" 2>&1
 		_stop_nbd_server
