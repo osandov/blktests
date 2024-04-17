@@ -53,11 +53,11 @@ test() {
 
 	echo "Testing IOCTL path"
 
-	nbd-client -N export localhost /dev/nbd0 >> "$FULL" 2>&1
+	nbd-client -nonetlink -N export localhost /dev/nbd0 >> "$FULL" 2>&1
 
 	if ! _wait_for_nbd_connect; then
 		echo "Connect didn't happen?"
-		nbd-client -d /dev/nbd0 >> "$FULL" 2>&1
+		nbd-client -nonetlink -d /dev/nbd0 >> "$FULL" 2>&1
 		_stop_nbd_server
 		return 1
 	fi
@@ -66,12 +66,12 @@ test() {
 
 	if ! stat /dev/nbd0p1 >> "$FULL" 2>&1; then
 		echo "Didn't have partition on ioctl path"
-		nbd-client -d /dev/nbd0 >> "$FULL" 2>&1
+		nbd-client -nonetlink -d /dev/nbd0 >> "$FULL" 2>&1
 		_stop_nbd_server
 		return 1
 	fi
 
-	nbd-client -d /dev/nbd0 >> "$FULL" 2>&1
+	nbd-client -nonetlink -d /dev/nbd0 >> "$FULL" 2>&1
 
 	udevadm settle
 
@@ -83,7 +83,7 @@ test() {
 
 	# Do it with netlink
 	echo "Testing the netlink path"
-	nbd-client -L -N export localhost /dev/nbd0 >> "$FULL" 2>&1
+	nbd-client -N export localhost /dev/nbd0 >> "$FULL" 2>&1
 
 	if ! _wait_for_nbd_connect; then
 		echo "Connect didn't happen?"
@@ -96,12 +96,12 @@ test() {
 
 	if  ! stat /dev/nbd0p1 >/dev/null 2>&1; then
 		echo "Didn't have partition on the netlink path"
-		nbd-client -L -d /dev/nbd0 >> "$FULL" 2>&1
+		nbd-client -d /dev/nbd0 >> "$FULL" 2>&1
 		_stop_nbd_server
 		return 1
 	fi
 
-	nbd-client -L -d /dev/nbd0 >> "$FULL" 2>&1
+	nbd-client -d /dev/nbd0 >> "$FULL" 2>&1
 
 	if ! _wait_for_nbd_disconnect; then
 		echo "Disconnect didn't happen?"
