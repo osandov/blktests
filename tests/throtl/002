@@ -1,0 +1,30 @@
+#!/bin/bash
+# SPDX-License-Identifier: GPL-3.0+
+# Copyright (C) 2024 Yu Kuai
+#
+# Test iops limit work correctly for big IO of blk-throttle, regression test
+# for commit 9f5ede3c01f9 ("block: throttle split bio in case of iops limit")
+
+. tests/throtl/rc
+
+DESCRIPTION="iops limit over IO split"
+QUICK=1
+
+test() {
+	echo "Running ${TEST_NAME}"
+
+	if ! _set_up_throtl max_sectors=8; then
+		return 1;
+	fi
+
+	_throtl_set_limits wiops=256
+	_throtl_test_io write 1M 1
+	_throtl_remove_limits
+
+	_throtl_set_limits riops=256
+	_throtl_test_io read 1M 1
+	_throtl_remove_limits
+
+	_clean_up_throtl
+	echo "Test complete"
+}
