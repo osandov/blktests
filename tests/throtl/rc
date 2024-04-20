@@ -1,0 +1,88 @@
+#!/bin/bash
+# SPDX-License-Identifier: GPL-3.0+
+# Copyright (C) 2024 Yu Kuai
+#
+# Tests for blk-throttle
+
+. common/rc
+. common/null_blk
+. common/cgroup
+
+THROTL_DIR=$(echo "$TEST_NAME" | tr '/' '_')
+THROTL_DEV=dev_nullb
+
+group_requires() {
+	_have_root
+	_have_null_blk
+	_have_kernel_option BLK_DEV_THROTTLING
+	_have_cgroup2_controller io
+	_have_program bc
+}
+
+# Create a new null_blk device, and create a new blk-cgroup for test.
+_set_up_throtl() {
+
+	if ! _configure_null_blk $THROTL_DEV "$@" power=1; then
+		return 1
+	fi
+
+	if ! _init_cgroup2; then
+		_exit_null_blk
+		return 1
+	fi
+
+	echo "+io" > "$(_cgroup2_base_dir)/cgroup.subtree_control"
+	echo "+io" > "$CGROUP2_DIR/cgroup.subtree_control"
+
+	mkdir -p "$CGROUP2_DIR/$THROTL_DIR"
+	return 0;
+}
+
+_clean_up_throtl() {
+	rmdir "$CGROUP2_DIR/$THROTL_DIR"
+	echo "-io" > "$CGROUP2_DIR/cgroup.subtree_control"
+	echo "-io" > "$(_cgroup2_base_dir)/cgroup.subtree_control"
+
+	_exit_cgroup2
+	_exit_null_blk
+}
+
+_throtl_set_limits() {
+	echo "$(cat /sys/block/$THROTL_DEV/dev) $*" > \
+		"$CGROUP2_DIR/$THROTL_DIR/io.max"
+}
+
+_throtl_remove_limits() {
+	echo "$(cat /sys/block/$THROTL_DEV/dev) rbps=max wbps=max riops=max wiops=max" > \
+		"$CGROUP2_DIR/$THROTL_DIR/io.max"
+}
+
+# Create an asynchronous thread and bind it to the specified blk-cgroup, issue
+# IO and then print time elapsed to the second, blk-throttle limits should be
+# set before this function.
+_throtl_test_io() {
+	local pid
+
+	{
+		local start_time
+		local end_time
+		local elapsed
+
+		sleep 0.1
+		start_time=$(date +%s.%N)
+
+		if [ "$1" == "read" ]; then
+			dd if=/dev/$THROTL_DEV of=/dev/null bs="$2" count="$3" iflag=direct status=none
+		elif [ "$1" == "write" ]; then
+			dd of=/dev/$THROTL_DEV if=/dev/zero bs="$2" count="$3" oflag=direct status=none
+		fi
+
+		end_time=$(date +%s.%N)
+		elapsed=$(echo "$end_time - $start_time" | bc)
+		printf "%.0f\n" "$elapsed"
+	} &
+
+	pid=$!
+	echo "$pid" > "$CGROUP2_DIR/$THROTL_DIR/cgroup.procs"
+	wait $pid
+}

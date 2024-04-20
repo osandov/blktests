@@ -1,0 +1,39 @@
+#!/bin/bash
+# SPDX-License-Identifier: GPL-3.0+
+# Copyright (C) 2024 Yu Kuai
+#
+# Test basic functionality of blk-throttle
+
+. tests/throtl/rc
+
+DESCRIPTION="basic functionality"
+QUICK=1
+
+test() {
+	echo "Running ${TEST_NAME}"
+
+	if ! _set_up_throtl; then
+		return 1;
+	fi
+
+	local bps_limit=$((1024 * 1024))
+
+	_throtl_set_limits wbps=$bps_limit
+	_throtl_test_io write 4k 256
+	_throtl_remove_limits
+
+	_throtl_set_limits wiops=256
+	_throtl_test_io write 4k 256
+	_throtl_remove_limits
+
+	_throtl_set_limits rbps=$bps_limit
+	_throtl_test_io read 4k 256
+	_throtl_remove_limits
+
+	_throtl_set_limits riops=256
+	_throtl_test_io read 4k 256
+	_throtl_remove_limits
+
+	_clean_up_throtl
+	echo "Test complete"
+}
