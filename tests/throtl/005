@@ -1,0 +1,37 @@
+#!/bin/bash
+# SPDX-License-Identifier: GPL-3.0+
+# Copyright (C) 2024 Yu Kuai
+#
+# Test change config while IO is throttled, regression test for
+# commit a880ae93e5b5 ("blk-throttle: fix io hung due to configuration updates")
+
+. tests/throtl/rc
+
+DESCRIPTION="change config with throttled IO"
+QUICK=1
+
+test() {
+	echo "Running ${TEST_NAME}"
+
+	if ! _set_up_throtl; then
+		return 1;
+	fi
+
+	_throtl_set_limits wbps=$((512 * 1024))
+
+	{
+		sleep 0.1
+		_throtl_issue_io write 1M 1
+	} &
+
+	local pid=$!
+	echo "$pid" > "$CGROUP2_DIR/$THROTL_DIR/cgroup.procs"
+
+	sleep 1
+	_throtl_set_limits wbps=$((256 * 1024))
+	wait $pid
+	_throtl_remove_limits
+
+	_clean_up_throtl
+	echo "Test complete"
+}
