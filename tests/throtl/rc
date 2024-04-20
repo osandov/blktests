@@ -57,6 +57,24 @@ _throtl_remove_limits() {
 		"$CGROUP2_DIR/$THROTL_DIR/io.max"
 }
 
+_throtl_issue_io() {
+	local start_time
+	local end_time
+	local elapsed
+
+	start_time=$(date +%s.%N)
+
+	if [ "$1" == "read" ]; then
+		dd if=/dev/$THROTL_DEV of=/dev/null bs="$2" count="$3" iflag=direct status=none
+	elif [ "$1" == "write" ]; then
+		dd of=/dev/$THROTL_DEV if=/dev/zero bs="$2" count="$3" oflag=direct status=none
+	fi
+
+	end_time=$(date +%s.%N)
+	elapsed=$(echo "$end_time - $start_time" | bc)
+	printf "%.0f\n" "$elapsed"
+}
+
 # Create an asynchronous thread and bind it to the specified blk-cgroup, issue
 # IO and then print time elapsed to the second, blk-throttle limits should be
 # set before this function.
@@ -64,22 +82,12 @@ _throtl_test_io() {
 	local pid
 
 	{
-		local start_time
-		local end_time
-		local elapsed
+		local rw=$1
+		local bs=$2
+		local count=$3
 
 		sleep 0.1
-		start_time=$(date +%s.%N)
-
-		if [ "$1" == "read" ]; then
-			dd if=/dev/$THROTL_DEV of=/dev/null bs="$2" count="$3" iflag=direct status=none
-		elif [ "$1" == "write" ]; then
-			dd of=/dev/$THROTL_DEV if=/dev/zero bs="$2" count="$3" oflag=direct status=none
-		fi
-
-		end_time=$(date +%s.%N)
-		elapsed=$(echo "$end_time - $start_time" | bc)
-		printf "%.0f\n" "$elapsed"
+		_throtl_issue_io "$rw" "$bs" "$count"
 	} &
 
 	pid=$!

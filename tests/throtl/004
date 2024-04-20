@@ -1,0 +1,37 @@
+#!/bin/bash
+# SPDX-License-Identifier: GPL-3.0+
+# Copyright (C) 2024 Yu Kuai
+#
+# Test delete the disk while IO is throttled, regerssion test for
+# commit 884f0e84f1e3 ("blk-throttle: fix UAF by deleteing timer in blk_throtl_exit()")
+# commit 8f9e7b65f833 ("block: cancel all throttled bios in del_gendisk()")
+
+. tests/throtl/rc
+
+DESCRIPTION="delete disk while IO is throttled"
+QUICK=1
+
+test() {
+	echo "Running ${TEST_NAME}"
+
+	if ! _set_up_throtl; then
+		return 1;
+	fi
+
+	_throtl_set_limits wbps=$((1024 * 1024))
+
+	{
+		sleep 0.1
+		_throtl_issue_io write 10M 1
+	} &
+
+	local pid=$!
+	echo "$pid" > "$CGROUP2_DIR/$THROTL_DIR/cgroup.procs"
+
+	sleep 0.6
+	echo 0 > "/sys/kernel/config/nullb/$THROTL_DEV/power"
+	wait "$pid"
+
+	_clean_up_throtl
+	echo "Test complete"
+}
