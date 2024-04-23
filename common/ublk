@@ -40,3 +40,9 @@ _exit_ublk() {
 	udevadm settle
 	modprobe -r -q ublk_drv
 }
+
+if which rublk > /dev/null 2>&1; then
+	export UBLK_PROG="src/rublk_wrapper.sh"
+else
+	export UBLK_PROG="src/miniublk"
+fi
