@@ -17,8 +17,6 @@ requires() {
 }
 
 test() {
-	local UBLK_PROG="src/miniublk"
-
 	echo "Running ${TEST_NAME}"
 
 	if ! _init_ublk; then

@@ -6,6 +6,12 @@
 
 . common/shellcheck
 
+if which rublk > /dev/null 2>&1; then
+	export UBLK_PROG="src/rublk_wrapper.sh"
+else
+	export UBLK_PROG="src/miniublk"
+fi
+
 _have_ublk() {
 	_have_driver ublk_drv
 	_have_program "${UBLK_PROG}"
@@ -40,9 +46,3 @@ _exit_ublk() {
 	udevadm settle
 	modprobe -r -q ublk_drv
 }
-
-if which rublk > /dev/null 2>&1; then
-	export UBLK_PROG="src/rublk_wrapper.sh"
-else
-	export UBLK_PROG="src/miniublk"
-fi
