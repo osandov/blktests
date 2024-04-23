@@ -19,7 +19,6 @@ test() {
 
 	_setup_nvmet
 
-
 	_nvmet_target_setup --blkdev file
 
 	_nvmet_target_cleanup
