@@ -24,7 +24,8 @@ last_dmesg()
 {
 	local nr_lines=$1
 
-	dmesg -t | grep -v "callbacks suppressed" | tail "-$nr_lines"
+	dmesg -t | grep -v "callbacks suppressed" | tail "-$nr_lines" \
+		| sed 's/\[.*\] //'
 }
 
 inject_unrec_read_on_read()
