@@ -37,7 +37,7 @@ test() {
 	local loop_dev
 	local port
 
-	truncate -s "${nvme_img_size}" "$(_nvme_def_file_path)"
+	truncate -s "${NVME_IMG_SIZE}" "$(_nvme_def_file_path)"
 
 	loop_dev="$(losetup -f --show "$(_nvme_def_file_path)")"
 

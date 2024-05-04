@@ -17,7 +17,7 @@ requires() {
 }
 
 device_requires() {
-	_require_test_dev_size "${nvme_img_size}"
+	_require_test_dev_size "${NVME_IMG_SIZE}"
 }
 
 set_conditions() {
@@ -35,7 +35,7 @@ test_device() {
 	_nvmet_passthru_target_setup
 	nsdev=$(_nvmet_passthru_target_connect)
 
-	if ! _xfs_run_fio_verify_io "${nsdev}" "${nvme_img_size}"; then
+	if ! _xfs_run_fio_verify_io "${nsdev}" "${NVME_IMG_SIZE}"; then
 		echo "FAIL: fio verify failed"
 	fi
 

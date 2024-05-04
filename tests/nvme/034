@@ -29,7 +29,7 @@ test_device() {
 	_nvmet_passthru_target_setup
 	nsdev=$(_nvmet_passthru_target_connect)
 
-	_run_fio_verify_io --size="${nvme_img_size}" --filename="${nsdev}"
+	_run_fio_verify_io --size="${NVME_IMG_SIZE}" --filename="${nsdev}"
 
 	_nvme_disconnect_subsys
 	_nvmet_passthru_target_cleanup

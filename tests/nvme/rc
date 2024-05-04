@@ -19,7 +19,7 @@ def_hostnqn="nqn.2014-08.org.nvmexpress:uuid:${def_hostid}"
 export def_subsysnqn="blktests-subsystem-1"
 export def_subsys_uuid="91fdba0d-f87b-4c25-b80f-db7be1418b9e"
 _check_conflict_and_set_default NVMET_TRTYPES nvme_trtype "loop"
-nvme_img_size=${nvme_img_size:-"1G"}
+_check_conflict_and_set_default NVME_IMG_SIZE nvme_img_size 1G
 nvme_num_iter=${nvme_num_iter:-"1000"}
 nvmet_blkdev_type=${nvmet_blkdev_type:-"device"}
 NVMET_BLKDEV_TYPES=${NVMET_BLKDEV_TYPES:-"device file"}
@@ -159,10 +159,10 @@ _require_nvme_test_img_size() {
 	local nvme_img_size_mb
 
 	require_sz_mb="$(convert_to_mb "$1")"
-	nvme_img_size_mb="$(convert_to_mb "${nvme_img_size}")"
+	nvme_img_size_mb="$(convert_to_mb "${NVME_IMG_SIZE}")"
 
 	if ((nvme_img_size_mb < require_sz_mb)); then
-		SKIP_REASONS+=("nvme_img_size must be at least ${require_sz_mb}m")
+		SKIP_REASONS+=("NVME_IMG_SIZE must be at least ${require_sz_mb}m")
 		return 1
 	fi
 	return 0
@@ -909,7 +909,7 @@ _nvmet_target_setup() {
 		esac
 	done
 
-	truncate -s "${nvme_img_size}" "$(_nvme_def_file_path)"
+	truncate -s "${NVME_IMG_SIZE}" "$(_nvme_def_file_path)"
 	if [[ "${blkdev_type}" == "device" ]]; then
 		blkdev="$(losetup -f --show "$(_nvme_def_file_path)")"
 	else
