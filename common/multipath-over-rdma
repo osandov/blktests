@@ -12,11 +12,12 @@ filesystem_type=ext4
 fio_aux_path=/tmp/fio-state-files
 memtotal=$(sed -n 's/^MemTotal:[[:blank:]]*\([0-9]*\)[[:blank:]]*kB$/\1/p' /proc/meminfo)
 max_ramdisk_size=$((1<<25))
-use_rxe=${use_rxe:-""}
 ramdisk_size=$((memtotal*(1024/16)))  # in bytes
 if [ $ramdisk_size -gt $max_ramdisk_size ]; then
 	ramdisk_size=$max_ramdisk_size
 fi
+
+_check_conflict_and_set_default USE_RXE use_rxe ""
 
 _have_legacy_dm() {
 	_have_kernel_config_file || return
@@ -396,7 +397,7 @@ start_soft_rdma() {
 	local type
 
 	{
-	if [ -z "$use_rxe" ]; then
+	if [ -z "$USE_RXE" ]; then
 		modprobe siw || return $?
 		type=siw
 	else

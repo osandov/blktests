@@ -132,9 +132,11 @@ NVMET_TRTYPES=rdma ./check nvme/
 ./check srp/
 
 To use the rdma_rxe driver:
-use_rxe=1 NVMET_TRTYPES=rdma ./check nvme/
-use_rxe=1 ./check srp/
+USE_RXE=1 NVMET_TRTYPES=rdma ./check nvme/
+USE_RXE=1 ./check srp/
 ```
+'USE_RXE' had the old name 'use_rxe'. The old name is still usable but not
+recommended.
 
 ### Normal user
 

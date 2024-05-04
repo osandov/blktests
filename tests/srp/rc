@@ -51,7 +51,7 @@ group_requires() {
 	_have_module ib_uverbs
 	_have_module null_blk
 	_have_module rdma_cm
-	if [ -n "$use_rxe" ]; then
+	if [ -n "$USE_RXE" ]; then
 		_have_module rdma_rxe
 	else
 		_have_module siw
