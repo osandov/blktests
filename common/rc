@@ -470,3 +470,48 @@ convert_to_mb()
 		echo "$((res * 1024))"
 	fi
 }
+
+# Combine multiple _set_conditions() hooks to iterate all combinations of them.
+# When one hook x has conditions x1 and x2, and the other hook y has y1 and y2,
+# iterate (x1, y1), (x2, y1), (x1, y2) and (x2, y2). In other words, it iterates
+# the Cartesian product of the given condiition sets.
+_set_combined_conditions()
+{
+	local -i index
+	local -a hooks
+	local -a nr_conds
+	local total_nr_conds=1
+	local i nr_cond _cond_desc
+	local -a last_arg
+
+	last_arg=("${@: -1}")
+	if [[ ${last_arg[*]} =~ ^[0-9]+$ ]]; then
+		index=$((${last_arg[*]}))
+	fi
+	read -r -a hooks <<< "${@/$index}"
+
+	nr_hooks=${#hooks[@]}
+
+	# Check how many conditions each hook has. Multiply them all to get
+	# the total number of the combined conditions.
+	for ((i = 0; i < nr_hooks; i++)); do
+		nr_cond=$(eval "${hooks[i]}")
+		nr_conds+=("$nr_cond")
+		total_nr_conds=$((total_nr_conds * nr_cond))
+	done
+
+	if [[ -z $index ]]; then
+		echo $((total_nr_conds))
+		return
+	fi
+
+	# Calculate the index of the each hook and call them. Concatenate the
+	# COND_DESC of the all hooks return.
+	for ((i = 0; i < nr_hooks; i++)); do
+		eval "${hooks[i]}" $((index % nr_conds[i]))
+		index=$((index / nr_conds[i]))
+		[[ -n $_cond_desc ]] && _cond_desc="${_cond_desc} "
+		_cond_desc="${_cond_desc}${COND_DESC}"
+	done
+	COND_DESC="$_cond_desc"
+}
