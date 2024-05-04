@@ -22,6 +22,7 @@ _check_conflict_and_set_default NVMET_TRTYPES nvme_trtype "loop"
 nvme_img_size=${nvme_img_size:-"1G"}
 nvme_num_iter=${nvme_num_iter:-"1000"}
 nvmet_blkdev_type=${nvmet_blkdev_type:-"device"}
+NVMET_BLKDEV_TYPES=${NVMET_BLKDEV_TYPES:-"device file"}
 
 _NVMET_TRTYPES_is_valid() {
 	local type
@@ -51,7 +52,22 @@ _set_nvme_trtype() {
 	fi
 
 	nvme_trtype=${types[index]}
-	COND_DESC="nvmet tr=${nvme_trtype}"
+	COND_DESC="tr=${nvme_trtype}"
+}
+
+_set_nvmet_blkdev_type() {
+	local index=$1
+	local -a types
+
+	read -r -a types <<< "$NVMET_BLKDEV_TYPES"
+
+	if [[ -z $index ]]; then
+		echo ${#types[@]}
+		return
+	fi
+
+	nvmet_blkdev_type=${types[index]}
+	COND_DESC="bd=${nvmet_blkdev_type}"
 }
 
 # TMPDIR can not be referred out of test() or test_device() context. Instead of

@@ -108,6 +108,11 @@ The NVMe tests can be additionally parameterized via environment variables.
   tests are repeated to cover all of the transports specified.
   This parameter had an old name 'nvme_trtype'. The old name is still usable,
   but not recommended.
+- NVMET_BLKDEV_TYPES: 'device', 'file'
+  Set up NVME target backends with the specified block device type. Multiple
+  block device types can be listed with separating spaces. In this case, the
+  tests are repeated to cover all of the block device types specified. Default
+  value is "device file".
 - nvme_img_size: '1G' (default)
   Run the tests with given image size in bytes. 'm', 'M', 'g'
 	and 'G' postfix are supported.
