@@ -18,9 +18,40 @@ def_hostid="0f01fb42-9f7f-4856-b0b3-51e60b8de349"
 def_hostnqn="nqn.2014-08.org.nvmexpress:uuid:${def_hostid}"
 export def_subsysnqn="blktests-subsystem-1"
 export def_subsys_uuid="91fdba0d-f87b-4c25-b80f-db7be1418b9e"
-nvme_trtype=${nvme_trtype:-"loop"}
+_check_conflict_and_set_default NVMET_TRTYPES nvme_trtype "loop"
 nvme_img_size=${nvme_img_size:-"1G"}
 nvme_num_iter=${nvme_num_iter:-"1000"}
+
+_NVMET_TRTYPES_is_valid() {
+	local type
+
+	for type in $NVMET_TRTYPES; do
+		case $type in
+		loop | rdma | tcp | fc)
+			;;
+		*)
+			SKIP_REASONS+=("Invalid NVMET_TRTYPE value: $type")
+			return 1
+			;;
+		esac
+	done
+	return 0
+}
+
+_set_nvme_trtype() {
+	local index=$1
+	local -a types
+
+	read -r -a types <<< "$NVMET_TRTYPES"
+
+	if [[ -z $index ]]; then
+		echo ${#types[@]}
+		return
+	fi
+
+	nvme_trtype=${types[index]}
+	COND_DESC="nvmet tr=${nvme_trtype}"
+}
 
 # TMPDIR can not be referred out of test() or test_device() context. Instead of
 # global variable def_flie_path, use this getter function.
@@ -61,9 +92,6 @@ _nvme_requires() {
 		_have_configfs
 		def_adrfam="fc"
 		;;
-	*)
-		SKIP_REASONS+=("unsupported nvme_trtype=${nvme_trtype}")
-		return 1
 	esac
 
 	if [[ -n ${nvme_adrfam} ]]; then
@@ -92,6 +120,7 @@ _nvme_requires() {
 
 group_requires() {
 	_have_root
+	_NVMET_TRTYPES_is_valid
 }
 
 group_device_requires() {
