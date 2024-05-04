@@ -16,7 +16,7 @@ requires() {
 }
 
 set_conditions() {
-	_set_nvme_trtype "$@"
+	_set_combined_conditions _set_nvme_trtype _set_nvmet_blkdev_type "$@"
 }
 
 test() {
