@@ -57,3 +57,8 @@ EOF
 		echo "$line" >> /dev/kmsg
 	done < "$TMPDIR/dmesg"
 }
+
+# Global variables shared between set_conditions() and test()
+export meta_x_index=
+export meta_y_index=
+export meta_z_index=

@@ -1,0 +1,43 @@
+#!/bin/bash
+# SPDX-License-Identifier: GPL-3.0+
+# Copyright (C) 2024 Western Digital Corporation or its affiliates.
+#
+# Test _set_combined_conditions() helper
+
+. tests/meta/rc
+
+DESCRIPTION="combine two set_conditions() hooks"
+
+conditions_x() {
+	local index=$1
+
+	if [[ -z $index ]]; then
+		echo 2
+		return
+	fi
+
+	meta_x_index=$index
+	COND_DESC="x=$index"
+}
+
+conditions_y() {
+	local index=$1
+
+	if [[ -z $index ]]; then
+		echo 2
+		return
+	fi
+
+	meta_y_index=$index
+	COND_DESC="y=$index"
+}
+
+set_conditions() {
+	_set_combined_conditions conditions_x conditions_y "$@"
+}
+
+test() {
+	echo "Running ${TEST_NAME}"
+	echo "(x,y)=(${meta_x_index},${meta_y_index})" >> "$FULL"
+	echo "Test complete"
+}
