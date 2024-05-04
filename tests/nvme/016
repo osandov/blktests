@@ -23,7 +23,7 @@ test() {
 	_setup_nvmet
 
 	local port
-	local iterations="${nvme_num_iter}"
+	local iterations="${NVME_NUM_ITER}"
 	local loop_dev
 
 	loop_dev="$(losetup -f)"

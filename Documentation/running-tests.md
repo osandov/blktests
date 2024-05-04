@@ -117,8 +117,9 @@ The NVMe tests can be additionally parameterized via environment variables.
   Run the tests with given image size in bytes. 'm', 'M', 'g' and 'G' postfix
   are supported. This parameter had an old name 'nvme_img_size'. The old name
   is still usable, but not recommended.
-- nvme_num_iter: 1000 (default)
-  The number of iterations a test should do.
+- NVME_NUM_ITER: 1000 (default)
+  The number of iterations a test should do. This parameter had an old name
+  'nvme_num_iter'. The old name is still usable, but not recommended.
 
 ### Running nvme-rdma and SRP tests
 
