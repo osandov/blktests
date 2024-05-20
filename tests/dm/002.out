@@ -1,0 +1,10 @@
+Running dm/002
+countbadblocks: 3 badblock(s) found
+60
+67
+72
+dust_clear_badblocks: badblocks cleared
+countbadblocks: 0 badblock(s) found
+countbadblocks: 3 badblock(s) found
+countbadblocks: 0 badblock(s) found
+Test complete

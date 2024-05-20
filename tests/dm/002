@@ -1,0 +1,40 @@
+#!/bin/bash
+# SPDX-License-Identifier: GPL-3.0+
+# Copyright (C) 2024 Red Hat, Inc.
+#
+
+. tests/dm/rc
+
+DESCRIPTION="dm-dust general functionality test"
+QUICK=1
+
+requires() {
+        _have_driver dm_dust
+}
+
+
+test_device() {
+	echo "Running ${TEST_NAME}"
+
+	TEST_DEV_SZ=$(blockdev --getsz "$TEST_DEV")
+	dmsetup create dust1 --table "0 $TEST_DEV_SZ dust $TEST_DEV 0 512"
+	dmsetup message dust1 0 addbadblock 60
+	dmsetup message dust1 0 addbadblock 67
+	dmsetup message dust1 0 addbadblock 72
+	dmsetup message dust1 0 countbadblocks
+	dmsetup message dust1 0 listbadblocks
+	dmsetup message dust1 0 clearbadblocks
+	dmsetup message dust1 0 countbadblocks
+	dmsetup message dust1 0 addbadblock 60
+	dmsetup message dust1 0 addbadblock 67
+	dmsetup message dust1 0 addbadblock 72
+	dmsetup message dust1 0 countbadblocks
+	dmsetup message dust1 0 enable
+	dd if=/dev/zero of=/dev/mapper/dust1 bs=512 count=128 oflag=direct >/dev/null 2>&1 || return $?
+	sync
+	dmsetup message dust1 0 countbadblocks
+	sync
+	dmsetup remove dust1
+
+	echo "Test complete"
+}
