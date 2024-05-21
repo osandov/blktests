@@ -43,7 +43,8 @@ _have_nbd_netlink() {
 
 _wait_for_nbd_connect() {
 	for ((i = 0; i < 3; i++)); do
-		if [[ -e /sys/kernel/debug/nbd/nbd0/tasks ]]; then
+		sz=$(lsblk --raw --noheadings -o SIZE /dev/nbd0)
+		if [ "$sz" != "0B"  ]; then
 			return 0
 		fi
 		sleep 1
