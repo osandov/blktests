@@ -1,0 +1,47 @@
+#!/bin/bash
+# SPDX-License-Identifier: GPL-3.0+
+# Copyright (C) 2024 Sagi Grimberg
+#
+# Regression test for kernel hang when enabling/disabling nvmet
+# namespace concurrently
+
+. tests/nvme/rc
+
+DESCRIPTION="test nvmet concurrent ns enable/disable"
+QUICK=1
+
+requires() {
+	_nvme_requires
+	_require_nvme_trtype_is_fabrics
+}
+
+set_conditions() {
+	_set_nvme_trtype "$@"
+}
+
+ns_enable_disable_loop() {
+	local ns="$1"
+	for ((i = 1; i <= 200; i++)); do
+		echo 0 > "${ns}/enable"
+		echo 1 > "${ns}/enable"
+	done
+}
+
+test() {
+	echo "Running ${TEST_NAME}"
+
+	_setup_nvmet
+
+	_nvmet_target_setup
+	ns="${NVMET_CFS}subsystems/${def_subsysnqn}/namespaces/1"
+
+	# fire off two enable/disable loops concurrently and wait
+	# for them to complete...
+	ns_enable_disable_loop $ns &
+	ns_enable_disable_loop $ns &
+	wait
+
+	_nvmet_target_cleanup
+
+	echo "Test complete"
+}
