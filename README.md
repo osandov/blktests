@@ -19,12 +19,15 @@ The dependencies are minimal, but make sure you have them installed:
 - fio
 - gcc
 - make
+- systemd-udev (udevadm)
 
 Some tests require the following:
 
-- e2fsprogs and xfsprogs
+- e2fsprogs, xfsprogs, f2fs-tools and btrfs-progs
+- nvme-cli
 - multipath-tools (Debian, openSUSE, Arch Linux) or device-mapper-multipath
   (Fedora)
+- nbd-client and nbd-server (Debian) or nbd (Fedora, openSUSE, Arch Linux)
 - dmsetup (Debian) or device-mapper (Fedora, openSUSE, Arch Linux)
 - rublk (`cargo install --version=^0.1 rublk`) for ublk test
 
