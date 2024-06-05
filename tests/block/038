@@ -1,0 +1,61 @@
+#!/bin/bash
+# SPDX-License-Identifier: GPL-3.0+
+# Copyright (C) 2024 Yi Zhang <yi.zhang@redhat.com>
+#
+# Regression test for commit a2db328b0839 ("null_blk: fix null-ptr-dereference
+# while configuring 'power' and 'submit_queues'").
+
+. tests/block/rc
+. common/null_blk
+
+DESCRIPTION="Test null-blk concurrent power/submit_queues operations"
+QUICK=1
+
+requires() {
+	_have_module null_blk
+	_have_module_param null_blk nr_devices
+	_have_module_param null_blk submit_queues
+}
+
+null_blk_power_loop() {
+	local nullb="$1"
+	for ((i = 1; i <= 200; i++)); do
+		echo 1 > "/sys/kernel/config/nullb/${nullb}/power"
+		echo 0 > "/sys/kernel/config/nullb/${nullb}/power"
+	done
+}
+
+null_blk_submit_queues_loop() {
+	local nullb="$1"
+	for ((i = 1; i <= 200; i++)); do
+		echo 1 > "/sys/kernel/config/nullb/${nullb}/submit_queues"
+		echo 4 > "/sys/kernel/config/nullb/${nullb}/submit_queues"
+	done
+}
+
+test() {
+	echo "Running ${TEST_NAME}"
+
+	local nullb_params=(
+		nr_devices=0
+	)
+	if ! _init_null_blk "${nullb_params[@]}"; then
+		echo "Loading null_blk failed"
+		return 1
+	fi
+
+	if ! _configure_null_blk nullb0; then
+		echo "Configuring null_blk nullb0 failed"
+		return 1
+	fi
+
+	# fire off two null-blk power/submit_queues concurrently and wait
+	# for them to complete...
+	null_blk_power_loop nullb0 &
+	null_blk_submit_queues_loop nullb0 &
+	wait
+
+	_exit_null_blk
+
+	echo "Test complete"
+}
