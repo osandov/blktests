@@ -12,9 +12,10 @@ DESCRIPTION="Test null-blk concurrent power/submit_queues operations"
 QUICK=1
 
 requires() {
-	_have_module null_blk
-	_have_module_param null_blk nr_devices
-	_have_module_param null_blk submit_queues
+	_have_null_blk
+	if ! _have_null_blk_feature submit_queues; then
+		SKIP_REASONS+=("null_blk does not support submit_queues")
+	fi
 }
 
 null_blk_power_loop() {
@@ -36,23 +37,15 @@ null_blk_submit_queues_loop() {
 test() {
 	echo "Running ${TEST_NAME}"
 
-	local nullb_params=(
-		nr_devices=0
-	)
-	if ! _init_null_blk "${nullb_params[@]}"; then
-		echo "Loading null_blk failed"
-		return 1
-	fi
-
-	if ! _configure_null_blk nullb0; then
-		echo "Configuring null_blk nullb0 failed"
+	if ! _configure_null_blk nullb1; then
+		echo "Configuring null_blk nullb1 failed"
 		return 1
 	fi
 
 	# fire off two null-blk power/submit_queues concurrently and wait
 	# for them to complete...
-	null_blk_power_loop nullb0 &
-	null_blk_submit_queues_loop nullb0 &
+	null_blk_power_loop nullb1 &
+	null_blk_submit_queues_loop nullb1 &
 	wait
 
 	_exit_null_blk
