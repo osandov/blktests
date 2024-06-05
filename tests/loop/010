@@ -1,0 +1,74 @@
+#!/bin/bash
+# SPDX-License-Identifier: GPL-3.0+
+# Copyright (C) 2024, Oracle and/or its affiliates.
+#
+# Test to detect a race between loop detach and loop open which creates
+# stale loop partitions when one process opens the loop partition and
+# another process detaches the loop device.
+#
+. tests/loop/rc
+DESCRIPTION="check stale loop partition"
+TIMED=1
+
+requires() {
+	_have_program parted
+	_have_program mkfs.xfs
+}
+
+create_loop() {
+	while true
+	do
+		loop_device="$(losetup --partscan --find --show "${image_file}")"
+		blkid /dev/loop0p1 >& /dev/null
+	done
+}
+
+detach_loop() {
+	while true
+	do
+		if [ -e /dev/loop0 ]; then
+			losetup --detach /dev/loop0 >& /dev/null
+		fi
+	done
+}
+
+test() {
+	echo "Running ${TEST_NAME}"
+	local loop_device
+	local create_pid
+	local detach_pid
+	local image_file="$TMPDIR/loopImg"
+
+	truncate --size 1G "${image_file}"
+	parted --align none --script "${image_file}" mklabel gpt
+	loop_device="$(losetup --partscan --find --show "${image_file}")"
+	parted --align none --script "${loop_device}" mkpart primary 64s 109051s
+
+	udevadm settle
+
+	if [ ! -e "${loop_device}" ]; then
+		return 1
+	fi
+
+	mkfs.xfs --force "${loop_device}p1" >& /dev/null
+	losetup --detach "${loop_device}" >&  /dev/null
+
+	create_loop &
+	create_pid=$!
+	detach_loop &
+	detach_pid=$!
+
+	sleep "${TIMEOUT:-90}"
+	{
+		kill -9 $create_pid
+		kill -9 $detach_pid
+		wait
+		sleep 1
+	} 2>/dev/null
+
+	losetup --detach-all >& /dev/null
+	if _dmesg_since_test_start | grep --quiet "partition scan of loop0 failed (rc=-16)"; then
+		echo "Fail"
+	fi
+	echo "Test complete"
+}
