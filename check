@@ -709,6 +709,32 @@ _check() {
 	return $ret
 }
 
+_check_dependencies() {
+	local v1 v2 v3
+	local -A required_commands_and_packages
+	local cmd
+
+	# Require bash version 4.2
+	IFS='.' read -r v1 v2 v3 < <(bash --version | grep version | head -1 | \
+					   sed 's/.*version \([0-9.]\+\).*/\1/')
+	if ((v1 * 65536 + v2 * 256 + v3 < 4 * 65536 + 2 * 256)); then
+		_warning "bash version is older than 4.2"
+	fi
+
+	# Check dependent commands to run blktests
+	required_commands_and_packages[dd]="GNU coreutils"
+	required_commands_and_packages[gawk]="GNU awk"
+	required_commands_and_packages[blockdev]="util-linux"
+	required_commands_and_packages[fio]="fio"
+	required_commands_and_packages[udevadm]="systemd-udev"
+
+	for cmd in "${!required_commands_and_packages[@]}"; do
+		command -v "$cmd" &> /dev/null && continue
+		_warning "$cmd is not available." \
+			 "Install ${required_commands_and_packages[$cmd]}."
+	done
+}
+
 usage () {
 	USAGE_STRING="\
 usage: $0 [options] [group-or-test...]
@@ -747,6 +773,8 @@ Miscellaneous:
 			;;
 	esac
 }
+
+_check_dependencies
 
 if ! TEMP=$(getopt -o 'do:q::x:c:h' --long 'device-only,quick::,exclude:,output:,config:,help' -n "$0" -- "$@"); then
 	exit 1
