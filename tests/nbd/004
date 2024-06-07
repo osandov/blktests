@@ -50,8 +50,8 @@ test() {
 
 	_stop_nbd_server_netlink
 
-	if _dmesg_since_test_start | grep -q -e "couldn't allocate config" \
-		-e "cannot create duplicate filename"; then
+	if _dmesg_since_test_start | \
+			grep --quiet "cannot create duplicate filename"; then
 			echo "Fail"
 	fi
 
