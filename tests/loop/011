@@ -1,0 +1,37 @@
+#!/bin/bash
+# SPDX-License-Identifier: GPL-3.0+
+# Copyright (C) 2024 Cyril Hrubis
+#
+# Regression test for the commit 5f75e081ab5c ("loop: Disable fallocate() zero
+# and discard if not supported").
+
+. tests/loop/rc
+DESCRIPTION="Make sure unsupported backing file fallocate does not fill dmesg with errors"
+
+requires() {
+	_have_program mkfs.ext2
+}
+
+test() {
+	local loop_dev;
+	echo "Running ${TEST_NAME}"
+
+	mkdir "$TMPDIR/tmpfs"
+	mount --types tmpfs testfs "$TMPDIR/tmpfs"
+	dd if=/dev/zero of="$TMPDIR/tmpfs/disk.img" bs=1M count=100 &> /dev/null
+
+	if ! loop_dev="$(losetup --find --show "$TMPDIR/tmpfs/disk.img")"; then
+		return 1
+	fi
+
+	mkfs.ext2 "$loop_dev" &> /dev/null
+
+	errors=$(_dmesg_since_test_start | grep -c "operation not supported error, dev .*WRITE_ZEROES")
+
+	losetup --detach "$loop_dev"
+	umount "$TMPDIR/tmpfs"
+
+	echo "Found $errors error(s) in dmesg"
+
+	echo "Test complete"
+}
