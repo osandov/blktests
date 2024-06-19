@@ -1,0 +1,83 @@
+#!/bin/bash
+# SPDX-License-Identifier: GPL-3.0+
+# Copyright (C) 2024 Nilay Shroff
+#
+# Regression test for commit be647e2c76b2(nvme: use srcu for iterating
+# namespace list). This regression is resolved with commit ff0ffe5b7c3c
+# (nvme: fix namespace removal list)
+
+. tests/nvme/rc
+
+DESCRIPTION="Test file-ns creation/deletion under one subsystem"
+
+requires() {
+	_nvme_requires
+	_have_loop
+	_require_nvme_trtype_is_loop
+}
+
+set_conditions() {
+	_set_nvme_trtype "$@"
+}
+
+nvmf_wait_for_ns() {
+	local ns
+	local timeout="5"
+	local uuid="$1"
+
+	ns=$(_find_nvme_ns "${uuid}")
+
+	start_time=$(date +%s)
+	while [[ -z "$ns" ]]; do
+		sleep 1
+		end_time=$(date +%s)
+		if (( end_time - start_time > timeout )); then
+			echo "namespace with uuid \"${uuid}\" not " \
+				"found within ${timeout} seconds"
+			return 1
+		fi
+		ns=$(_find_nvme_ns "${uuid}")
+	done
+
+	return 0
+}
+
+test() {
+	echo "Running ${TEST_NAME}"
+
+	_setup_nvmet
+
+	local iterations=20
+
+	_nvmet_target_setup
+
+	_nvme_connect_subsys
+
+	# start iteration from ns-id 2 because ns-id 1 is created
+	# by default when nvme target is setup. Also ns-id 1 is
+	# deleted when nvme target is cleaned up.
+	for ((i = 2; i <= iterations; i++)); do {
+		truncate -s "${NVME_IMG_SIZE}" "$(_nvme_def_file_path).$i"
+		uuid="$(uuidgen -r)"
+
+		_create_nvmet_ns "${def_subsysnqn}" "${i}" "$(_nvme_def_file_path).$i" "${uuid}"
+
+		# wait until async request is processed and ns is created
+		nvmf_wait_for_ns "${uuid}"
+		if [ $? -eq 1 ]; then
+			echo "FAIL"
+			rm "$(_nvme_def_file_path).$i"
+			break
+		fi
+
+		_remove_nvmet_ns "${def_subsysnqn}" "${i}"
+		rm "$(_nvme_def_file_path).$i"
+	}
+	done
+
+	_nvme_disconnect_subsys >> "${FULL}" 2>&1
+
+	_nvmet_target_cleanup
+
+	echo "Test complete"
+}
