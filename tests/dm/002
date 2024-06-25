@@ -14,10 +14,12 @@ requires() {
 
 
 test_device() {
+	local sz bsz
 	echo "Running ${TEST_NAME}"
 
-	TEST_DEV_SZ=$(blockdev --getsz "$TEST_DEV")
-	dmsetup create dust1 --table "0 $TEST_DEV_SZ dust $TEST_DEV 0 512"
+	sz=$(blockdev --getsz "$TEST_DEV")
+	bsz=$(blockdev --getbsz "$TEST_DEV")
+	dmsetup create dust1 --table "0 $sz dust $TEST_DEV 0 $bsz"
 	dmsetup message dust1 0 addbadblock 60
 	dmsetup message dust1 0 addbadblock 67
 	dmsetup message dust1 0 addbadblock 72
@@ -30,7 +32,8 @@ test_device() {
 	dmsetup message dust1 0 addbadblock 72
 	dmsetup message dust1 0 countbadblocks
 	dmsetup message dust1 0 enable
-	dd if=/dev/zero of=/dev/mapper/dust1 bs=512 count=128 oflag=direct >/dev/null 2>&1 || return $?
+	dd if=/dev/zero of=/dev/mapper/dust1 bs="$bsz" count=128 oflag=direct \
+	   >"$FULL" 2>&1 || return $?
 	sync
 	dmsetup message dust1 0 countbadblocks
 	sync
