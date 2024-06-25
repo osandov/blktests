@@ -16,18 +16,23 @@ requires() {
 }
 
 create_loop() {
+	local dev=$1
+
 	while true
 	do
-		loop_device="$(losetup --partscan --find --show "${image_file}")"
-		blkid /dev/loop0p1 >& /dev/null
+		if losetup --partscan "$dev" "${image_file}" &> /dev/null; then
+			blkid "$dev"p1 >& /dev/null
+		fi
 	done
 }
 
 detach_loop() {
+	local dev=$1
+
 	while true
 	do
-		if [ -e /dev/loop0 ]; then
-			losetup --detach /dev/loop0 >& /dev/null
+		if [[ -e "$dev" ]]; then
+			losetup --detach "$dev" >& /dev/null
 		fi
 	done
 }
@@ -38,6 +43,7 @@ test() {
 	local create_pid
 	local detach_pid
 	local image_file="$TMPDIR/loopImg"
+	local grep_str
 
 	truncate --size 1G "${image_file}"
 	parted --align none --script "${image_file}" mklabel gpt
@@ -53,9 +59,9 @@ test() {
 	mkfs.xfs --force "${loop_device}p1" >& /dev/null
 	losetup --detach "${loop_device}" >&  /dev/null
 
-	create_loop &
+	create_loop "${loop_device}" &
 	create_pid=$!
-	detach_loop &
+	detach_loop "${loop_device}" &
 	detach_pid=$!
 
 	sleep "${TIMEOUT:-90}"
@@ -66,8 +72,9 @@ test() {
 		sleep 1
 	} 2>/dev/null
 
-	losetup --detach-all >& /dev/null
-	if _dmesg_since_test_start | grep --quiet "partition scan of loop0 failed (rc=-16)"; then
+	losetup --detach "${loop_device}" >& /dev/null
+	grep_str="partition scan of ${loop_device##*/} failed (rc=-16)"
+	if _dmesg_since_test_start | grep --quiet "$grep_str"; then
 		echo "Fail"
 	fi
 	echo "Test complete"
