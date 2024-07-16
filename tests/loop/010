@@ -11,6 +11,7 @@ DESCRIPTION="check stale loop partition"
 TIMED=1
 
 requires() {
+        _have_kver 6 11 
 	_have_program parted
 	_have_program mkfs.xfs
 }
