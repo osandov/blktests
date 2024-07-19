@@ -63,13 +63,24 @@ _wait_for_nbd_disconnect() {
 }
 
 _start_nbd_server() {
+	local i
+
 	truncate -s 10G "${TMPDIR}/export"
 	cat > "${TMPDIR}/nbd.conf" << EOF
 [generic]
+allowlist=true
 [export]
 exportname=${TMPDIR}/export
 EOF
 	nbd-server -p "${TMPDIR}/nbd.pid" -C "${TMPDIR}/nbd.conf"
+
+	# Wait for nbd-server start listening the port
+	for ((i = 0; i < 100; i++)); do
+		if nbd-client -l localhost &> "$FULL"; then
+			break
+		fi
+		sleep .1
+	done
 }
 
 _stop_nbd_server() {
