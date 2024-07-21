@@ -1,0 +1,87 @@
+#!/bin/bash
+# SPDX-License-Identifier: GPL-3.0+
+# Copyright (C) 2024 Ofir Gal
+#
+# The bug is "visible" only when the underlying device of the raid is a network
+# block device that utilize MSG_SPLICE_PAGES. nvme-tcp is used as the network
+# device.
+#
+# Regression test for the commit ab99a87542f1 ("md/md-bitmap: fix writing non
+# bitmap pages").
+
+. tests/md/rc
+. common/brd
+. common/nvme
+
+DESCRIPTION="Raid with bitmap on tcp nvmet with opt-io-size over bitmap size"
+QUICK=1
+
+#restrict test to nvme-tcp only
+nvme_trtype=tcp
+nvmet_blkdev_type="device"
+
+requires() {
+	# Require dm-stripe
+	_have_program dmsetup
+	_have_driver dm-mod
+	_have_driver raid1
+
+	_require_nvme_trtype tcp
+	_have_brd
+}
+
+# Sets up a brd device of 1G with optimal-io-size of 256K
+setup_underlying_device() {
+	if ! _init_brd rd_size=1048576 rd_nr=1; then
+		return 1
+	fi
+
+	dmsetup create ram0_big_optio --table \
+		"0 $(blockdev --getsz /dev/ram0) striped 1 512 /dev/ram0 0"
+}
+
+cleanup_underlying_device() {
+	dmsetup remove ram0_big_optio
+	_cleanup_brd
+}
+
+# Sets up a local host nvme over tcp
+setup_nvme_over_tcp() {
+	_setup_nvmet
+
+	local port
+	port="$(_create_nvmet_port "${nvme_trtype}")"
+
+	_create_nvmet_subsystem "${def_subsysnqn}" "/dev/mapper/ram0_big_optio" "${def_subsys_uuid}"
+	_add_nvmet_subsys_to_port "${port}" "${def_subsysnqn}"
+
+	_create_nvmet_host "${def_subsysnqn}" "${def_hostnqn}"
+
+	_nvme_connect_subsys
+}
+
+cleanup_nvme_over_tcp() {
+	_nvme_disconnect_subsys
+	_nvmet_target_cleanup --subsysnqn "${def_subsysnqn}"
+}
+
+test() {
+	echo "Running ${TEST_NAME}"
+
+	setup_underlying_device
+	setup_nvme_over_tcp
+
+	local ns
+	ns=$(_find_nvme_ns "${def_subsys_uuid}")
+
+	# Hangs here without the fix
+	mdadm --quiet --create /dev/md/blktests_md --level=1 --bitmap=internal \
+		--bitmap-chunk=1024K --assume-clean --run --raid-devices=2 \
+		/dev/"${ns}" missing
+
+	mdadm --quiet --stop /dev/md/blktests_md
+	cleanup_nvme_over_tcp
+	cleanup_underlying_device
+
+	echo "Test complete"
+}

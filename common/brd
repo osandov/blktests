@@ -1,0 +1,28 @@
+#!/bin/bash
+# SPDX-License-Identifier: GPL-3.0+
+# Copyright (C) 2024 Ofir Gal
+#
+# brd helper functions
+
+. common/shellcheck
+
+_have_brd() {
+	_have_module brd
+}
+
+_init_brd() {
+	# _have_brd loads brd, we need to wait a bit for brd to be not in use in
+	# order to reload it
+	sleep 0.2
+
+	if ! modprobe -r brd || ! modprobe brd "$@" ; then
+		echo "failed to reload brd with args: $*"
+		return 1
+	fi
+
+	return 0
+}
+
+_cleanup_brd() {
+	modprobe -r brd
+}

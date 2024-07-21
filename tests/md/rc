@@ -1,0 +1,13 @@
+#!/bin/bash
+# SPDX-License-Identifier: GPL-3.0+
+# Copyright (C) 2024 Ofir Gal
+#
+# Tests for md raid
+
+. common/rc
+
+group_requires() {
+	_have_root
+	_have_program mdadm
+	_have_driver md-mod
+}
