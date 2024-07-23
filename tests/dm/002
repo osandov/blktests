@@ -37,7 +37,7 @@ test_device() {
 	sync
 	dmsetup message dust1 0 countbadblocks
 	sync
-	dmsetup remove dust1
+	dmsetup remove --retry dust1 |& grep -v "Device or resource busy"
 
 	echo "Test complete"
 }
