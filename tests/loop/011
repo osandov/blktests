@@ -3,12 +3,16 @@
 # Copyright (C) 2024 Cyril Hrubis
 #
 # Regression test for the commit 5f75e081ab5c ("loop: Disable fallocate() zero
-# and discard if not supported").
+# and discard if not supported"). This commit is merged into the kernel v6.10
+# and later backported to kernel v6.9.11. Running this test on a kernel older
+# than v6.9.11 would obviously fail, so we enforce that this test is skipped
+# if it's started on a kernel version older than v6.9.11.
 
 . tests/loop/rc
 DESCRIPTION="Make sure unsupported backing file fallocate does not fill dmesg with errors"
 
 requires() {
+	_have_kver 6 9 11
 	_have_program mkfs.ext2
 }
 
