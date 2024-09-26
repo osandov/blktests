@@ -551,6 +551,19 @@ _create_nvmet_ns() {
 	echo "${uuid}"
 }
 
+_setup_nvmet_ns_ana() {
+	local nvmet_subsystem="$1"
+	local nsid="$2"
+	local anagrpid="${3:-def_anagrpid}"
+	local subsys_path="${NVMET_CFS}/subsystems/${nvmet_subsystem}"
+	local ns_path="${subsys_path}/namespaces/${nsid}"
+
+	if [[ ! -d "${ns_path}" ]]; then
+		return
+	fi
+	echo "${anagrpid}" > "${ns_path}/anagrpid"
+}
+
 _create_nvmet_subsystem() {
 	local subsystem="${def_subsysnqn}"
 	local blkdev
