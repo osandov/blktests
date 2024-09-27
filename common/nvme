@@ -270,10 +270,15 @@ _nvme_connect_subsys() {
 	local reconnect_delay=""
 	local ctrl_loss_tmo=""
 	local no_wait=false
+	local port
 	local i
 
 	while [[ $# -gt 0 ]]; do
 		case $1 in
+			--port)
+				port="$2"
+				shift 2
+				;;
 			--subsysnqn)
 				subsysnqn="$2"
 				shift 2
@@ -329,12 +334,18 @@ _nvme_connect_subsys() {
 		esac
 	done
 
-	ARGS=(--transport "${nvme_trtype}" --nqn "${subsysnqn}")
-	if [[ "${nvme_trtype}" == "fc" ]] ; then
-		ARGS+=(--traddr "${def_traddr}" --host-traddr "${def_host_traddr}")
-	elif [[ "${nvme_trtype}" != "loop" ]]; then
-		ARGS+=(--traddr "${def_traddr}" --trsvcid "${def_trsvcid}")
+	if [[ -z "${port}" ]]; then
+		local ports
+
+		_get_nvmet_ports "${subsysnqn}" ports
+		port="${ports[0]##*/}"
+		if [[ -z "${port}" ]]; then
+			echo "WARNING: no port found"
+			return 1
+		fi
 	fi
+	read -ra ARGS < <(_get_nvmet_port_params "${port}")
+	ARGS+=(--nqn "${subsysnqn}")
 	ARGS+=(--hostnqn="${hostnqn}")
 	ARGS+=(--hostid="${hostid}")
 	if [[ -n "${hostkey}" ]]; then
@@ -581,6 +592,29 @@ _get_nvmet_ports() {
 			nvmet_ports+=("${port##*/}")
 		fi
 	done
+}
+
+_get_nvmet_port_params() {
+	local port="$1"
+	local -a args=()
+	local cfs_path="${NVMET_CFS}/ports/${port}"
+	local trtype
+	local traddr
+	local trsvcid
+
+	[[ -d "${cfs_path}" ]] || exit 1
+	trtype=$(cat "${cfs_path}/addr_trtype")
+	args+=(--transport "${trtype}")
+	traddr=$(cat "${cfs_path}/addr_traddr")
+	args+=(--traddr "${traddr}")
+	if [[ "${trtype}" == "tcp" ]] || [[ "${trtype}" == "rdma" ]]; then
+		trsvcid=$(cat "${cfs_path}/addr_trsvcid")
+		args+=(--trsvcid "${trsvcid}")
+	elif [[ "${trtype}" == "fc" ]]; then
+		args+=(--host-traddr "${def_host_traddr}")
+	fi
+
+	echo "${args[@]}"
 }
 
 _find_nvme_dev() {
