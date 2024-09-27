@@ -423,10 +423,11 @@ _nvme_ns_ready() {
 }
 
 _create_nvmet_port() {
-	local trtype="$1"
+	local trtype="${1:-$nvme_trtype}"
 	local traddr="${2:-$def_traddr}"
 	local adrfam="${3:-$def_adrfam}"
 	local trsvcid="${4:-$def_trsvcid}"
+	local portcfs
 
 	local port
 	for ((port = 0; ; port++)); do
@@ -435,12 +436,14 @@ _create_nvmet_port() {
 		fi
 	done
 
-	mkdir "${NVMET_CFS}/ports/${port}"
-	echo "${trtype}" > "${NVMET_CFS}/ports/${port}/addr_trtype"
-	echo "${traddr}" > "${NVMET_CFS}/ports/${port}/addr_traddr"
-	echo "${adrfam}" > "${NVMET_CFS}/ports/${port}/addr_adrfam"
-	if [[ "${adrfam}" != "fc" ]]; then
-		echo "${trsvcid}" > "${NVMET_CFS}/ports/${port}/addr_trsvcid"
+	portcfs="${NVMET_CFS}/ports/${port}"
+	mkdir "${portcfs}"
+	echo "${trtype}" > "${portcfs}/addr_trtype"
+	echo "${traddr}" > "${portcfs}/addr_traddr"
+	echo "${adrfam}" > "${portcfs}/addr_adrfam"
+	if [[ "${adrfam}" != "fc" ]] && \
+	   [[ "${adrfam}" != "loop" ]] ; then
+		echo "${trsvcid}" > "${portcfs}/addr_trsvcid"
 	fi
 
 	echo "${port}"

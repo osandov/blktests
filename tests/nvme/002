@@ -26,7 +26,7 @@ test() {
 
 	local iterations=1000
 	local port
-	port="$(_create_nvmet_port "${nvme_trtype}")"
+	port="$(_create_nvmet_port)"
 
 	local loop_dev
 	loop_dev="$(losetup -f)"

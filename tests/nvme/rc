@@ -363,7 +363,7 @@ _nvmet_target_setup() {
 
 	_create_nvmet_subsystem "${subsysnqn}" "${blkdev}" \
 				"${subsys_uuid}"
-	port="$(_create_nvmet_port "${nvme_trtype}")"
+	port="$(_create_nvmet_port)"
 	_add_nvmet_subsys_to_port "${port}" "${subsysnqn}"
 	_create_nvmet_host "${subsysnqn}" "${def_hostnqn}" \
 			"${hostkey}" "${ctrlkey}"
@@ -387,7 +387,7 @@ _nvmet_passthru_target_setup() {
 	done
 
 	_create_nvmet_passthru "${subsysnqn}"
-	port="$(_create_nvmet_port "${nvme_trtype}")"
+	port="$(_create_nvmet_port)"
 	_add_nvmet_subsys_to_port "${port}" "${subsysnqn}"
 	_create_nvmet_host "${subsysnqn}" "${def_hostnqn}"
 }

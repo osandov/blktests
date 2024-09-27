@@ -35,7 +35,7 @@ test() {
 		_create_nvmet_ns "${def_subsysnqn}" "${i}" "${loop_dev}"
 	done
 
-	port="$(_create_nvmet_port "${nvme_trtype}")"
+	port="$(_create_nvmet_port)"
 	_add_nvmet_subsys_to_port "$port" "${def_subsysnqn}"
 
 	genctr=$(_check_genctr "${genctr}" "adding a subsystem to a port")
