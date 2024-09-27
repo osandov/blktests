@@ -27,14 +27,19 @@ test_device() {
 	_setup_nvmet
 
 	local ctrldev
+	local nsdev
 
 	_nvmet_passthru_target_setup
 	nsdev=$(_nvmet_passthru_target_connect)
 
-	ctrldev=$(_find_nvme_dev "${def_subsysnqn}")
+	if [[ -z "$nsdev" ]]; then
+		echo "FAIL: Failed to find passthru target namespace"
+	else
+		ctrldev=$(_find_nvme_dev "${def_subsysnqn}")
 
-	if ! nvme reset "/dev/${ctrldev}" >> "$FULL" 2>&1; then
-		echo "ERROR: reset failed"
+		if ! nvme reset "/dev/${ctrldev}" >> "$FULL" 2>&1; then
+			echo "ERROR: reset failed"
+		fi
 	fi
 
 	_nvme_disconnect_subsys

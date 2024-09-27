@@ -62,8 +62,11 @@ test_device() {
 	_nvmet_passthru_target_setup
 
 	nsdev=$(_nvmet_passthru_target_connect)
-
-	compare_dev_info "${nsdev}"
+	if [[ -z "$nsdev" ]]; then
+		echo "FAIL: Failed to find passthru target namespace"
+	else
+		compare_dev_info "${nsdev}"
+	fi
 
 	_nvme_disconnect_subsys
 	_nvmet_passthru_target_cleanup

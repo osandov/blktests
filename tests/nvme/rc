@@ -394,6 +394,8 @@ _nvmet_passthru_target_setup() {
 
 _nvmet_passthru_target_connect() {
 	local subsysnqn="$def_subsysnqn"
+	local timeout="5"
+	local count="0"
 
 	while [[ $# -gt 0 ]]; do
 		case $1 in
@@ -414,7 +416,12 @@ _nvmet_passthru_target_connect() {
 	# The following tests can race with the creation
 	# of the device so ensure the block device exists
 	# before continuing
-	while [ ! -b "${nsdev}" ]; do sleep 1; done
+	while [ ! -b "${nsdev}" ]; do
+		sleep 1
+		if ((++count >= timeout)); then
+			return 1
+		fi
+	done
 
 	echo "${nsdev}"
 }

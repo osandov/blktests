@@ -27,13 +27,15 @@ test_device() {
 
 	_setup_nvmet
 
-	local ctrldev
 	local nsdev
 
 	_nvmet_passthru_target_setup
 	nsdev=$(_nvmet_passthru_target_connect)
-
-	_run_fio_verify_io --size="${NVME_IMG_SIZE}" --filename="${nsdev}"
+	if [[ -z "$nsdev" ]]; then
+		echo "FAIL: Failed to find passthru target namespace"
+	else
+		_run_fio_verify_io --size="${NVME_IMG_SIZE}" --filename="${nsdev}"
+	fi
 
 	_nvme_disconnect_subsys
 	_nvmet_passthru_target_cleanup

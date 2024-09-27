@@ -27,7 +27,7 @@ test_device() {
 
 	local subsys="blktests-subsystem-"
 	local iterations=10
-	local ctrldev
+	local nsdev
 
 	for ((i = 0; i < iterations; i++)); do
 		_nvmet_passthru_target_setup --subsysnqn "${subsys}${i}"
@@ -37,6 +37,11 @@ test_device() {
 		_nvme_disconnect_subsys \
 			--subsysnqn "${subsys}${i}" >>"${FULL}" 2>&1
 		_nvmet_passthru_target_cleanup --subsysnqn "${subsys}${i}"
+
+		if [[ -z "$nsdev" ]]; then
+			echo "FAIL: Failed to find passthru target namespace"
+			break
+		fi
 	done
 
 	echo "Test complete"
