@@ -573,15 +573,14 @@ _remove_nvmet_subsystem_from_port() {
 }
 
 _get_nvmet_ports() {
-	local nvmet_subsystem="$1"
+	local nvmet_subsysnqn="${1:-$def_subsysnqn}"
 	local -n nvmet_ports="$2"
 	local cfs_path="${NVMET_CFS}/ports"
-	local sarg
 
-	sarg="s;^${cfs_path}/\([0-9]\+\)/subsystems/${nvmet_subsystem}$;\1;p"
-
-	for path in "${cfs_path}/"*"/subsystems/${nvmet_subsystem}"; do
-		nvmet_ports+=("$(echo "${path}" | sed -n -s "${sarg}")")
+	for port in "${cfs_path}/"*; do
+		if [[ -e "${port}/subsystems/${nvmet_subsysnqn}" ]]; then
+			nvmet_ports+=("${port##*/}")
+		fi
 	done
 }
 
