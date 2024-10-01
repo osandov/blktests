@@ -45,7 +45,7 @@ test() {
 		--ioengine=libaio --runtime="${TIMEOUT}" --thread \
 		--name=block-031 --filename=/dev/nullb1 \
 		--output="${RESULTS_DIR}/block/fio-output-031.txt" \
-		>>"$FULL"
+		--verify_state_save=0 >>"$FULL"
 	fio_status=$?
 	rmdir /sys/kernel/config/nullb/nullb1
 	_exit_null_blk
