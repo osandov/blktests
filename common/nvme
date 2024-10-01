@@ -595,8 +595,10 @@ _find_nvme_dev() {
 		subsysnqn="$(cat "/sys/class/nvme/${dev}/subsysnqn" 2>/dev/null)"
 		if [[ "$subsysnqn" == "$subsys" ]]; then
 			echo "$dev"
+			return 0
 		fi
 	done
+	return 1
 }
 
 _find_nvme_ns() {
@@ -613,8 +615,10 @@ _find_nvme_ns() {
 		uuid=$(cat "${ns}/uuid")
 		if [[ "${subsys_uuid}" == "${uuid}" ]]; then
 			basename "${ns}"
+			return 0
 		fi
 	done
+	return 1
 }
 
 _nvmet_target_cleanup() {
