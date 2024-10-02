@@ -82,18 +82,6 @@ _nvme_fcloop_add_tport() {
 	echo "wwnn=${wwnn},wwpn=${wwpn}" > ${loopctl}/add_target_port
 }
 
-_setup_fcloop() {
-	local local_wwnn="${1:-$def_local_wwnn}"
-	local local_wwpn="${2:-$def_local_wwpn}"
-	local remote_wwnn="${3:-$def_remote_wwnn}"
-	local remote_wwpn="${4:-$def_remote_wwpn}"
-
-	_nvme_fcloop_add_tport "${remote_wwnn}" "${remote_wwpn}"
-	_nvme_fcloop_add_lport "${local_wwnn}" "${local_wwpn}"
-	_nvme_fcloop_add_rport "${local_wwnn}" "${local_wwpn}" \
-		               "${remote_wwnn}" "${remote_wwpn}"
-}
-
 _nvme_fcloop_del_rport() {
 	local local_wwnn="$1"
 	local local_wwpn="$2"
@@ -127,18 +115,6 @@ _nvme_fcloop_del_tport() {
 		return
 	fi
 	echo "wwnn=${wwnn},wwpn=${wwpn}" > "${loopctl}/del_target_port"
-}
-
-_cleanup_fcloop() {
-	local local_wwnn="${1:-$def_local_wwnn}"
-	local local_wwpn="${2:-$def_local_wwpn}"
-	local remote_wwnn="${3:-$def_remote_wwnn}"
-	local remote_wwpn="${4:-$def_remote_wwpn}"
-
-	_nvme_fcloop_del_tport "${remote_wwnn}" "${remote_wwpn}"
-	_nvme_fcloop_del_lport "${local_wwnn}" "${local_wwpn}"
-	_nvme_fcloop_del_rport "${local_wwnn}" "${local_wwpn}" \
-			       "${remote_wwnn}" "${remote_wwpn}"
 }
 
 _cleanup_blkdev() {
@@ -206,8 +182,7 @@ _cleanup_nvmet() {
 	trap SIGINT
 
 	if [[ "${nvme_trtype}" == "fc" ]]; then
-		_cleanup_fcloop "${def_local_wwnn}" "${def_local_wwpn}" \
-				"${def_remote_wwnn}" "${def_remote_wwpn}"
+		_nvme_fcloop_del_lport "${def_local_wwnn}" "${def_local_wwpn}"
 		modprobe -rq nvme-fcloop 2>/dev/null
 	fi
 	modprobe -rq nvme-"${nvme_trtype}" 2>/dev/null
@@ -248,6 +223,7 @@ _setup_nvmet() {
 	fi
 	if [[ "${nvme_trtype}" = "fc" ]]; then
 		modprobe -q nvme-fcloop
+		_nvme_fcloop_add_lport "${def_local_wwnn}" "${def_local_wwpn}"
 	fi
 }
 
@@ -445,24 +421,20 @@ _create_nvmet_port() {
 		traddr="${port}"
 		adrfam="loop"
 	elif [[ "${trtype}" == "fc" ]]; then
-		local local_wwnn
-		local local_wwpn
+		local local_wwnn="${def_local_wwnn}"
+		local local_wwpn="${def_local_wwpn}"
 		local remote_wwnn
 		local remote_wwpn
 
-		local_wwnn=$(printf "0x%08x" $(( def_local_wwnn + port )) )
-		local_wwpn=$(printf "0x%08x" $(( def_local_wwpn + port )) )
 		remote_wwnn=$(printf "0x%08x" $(( def_remote_wwnn + port )) )
 		remote_wwpn=$(printf "0x%08x" $(( def_remote_wwpn + port )) )
-		_setup_fcloop "${local_wwnn}" "${local_wwpn}" \
-			      "${remote_wwnn}" "${remote_wwpn}"
+		_nvme_fcloop_add_tport "${remote_wwnn}" "${remote_wwpn}"
+		_nvme_fcloop_add_rport "${local_wwnn}" "${local_wwpn}" \
+				       "${remote_wwnn}" "${remote_wwpn}"
 
 		traddr=$(printf "nn-%s:pn-%s" \
 				"${remote_wwnn}" \
 				"${remote_wwpn}")
-		def_host_traddr=$(printf "nn-%s:pn-%s" \
-					 "${local_wwnn}" \
-					 "${local_wwpn}")
 		adrfam="fc"
 	fi
 	echo "${trtype}" > "${portcfs}/addr_trtype"
@@ -478,6 +450,31 @@ _create_nvmet_port() {
 
 _remove_nvmet_port() {
 	local port="$1"
+	local cfspath="${NVMET_CFS}/ports/${port}"
+	local trtype
+	local traddr
+
+	trtype=$(cat "${cfspath}/addr_trtype")
+	traddr=$(cat "${cfspath}/addr_traddr")
+	if [[ "${trtype}" == "fc" ]]; then
+		local nn
+		local pn
+		local remote_wwnn
+		local remote_wwpn
+		local local_wwnn="${def_local_wwnn}"
+		local local_wwpn="${def_local_wwpn}"
+
+		# shellcheck disable=SC2086
+		nn=$(IFS=: ; set -- ${traddr} ; echo "$1" )
+		# shellcheck disable=SC2086
+		pn=$(IFS=: ; set -- ${traddr} ; echo "$2" )
+		remote_wwnn="${nn##nn-}"
+		remote_wwpn="${pn##pn-}"
+
+		_nvme_fcloop_del_rport "${local_wwnn}" "${local_wwpn}" \
+				       "${remote_wwnn}" "${remote_wwpn}"
+		_nvme_fcloop_del_tport "${remote_wwnn}" "${remote_wwpn}"
+	fi
 	rmdir "${NVMET_CFS}/ports/${port}"
 }
 
@@ -685,7 +682,12 @@ _get_nvmet_port_params() {
 		trsvcid=$(cat "${cfs_path}/addr_trsvcid")
 		args+=(--trsvcid "${trsvcid}")
 	elif [[ "${trtype}" == "fc" ]]; then
-		args+=(--host-traddr "${def_host_traddr}")
+		local host_traddr
+
+		host_traddr=$(printf "nn-%s:pn-%s" \
+				     "${def_local_wwnn}" \
+				     "${def_local_wwpn}")
+		args+=(--host-traddr "${host_traddr}")
 	fi
 
 	echo "${args[@]}"
