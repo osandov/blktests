@@ -494,6 +494,10 @@ _remove_nvmet_port() {
 				       "${remote_wwnn}" "${remote_wwpn}"
 		_nvme_fcloop_del_tport "${remote_wwnn}" "${remote_wwpn}"
 	fi
+	for a in "${cfspath}/ana_groups/"*; do
+		[[ "${a##*/}" == "1" ]] && continue
+		rmdir "${a}"
+	done
 	rmdir "${NVMET_CFS}/ports/${port}"
 }
 
