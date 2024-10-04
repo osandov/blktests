@@ -29,9 +29,9 @@ test() {
 	loop_dev="$(losetup -f)"
 	local genctr=1
 
-	_create_nvmet_subsystem --blkdev "${loop_dev}"
+	_create_nvmet_subsystem
 
-	for ((i = 2; i <= iterations; i++)); do
+	for i in $(seq 1 "${iterations}"); do
 		_create_nvmet_ns --nsid "${i}" \
 				 --blkdev "${loop_dev}" > /dev/null
 	done
