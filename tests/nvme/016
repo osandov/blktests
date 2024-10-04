@@ -32,7 +32,8 @@ test() {
 	_create_nvmet_subsystem "${def_subsysnqn}" "${loop_dev}"
 
 	for ((i = 2; i <= iterations; i++)); do
-		_create_nvmet_ns "${def_subsysnqn}" "${i}" "${loop_dev}"
+		_create_nvmet_ns --nsid "${i}" \
+				 --blkdev "${loop_dev}" > /dev/null
 	done
 
 	port="$(_create_nvmet_port)"

@@ -62,9 +62,9 @@ test() {
 	# deleted when nvme target is cleaned up.
 	for ((i = 2; i <= iterations; i++)); do {
 		truncate -s "${NVME_IMG_SIZE}" "$(_nvme_def_file_path).$i"
-		uuid="$(uuidgen -r)"
 
-		_create_nvmet_ns "${def_subsysnqn}" "${i}" "$(_nvme_def_file_path).$i" "${uuid}"
+		_create_nvmet_ns --subsysnqn "${def_subsysnqn}" --nsid "${i}" \
+				 --blkdev "$(_nvme_def_file_path).$i" > /dev/null
 
 		# wait until async request is processed and ns is created
 		if ! nvmf_wait_for_ns "${uuid}" created; then

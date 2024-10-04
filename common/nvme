@@ -482,32 +482,74 @@ _remove_nvmet_port() {
 }
 
 _create_nvmet_ns() {
-	local nvmet_subsystem="$1"
-	local nsid="$2"
-	local blkdev="$3"
-	local uuid="00000000-0000-0000-0000-000000000000"
-	local subsys_path="${NVMET_CFS}/subsystems/${nvmet_subsystem}"
-	local ns_path="${subsys_path}/namespaces/${nsid}"
+	local subsysnqn="${def_subsysnqn}"
+	local nsid="1"
+	local grpid="1"
+	local blkdev
+	local uuid
+	local subsys_path
+	local ns_path
 
-	if [[ $# -eq 4 ]]; then
-		uuid="$4"
-	fi
+	while [[ $# -gt 0 ]]; do
+		case $1 in
+			--subsysnqn)
+				subsysnqn="$2"
+				shift 2
+				;;
+			--nsid)
+				nsid="$2"
+				shift 2
+				;;
+			--blkdev)
+				blkdev="$2"
+				shift 2
+				;;
+			--uuid)
+				uuid="$2"
+				shift 2
+				;;
+			--grpid)
+				grpid="$2"
+				shift 2
+				;;
+			*)
+				echo "WARNING: unknown argument: $1"
+				shift
+				;;
+		esac
+	done
 
+	subsys_path="${NVMET_CFS}/subsystems/${subsysnqn}"
+	ns_path="${subsys_path}/namespaces/${nsid}"
 	mkdir "${ns_path}"
 	printf "%s" "${blkdev}" > "${ns_path}/device_path"
-	printf "%s" "${uuid}" > "${ns_path}/device_uuid"
+	if [[ -n "${uuid}" ]]; then
+		printf "%s" "${uuid}" > "${ns_path}/device_uuid"
+	else
+		uuid=$(cat "${ns_path}/device_uuid")
+	fi
+	if (( grpid != 1 )); then
+		printf "%d" "${grpid}" > "${ns_path}/ana_grpid"
+	fi
 	printf 1 > "${ns_path}/enable"
+	echo "${uuid}"
 }
 
 _create_nvmet_subsystem() {
 	local nvmet_subsystem="$1"
 	local blkdev="$2"
-	local uuid=$3
+	local uuid="$3"
 	local cfs_path="${NVMET_CFS}/subsystems/${nvmet_subsystem}"
+	local -a ARGS
 
 	mkdir -p "${cfs_path}"
 	echo 0 > "${cfs_path}/attr_allow_any_host"
-	_create_nvmet_ns "${nvmet_subsystem}" "1" "${blkdev}" "${uuid}"
+	ARGS+=(--subsysnqn "${nvmet_subsystem}")
+	ARGS+=(--blkdev "${blkdev}")
+	if [[ -n "$uuid" ]]; then
+		ARGS+=(--uuid "${uuid}")
+	fi
+	_create_nvmet_ns "${ARGS[@]}" > /dev/null
 }
 
 _add_nvmet_allow_hosts() {
