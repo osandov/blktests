@@ -45,10 +45,6 @@ test() {
 	_remove_nvmet_subsystem_from_port "${port}" "${def_subsysnqn}"
 	_remove_nvmet_port "${port}"
 
-	for ((i = iterations; i > 1; i--)); do
-		_remove_nvmet_ns "${def_subsysnqn}" "$i"
-	done
-
 	_remove_nvmet_subsystem "${def_subsysnqn}"
 
 	rm "$(_nvme_def_file_path)"
