@@ -29,9 +29,9 @@ test() {
 
 	local genctr=1
 
-	_create_nvmet_subsystem --blkdev "$(_nvme_def_file_path)"
+	_create_nvmet_subsystem
 
-	for ((i = 2; i <= iterations; i++)); do
+	for i in $(seq 1 "${iterations}"); do
 		_create_nvmet_ns --nsid "${i}" \
 				 --blkdev "$(_nvme_def_file_path)" > /dev/null
 	done
