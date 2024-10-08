@@ -337,7 +337,7 @@ _nvme_connect_subsys() {
 	if [[ -z "${port}" ]]; then
 		local ports
 
-		_get_nvmet_ports "${subsysnqn}" ports
+		read -ra ports < <(_get_nvmet_ports "${subsysnqn}")
 		port="${ports[0]##*/}"
 		if [[ -z "${port}" ]]; then
 			echo "WARNING: no port found"
@@ -584,7 +584,7 @@ _remove_nvmet_subsystem_from_port() {
 
 _get_nvmet_ports() {
 	local nvmet_subsysnqn="${1:-$def_subsysnqn}"
-	local -n nvmet_ports="$2"
+	local -a nvmet_ports=()
 	local cfs_path="${NVMET_CFS}/ports"
 
 	for port in "${cfs_path}/"*; do
@@ -592,6 +592,10 @@ _get_nvmet_ports() {
 			nvmet_ports+=("${port##*/}")
 		fi
 	done
+
+	if (( ${#nvmet_ports[@]} )); then
+		echo "${nvmet_ports[@]}"
+	fi
 }
 
 _get_nvmet_port_params() {
@@ -677,7 +681,7 @@ _nvmet_target_cleanup() {
 		esac
 	done
 
-	_get_nvmet_ports "${subsysnqn}" ports
+	read -ra ports < <(_get_nvmet_ports "${subsysnqn}")
 
 	for port in "${ports[@]}"; do
 		_remove_nvmet_subsystem_from_port "${port}" "${subsysnqn}"

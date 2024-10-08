@@ -444,7 +444,7 @@ _nvmet_passthru_target_cleanup() {
 		esac
 	done
 
-	_get_nvmet_ports "${subsysnqn}" ports
+	read -ra ports < <(_get_nvmet_ports "${subsysnqn}")
 
 	for port in "${ports[@]}"; do
 		_remove_nvmet_subsystem_from_port "${port}" "${subsysnqn}"
