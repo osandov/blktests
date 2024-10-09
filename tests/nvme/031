@@ -44,14 +44,18 @@ test() {
 	port="$(_create_nvmet_port)"
 
 	for ((i = 0; i < iterations; i++)); do
-		_nvmet_target_setup --subsysnqn "${subsys}$i" \
+		subsysnqn=$(printf "blktests-subsystem-%d" "$i")
+		_create_nvmet_subsystem --subsysnqn "${subsysnqn}" \
 			--blkdev "${loop_dev}"
+		_add_nvmet_subsys_to_port "${port}" "${subsysnqn}"
+		_create_nvmet_host "${subsysnqn}" "${def_hostnqn}"
 
-		_nvme_connect_subsys --subsysnqn "${subsys}$i"
-		_nvme_disconnect_subsys --subsysnqn "${subsys}$i" >> "${FULL}" 2>&1
+		_nvme_connect_subsys --subsysnqn "${subsysnqn}"
+		_nvme_disconnect_subsys --subsysnqn "${subsysnqn}" >> "${FULL}" 2>&1
 
-		_nvmet_target_cleanup --subsysnqn "${subsys}$i" \
-			--blkdev "${loop_dev}"
+		_remove_nvmet_subsystem_from_port "${port}" "${subsysnqn}"
+		_remove_nvmet_subsystem "${subsysnqn}"
+		_remove_nvmet_host "${def_hostnqn}"
 	done
 
 	_remove_nvmet_port "${port}"
