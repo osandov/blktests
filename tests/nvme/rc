@@ -322,8 +322,9 @@ _nvmet_target_setup() {
 	local ctrlkey=""
 	local hostkey=""
 	local subsysnqn="${def_subsysnqn}"
-	local subsys_uuid="${def_subsys_uuid}"
+	local subsys_uuid
 	local port
+	local -a ARGS
 
 	while [[ $# -gt 0 ]]; do
 		case $1 in
@@ -361,8 +362,15 @@ _nvmet_target_setup() {
 		blkdev="$(_nvme_def_file_path)"
 	fi
 
-	_create_nvmet_subsystem "${subsysnqn}" "${blkdev}" \
-				"${subsys_uuid}"
+	ARGS=(--subsysnqn "${subsysnqn}")
+	if [[ -n "${blkdev}" ]]; then
+		ARGS+=(--blkdev "${blkdev}")
+	fi
+	if [[ -n "${subsys_uuid}" ]]; then
+		ARGS+=(--uuid "${subsys_uuid}")
+	fi
+	_create_nvmet_subsystem "${ARGS[@]}"
+
 	port="$(_create_nvmet_port)"
 	_add_nvmet_subsys_to_port "${port}" "${subsysnqn}"
 	_create_nvmet_host "${subsysnqn}" "${def_hostnqn}" \
