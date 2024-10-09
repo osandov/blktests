@@ -564,6 +564,7 @@ run_fio() {
 		grep -q ', io=[0-9].*, run=[0-9]' "$output"
 		rc=$?
 	fi
+	rm -fr ${fio_aux_path}
 	echo "run_fio exit code: $rc" >>"$FULL"
 	return $rc
 }
