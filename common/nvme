@@ -283,6 +283,7 @@ _nvme_connect_subsys() {
 	local hdr_digest=false
 	local data_digest=false
 	local tls=false
+	local concat=false
 	local port
 	local i
 	local -a ARGS
@@ -353,6 +354,10 @@ _nvme_connect_subsys() {
 				tls=true
 				shift 1
 				;;
+			--concat)
+				concat=true
+				shift 1
+				;;
 			*)
 				echo "WARNING: unknown argument: $1"
 				shift
@@ -412,6 +417,9 @@ _nvme_connect_subsys() {
 	fi
 	if [[ ${tls} = true ]]; then
 		ARGS+=(--tls)
+	fi
+	if [[ ${concat} = true ]]; then
+		ARGS+=(--concat)
 	fi
 	ARGS+=(-o json)
 	connect=$(nvme connect "${ARGS[@]}" 2> /dev/null)
