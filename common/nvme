@@ -478,6 +478,7 @@ _fc_host_traddr() {
 }
 
 _create_nvmet_port() {
+	local tls="${1:-none}"
 	local trtype="${nvme_trtype}"
 	local traddr="${def_traddr}"
 	local adrfam="${def_adrfam}"
@@ -514,7 +515,13 @@ _create_nvmet_port() {
 	   [[ "${adrfam}" != "loop" ]] ; then
 		echo "${trsvcid}" > "${portcfs}/addr_trsvcid"
 	fi
-
+	if [[ "${trtype}" == "tcp" ]] && \
+		   [[ "${tls}" != "none" ]]; then
+		echo "tls1.3" > "${portcfs}/addr_tsas"
+		if [[ "${tls}" != "required" ]]; then
+			echo "not required" > "${portcfs}/addr_treq"
+		fi
+	fi
 	echo "${port}"
 }
 
@@ -879,6 +886,7 @@ _nvmet_target_setup() {
 	local port p
 	local resv_enable=""
 	local num_ports=1
+	local tls="none"
 	local -a ARGS
 
 	while [[ $# -gt 0 ]]; do
@@ -910,6 +918,14 @@ _nvmet_target_setup() {
 			--ports)
 				num_ports="$2"
 				shift 2
+				;;
+			--tls)
+				tls="not-required"
+				shift 1
+				;;
+			--force-tls)
+				tls="required"
+				shift 1
 				;;
 			*)
 				echo "WARNING: unknown argument: $1"
@@ -957,7 +973,7 @@ _nvmet_target_setup() {
 
 	p=0
 	while (( p < num_ports )); do
-		port="$(_create_nvmet_port)"
+		port="$(_create_nvmet_port ${tls})"
 		_add_nvmet_subsys_to_port "${port}" "${subsysnqn}"
 		p=$(( p + 1 ))
 	done
