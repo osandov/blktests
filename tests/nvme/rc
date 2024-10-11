@@ -168,6 +168,14 @@ _require_nvme_cli_auth() {
 	return 0
 }
 
+_require_nvme_cli_tls() {
+	if ! nvme gen-tls-key --subsysnqn nvmf-test-subsys > /dev/null 2>&1; then
+		SKIP_REASON+=("nvme gen-tls-key command missing")
+		return 1
+	fi
+	return 0
+}
+
 _require_kernel_nvme_fabrics_feature() {
 	local feature="$1"
 
@@ -306,6 +314,37 @@ _set_nvmet_dhgroup() {
 	     "${cfs_path}/dhchap_dhgroup"
 }
 
+_enable_nvmet_ns() {
+	local subsysnqn="${def_subsysnqn}"
+	local nsid="${1:-1}"
+
+	cfs_path="${NVMET_CFS}/subsystems/${subsysnqn}"
+	ns_path="${cfs_path}/namespaces/${nsid}"
+
+	echo 1 > "${ns_path}/enable"
+}
+
+_disable_nvmet_ns() {
+	local subsysnqn="${def_subsysnqn}"
+	local nsid="${1:-1}"
+
+	cfs_path="${NVMET_CFS}/subsystems/${subsysnqn}"
+	ns_path="${cfs_path}/namespaces/${nsid}"
+
+	echo 0 > "${ns_path}/enable"
+}
+
+_set_nvmet_ns_uuid() {
+	local subsysnqn="${def_subsysnqn}"
+	local nsid="${1:-1}"
+	local uuid="${2:-$(uuidgen)}"
+
+	cfs_path="${NVMET_CFS}/subsystems/${subsysnqn}"
+	ns_path="${cfs_path}/namespaces/${nsid}"
+
+	printf "%s" "${uuid}" > "${ns_path}/device_uuid"
+}
+
 _find_nvme_passthru_loop_dev() {
 	local subsys=$1
 	local nsid
@@ -314,59 +353,6 @@ _find_nvme_passthru_loop_dev() {
 	dev=$(_find_nvme_dev "${subsys}")
 	nsid=$(_test_dev_nvme_nsid)
 	echo "/dev/${dev}n${nsid}"
-}
-
-_nvmet_target_setup() {
-	local blkdev_type="${nvmet_blkdev_type}"
-	local blkdev
-	local ctrlkey=""
-	local hostkey=""
-	local subsysnqn="${def_subsysnqn}"
-	local subsys_uuid="${def_subsys_uuid}"
-	local port
-
-	while [[ $# -gt 0 ]]; do
-		case $1 in
-			--blkdev)
-				blkdev_type="$2"
-				shift 2
-				;;
-			--ctrlkey)
-				ctrlkey="$2"
-				shift 2
-				;;
-			--hostkey)
-				hostkey="$2"
-				shift 2
-				;;
-			--subsysnqn)
-				subsysnqn="$2"
-				shift 2
-				;;
-			--subsys-uuid)
-				subsys_uuid="$2"
-				shift 2
-				;;
-			*)
-				echo "WARNING: unknown argument: $1"
-				shift
-				;;
-		esac
-	done
-
-	truncate -s "${NVME_IMG_SIZE}" "$(_nvme_def_file_path)"
-	if [[ "${blkdev_type}" == "device" ]]; then
-		blkdev="$(losetup -f --show "$(_nvme_def_file_path)")"
-	else
-		blkdev="$(_nvme_def_file_path)"
-	fi
-
-	_create_nvmet_subsystem "${subsysnqn}" "${blkdev}" \
-				"${subsys_uuid}"
-	port="$(_create_nvmet_port "${nvme_trtype}")"
-	_add_nvmet_subsys_to_port "${port}" "${subsysnqn}"
-	_create_nvmet_host "${subsysnqn}" "${def_hostnqn}" \
-			"${hostkey}" "${ctrlkey}"
 }
 
 _nvmet_passthru_target_setup() {
@@ -387,7 +373,7 @@ _nvmet_passthru_target_setup() {
 	done
 
 	_create_nvmet_passthru "${subsysnqn}"
-	port="$(_create_nvmet_port "${nvme_trtype}")"
+	port="$(_create_nvmet_port)"
 	_add_nvmet_subsys_to_port "${port}" "${subsysnqn}"
 	_create_nvmet_host "${subsysnqn}" "${def_hostnqn}"
 }
@@ -444,7 +430,7 @@ _nvmet_passthru_target_cleanup() {
 		esac
 	done
 
-	_get_nvmet_ports "${subsysnqn}" ports
+	read -ra ports < <(_get_nvmet_ports "${subsysnqn}")
 
 	for port in "${ports[@]}"; do
 		_remove_nvmet_subsystem_from_port "${port}" "${subsysnqn}"
@@ -584,4 +570,10 @@ _nvme_reset_ctrl() {
 
 _nvme_delete_ctrl() {
 	echo 1 > /sys/class/nvme/"$1"/delete_controller
+}
+
+_check_ctrl_tls() {
+	local ctrl="$1"
+
+	cat /sys/class/nvme/"$ctrl"/tls_key
 }

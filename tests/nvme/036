@@ -35,7 +35,7 @@ test_device() {
 	if [[ -z "$nsdev" ]]; then
 		echo "FAIL: Failed to find passthru target namespace"
 	else
-		ctrldev=$(_find_nvme_dev "${def_subsysnqn}")
+		ctrldev=$(_find_nvme_dev)
 
 		if ! nvme reset "/dev/${ctrldev}" >> "$FULL" 2>&1; then
 			echo "ERROR: reset failed"

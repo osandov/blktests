@@ -1,0 +1,106 @@
+#!/bin/bash
+# SPDX-License-Identifier: GPL-3.0+
+# Copyright (C) 2022 Hannes Reinecke, SUSE Labs
+#
+# Create secure concatenation for TCP connections
+
+. tests/nvme/rc
+
+DESCRIPTION="Create authenticated TCP connections with secure concatenation"
+QUICK=1
+
+requires() {
+	_nvme_requires
+	_have_loop
+	_have_kernel_option NVME_AUTH
+	_have_kernel_option NVME_TCP_TLS
+	_have_kernel_option NVME_TARGET_AUTH
+	_have_kernel_option NVME_TARGET_TCP_TLS
+	_require_kernel_nvme_fabrics_feature dhchap_ctrl_secret
+	_require_kernel_nvme_fabrics_feature concat
+	_require_nvme_trtype_is_tcp
+	_require_nvme_cli_auth
+}
+
+set_conditions() {
+	_set_nvme_trtype "$@"
+}
+
+test() {
+	echo "Running ${TEST_NAME}"
+
+	_setup_nvmet
+
+	local hostkey
+
+	systemctl restart tlshd
+
+	hostkey="$(nvme gen-dhchap-key -m 1 -n ${def_hostnqn} 2> /dev/null)"
+	if [ -z "$hostkey" ] ; then
+		echo "nvme gen-dhchap-key failed"
+		return 1
+	fi
+
+	_nvmet_target_setup --blkdev file --hostkey "${hostkey}" --concat
+	_set_nvmet_hash "${def_hostnqn}" "hmac(sha256)"
+	_set_nvmet_dhgroup "${def_hostnqn}" "ffdhe2048"
+
+	echo "Test secure concatenation with SHA256"
+	_nvme_connect_subsys --dhchap-secret "${hostkey}" --concat
+
+	ctrl=$(_find_nvme_dev)
+	if [[ -z "$ctrl" ]]; then
+		echo "WARNING: connection failed"
+		exit 1
+	fi
+	tlskey=$(_check_ctrl_tls "$ctrl" 2> /dev/null || true)
+	if [[ -z "$tlskey" ]]; then
+		echo "WARNING: connection is not encrypted"
+		exit 1
+	fi
+
+	# Reset controller to force re-negotiation
+	echo "Reset controller"
+	if ! nvme reset "/dev/${ctrl}" ; then
+		echo "WARNING: failed to reset controller"
+	fi
+
+	new_tlskey=$(_check_ctrl_tls "$ctrl" 2> /dev/null || true)
+	if [[ -z "$new_tlskey" ]]; then
+		echo "WARNING: connection is not encrypted"
+	elif [[ "$new_tlskey" = "$tlskey" ]]; then
+		echo "WARNING: TLS key has not been renegotiated"
+	fi
+
+	_nvme_disconnect_subsys
+
+	hostkey="$(nvme gen-dhchap-key -m 2 -n ${def_hostnqn} 2> /dev/null)"
+	if [ -z "$hostkey" ] ; then
+		echo "nvme gen-dhchap-key failed"
+		return 1
+	fi
+
+	_set_nvmet_hostkey "{def_hostnqn}" "${hostkey}"
+	_set_nvmet_hash "${def_hostnqn}" "hmac(sha384)"
+	_set_nvmet_dhgroup "${def_hostnqn}" "ffdhe3072"
+
+	echo "Test secure concatenation with SHA384"
+	_nvme_connect_subsys --dhchap-secret "${hostkey}" --concat
+
+	ctrl=$(_find_nvme_dev)
+	if [[ -z "$ctrl" ]]; then
+		echo "WARNING: connection failed"
+		exit 1
+	fi
+	tlskey=$(_check_ctrl_tls "$ctrl" 2> /dev/null || true)
+	if [[ -z "$tlskey" ]]; then
+		echo "WARNING: connection is not encrypted"
+		exit 1
+	fi
+
+	_nvme_disconnect_subsys
+
+	_nvmet_target_cleanup
+
+	echo "Test complete"
+}
