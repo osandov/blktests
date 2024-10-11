@@ -51,6 +51,13 @@ _require_nvme_trtype_is_loop() {
 	return 0
 }
 
+_require_nvme_trtype_is_tcp() {
+	if ! _require_nvme_trtype tcp; then
+		return 1
+	fi
+	return 0
+}
+
 _require_nvme_trtype_is_fabrics() {
 	if ! _require_nvme_trtype loop fc rdma tcp; then
 		return 1
