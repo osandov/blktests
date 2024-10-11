@@ -275,6 +275,7 @@ _nvme_connect_subsys() {
 	local no_wait=false
 	local hdr_digest=false
 	local data_digest=false
+	local tls=false
 	local port
 	local i
 	local -a ARGS
@@ -341,6 +342,10 @@ _nvme_connect_subsys() {
 				data_digest=true
 				shift 1
 				;;
+			--tls)
+				tls=true
+				shift 1
+				;;
 			*)
 				echo "WARNING: unknown argument: $1"
 				shift
@@ -397,6 +402,9 @@ _nvme_connect_subsys() {
 	fi
 	if [[ ${data_digest} = true ]]; then
 		ARGS+=(--data-digest)
+	fi
+	if [[ ${tls} = true ]]; then
+		ARGS+=(--tls)
 	fi
 	ARGS+=(-o json)
 	connect=$(nvme connect "${ARGS[@]}" 2> /dev/null)
