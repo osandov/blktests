@@ -175,6 +175,14 @@ _require_nvme_cli_auth() {
 	return 0
 }
 
+_require_nvme_cli_tls() {
+	if ! nvme gen-tls-key --subsysnqn nvmf-test-subsys > /dev/null 2>&1; then
+		SKIP_REASON+=("nvme gen-tls-key command missing")
+		return 1
+	fi
+	return 0
+}
+
 _require_kernel_nvme_fabrics_feature() {
 	local feature="$1"
 
@@ -596,4 +604,10 @@ _nvme_reset_ctrl() {
 
 _nvme_delete_ctrl() {
 	echo 1 > /sys/class/nvme/"$1"/delete_controller
+}
+
+_check_ctrl_tls() {
+	local ctrl="$1"
+
+	cat /sys/class/nvme/"$ctrl"/tls_key
 }
