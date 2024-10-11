@@ -30,7 +30,7 @@ test() {
 
 	_nvme_connect_subsys
 
-	nvmedev=$(_find_nvme_dev "${def_subsysnqn}")
+	nvmedev=$(_find_nvme_dev)
 	_check_uuid "${nvmedev}"
 
 	if ! nvme ns-rescan "/dev/${nvmedev}" >> "$FULL" 2>&1; then

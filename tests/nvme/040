@@ -32,7 +32,7 @@ test() {
 	_nvmet_target_setup
 
 	_nvme_connect_subsys
-	nvmedev=$(_find_nvme_dev "${def_subsysnqn}")
+	nvmedev=$(_find_nvme_dev)
 	ns=$(_find_nvme_ns "${def_subsys_uuid}")
 
 	# start fio job

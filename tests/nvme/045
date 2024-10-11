@@ -60,7 +60,7 @@ test() {
 
 	echo "Re-authenticate with original host key"
 
-	ctrldev=$(_find_nvme_dev "${def_subsysnqn}")
+	ctrldev=$(_find_nvme_dev)
 	if [ -z "$ctrldev" ] ; then
 		echo "nvme controller not found"
 	fi

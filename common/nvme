@@ -730,7 +730,7 @@ _get_nvmet_port_params() {
 }
 
 _find_nvme_dev() {
-	local subsys=$1
+	local subsys="${1:-$def_subsysnqn}"
 	local subsysnqn
 	local dev
 	for dev in /sys/class/nvme/nvme*; do

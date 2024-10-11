@@ -31,7 +31,7 @@ test() {
 
 	_nvme_connect_subsys
 
-	nvmedev=$(_find_nvme_dev "${def_subsysnqn}")
+	nvmedev=$(_find_nvme_dev)
 
 	echo 1 > "/sys/class/nvme/${nvmedev}/reset_controller"
 
