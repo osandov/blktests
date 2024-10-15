@@ -1,0 +1,101 @@
+#!/bin/bash
+# SPDX-License-Identifier: GPL-3.0+
+# Copyright (C) 2024 Guixin Liu
+# Copyright (C) 2024 Alibaba Group.
+#
+# Test the NVMe reservation feature
+#
+. tests/nvme/rc
+
+DESCRIPTION="Test the NVMe reservation feature"
+QUICK=1
+nvme_trtype="loop"
+
+requires() {
+	_nvme_requires
+}
+
+resv_report() {
+	local test_dev=$1
+	local report_arg=$2
+
+	nvme resv-report "${test_dev}" "${report_arg}" | grep -v "hostid" | \
+		grep -E "gen|rtype|regctl|regctlext|cntlid|rcsts|rkey"
+}
+
+test_resv() {
+	local ns=$1
+	local report_arg="--cdw11=1"
+	local test_dev="/dev/${ns}"
+
+	if nvme resv-report --help 2>&1 | grep -- '--eds' > /dev/null; then
+		report_arg="--eds"
+	fi
+
+	echo "Register"
+	resv_report "${test_dev}" "${report_arg}"
+	nvme resv-register "${test_dev}" --nrkey=4 --rrega=0
+	resv_report "${test_dev}" "${report_arg}"
+
+	echo "Replace"
+	nvme resv-register "${test_dev}" --crkey=4 --nrkey=5 --rrega=2
+	resv_report "${test_dev}" "${report_arg}"
+
+	echo "Unregister"
+	nvme resv-register "${test_dev}" --crkey=5 --rrega=1
+	resv_report "${test_dev}" "${report_arg}"
+
+	echo "Acquire"
+	nvme resv-register "${test_dev}" --nrkey=4 --rrega=0
+	nvme resv-acquire "${test_dev}" --crkey=4 --rtype=1 --racqa=0
+	resv_report "${test_dev}" "${report_arg}"
+
+	echo "Preempt"
+	nvme resv-acquire "${test_dev}" --crkey=4 --rtype=2 --racqa=1
+	resv_report "${test_dev}" "${report_arg}"
+
+	echo "Release"
+	nvme resv-release "${test_dev}" --crkey=4 --rtype=2 --rrela=0
+	resv_report "${test_dev}" "${report_arg}"
+
+	echo "Clear"
+	nvme resv-register "${test_dev}" --nrkey=4 --rrega=0
+	nvme resv-acquire "${test_dev}" --crkey=4 --rtype=1 --racqa=0
+	resv_report "${test_dev}" "${report_arg}"
+	nvme resv-release "${test_dev}" --crkey=4 --rrela=1
+}
+
+test() {
+	echo "Running ${TEST_NAME}"
+
+	_setup_nvmet
+
+	local ns
+	local skipped=false
+	local subsys_path=""
+	local ns_path=""
+
+	_nvmet_target_setup --blkdev file --resv_enable
+	subsys_path="${NVMET_CFS}/subsystems/${def_subsysnqn}"
+	_nvme_connect_subsys
+
+	ns=$(_find_nvme_ns "${def_subsys_uuid}")
+	ns_id=$(echo "${ns}" | grep -oE '[0-9]+' | sed -n '2p')
+	ns_path="${subsys_path}/namespaces/${ns_id}"
+
+	if [[ -f "${ns_path}/resv_enable" ]] ; then
+		test_resv "${ns}"
+	else
+		SKIP_REASONS+=("missing reservation feature")
+		skipped=true
+	fi
+
+	_nvme_disconnect_subsys
+	_nvmet_target_cleanup
+
+	if [[ "${skipped}" = true ]] ; then
+		return 1
+	fi
+
+	echo "Test complete"
+}
