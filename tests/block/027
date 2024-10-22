@@ -84,7 +84,7 @@ test() {
 	echo "Running ${TEST_NAME}"
 
 	scsi_debug_stress_remove virtual_gb=128 max_luns=21 ndelay=10000 \
-		max_queue=110
+		max_queue=110 submit_queues="$(nproc)"
 
 	echo "Test complete"
 }
