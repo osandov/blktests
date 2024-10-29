@@ -70,7 +70,7 @@ _have_driver()
 # built-in the kernel.
 _have_module() {
 	if ! _module_file_exists "${1}"; then
-		SKIP_REASONS+=("${1} module is not available")
+		SKIP_REASONS+=("module ${1} is not available")
 		return 1
 	fi
 	return 0
@@ -84,7 +84,7 @@ _have_module_param() {
 	fi
 
 	if ! modinfo -F parm -0 "$1" | grep -q -z "^$2:"; then
-		SKIP_REASONS+=("$1 module does not have parameter $2")
+		SKIP_REASONS+=("module $1 does not have parameter $2")
 		return 1
 	fi
 	return 0
@@ -106,7 +106,7 @@ _have_module_param_value() {
 
 	value=$(cat "/sys/module/$modname/parameters/$param")
 	if [[ "${value}" != "$expected_value" ]]; then
-		SKIP_REASONS+=("$modname module parameter $param must be set to $expected_value")
+		SKIP_REASONS+=("module $modname parameter $param must be set to $expected_value")
 		return 1
 	fi
 
@@ -117,7 +117,7 @@ _have_program() {
 	if command -v "$1" >/dev/null 2>&1; then
 		return 0
 	fi
-	SKIP_REASONS+=("$1 is not available")
+	SKIP_REASONS+=("command $1 is not available")
 	return 1
 }
 
