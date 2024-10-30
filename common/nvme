@@ -183,6 +183,12 @@ _cleanup_nvmet() {
 	for port in "${NVMET_CFS}"/ports/*; do
 		name=$(basename "${port}")
 		echo "WARNING: Test did not clean up port: ${name}"
+		if [[ "${nvme_trtype}" == "fc" ]]; then
+			_cleanup_fcloop "$(_local_wwnn "$port")" \
+					"$(_local_wwpn "$port")" \
+					"$(_remote_wwnn "$port")" \
+					"$(_remote_wwpn "$port")"
+		fi
 		rm -f "${port}"/subsystems/*
 		rmdir "${port}"
 	done
@@ -206,8 +212,6 @@ _cleanup_nvmet() {
 	trap SIGINT
 
 	if [[ "${nvme_trtype}" == "fc" ]]; then
-		_cleanup_fcloop "${def_local_wwnn}" "${def_local_wwpn}" \
-				"${def_remote_wwnn}" "${def_remote_wwpn}"
 		modprobe -rq nvme-fcloop 2>/dev/null
 	fi
 	modprobe -rq nvme-"${nvme_trtype}" 2>/dev/null
@@ -493,6 +497,13 @@ _create_nvmet_port() {
 
 _remove_nvmet_port() {
 	local port="$1"
+
+	if [[ "${nvme_trtype}" == "fc" ]]; then
+		_cleanup_fcloop "$(_local_wwnn "$port")" \
+				"$(_local_wwpn "$port")" \
+				"$(_remote_wwnn "$port")" \
+				"$(_remote_wwpn "$port")"
+	fi
 	rmdir "${NVMET_CFS}/ports/${port}"
 }
 
