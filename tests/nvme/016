@@ -29,8 +29,7 @@ test() {
 	loop_dev="$(losetup -f)"
 	local genctr=1
 
-	_create_nvmet_subsystem --subsysnqn "${def_subsysnqn}" \
-				--blkdev "${loop_dev}"
+	_create_nvmet_subsystem --blkdev "${loop_dev}"
 
 	for ((i = 2; i <= iterations; i++)); do
 		_create_nvmet_ns --nsid "${i}" \

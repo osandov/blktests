@@ -573,17 +573,17 @@ _create_nvmet_ns() {
 }
 
 _create_nvmet_subsystem() {
-	local nvmet_subsystem=""
-	local blkdev=""
-	local uuid="00000000-0000-0000-0000-000000000000"
-	local resv_enable=""
-	local cfs_path=""
+	local subsystem="${def_subsysnqn}"
+	local blkdev
+	local uuid="${def_subsys_uuid}"
+	local resv_enable
+	local cfs_path
 	local -a ARGS
 
 	while [[ $# -gt 0 ]]; do
 		case $1 in
 			--subsysnqn)
-				nvmet_subsystem="$2"
+				subsystem="$2"
 				shift 2
 				;;
 			--blkdev)
@@ -605,10 +605,13 @@ _create_nvmet_subsystem() {
 		esac
 	done
 
-	cfs_path="${NVMET_CFS}/subsystems/${nvmet_subsystem}"
+	cfs_path="${NVMET_CFS}/subsystems/${subsystem}"
 	mkdir -p "${cfs_path}"
 	echo 0 > "${cfs_path}/attr_allow_any_host"
-	ARGS+=(--subsysnqn "${nvmet_subsystem}")
+	if [[ -z "${blkdev}" ]]; then
+		return 0
+	fi
+	ARGS+=(--subsysnqn "${subsystem}")
 	ARGS+=(--blkdev "${blkdev}")
 	if [[ -n "$uuid" ]]; then
 		ARGS+=(--uuid "${uuid}")

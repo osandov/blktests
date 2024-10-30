@@ -29,9 +29,7 @@ test() {
 
 	local genctr=1
 
-	_create_nvmet_subsystem --subsysnqn "${def_subsysnqn}" \
-				--blkdev "$(_nvme_def_file_path)" \
-				--uuid "${def_subsys_uuid}"
+	_create_nvmet_subsystem --blkdev "$(_nvme_def_file_path)"
 
 	for ((i = 2; i <= iterations; i++)); do
 		_create_nvmet_ns --nsid "${i}" \
