@@ -33,7 +33,7 @@ test() {
 	mkdir -p "${subsys_path}"
 	rmdir "${subsys_path}"
 
-	port="$(_create_nvmet_port "${nvme_trtype}")"
+	port="$(_create_nvmet_port)"
 	_remove_nvmet_port "${port}"
 
 	echo "Test complete"

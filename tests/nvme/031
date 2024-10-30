@@ -41,7 +41,7 @@ test() {
 
 	loop_dev="$(losetup -f --show "$(_nvme_def_file_path)")"
 
-	port="$(_create_nvmet_port "${nvme_trtype}")"
+	port="$(_create_nvmet_port)"
 
 	for ((i = 0; i < iterations; i++)); do
 		_nvmet_target_setup --subsysnqn "${subsys}$i" \

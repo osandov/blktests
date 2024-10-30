@@ -28,7 +28,7 @@ test() {
 	local genctr
 	local subsys="blktests-subsystem-"
 
-	port="$(_create_nvmet_port "${nvme_trtype}")"
+	port="$(_create_nvmet_port)"
 
 	_create_nvmet_subsystem --subsysnqn "${subsys}1" \
 				--blkdev "$(losetup -f)"
