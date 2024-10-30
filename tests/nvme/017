@@ -34,9 +34,8 @@ test() {
 				--uuid "${def_subsys_uuid}"
 
 	for ((i = 2; i <= iterations; i++)); do
-		_create_nvmet_ns --subsysnqn "${def_subsysnqn}" \
-				 --nsid "${i}" \
-				 --blkdev "$(_nvme_def_file_path)"
+		_create_nvmet_ns --nsid "${i}" \
+				 --blkdev "$(_nvme_def_file_path)" > /dev/null
 	done
 
 	port="$(_create_nvmet_port)"

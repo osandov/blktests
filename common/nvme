@@ -511,18 +511,19 @@ _remove_nvmet_port() {
 }
 
 _create_nvmet_ns() {
-	local nvmet_subsystem=""
-	local nsid=""
-	local blkdev=""
-	local uuid="00000000-0000-0000-0000-000000000000"
-	local subsys_path=""
-	local ns_path=""
+	local subsysnqn="${def_subsysnqn}"
+	local nsid="1"
+	local grpid="1"
+	local blkdev
+	local uuid
+	local subsys_path
+	local ns_path
 	local resv_enable=false
 
 	while [[ $# -gt 0 ]]; do
 		case $1 in
 			--subsysnqn)
-				nvmet_subsystem="$2"
+				subsysnqn="$2"
 				shift 2
 				;;
 			--nsid)
@@ -541,6 +542,10 @@ _create_nvmet_ns() {
 				resv_enable=true
 				shift 1
 				;;
+			--grpid)
+				grpid="$2"
+				shift 2
+				;;
 			*)
 				echo "WARNING: unknown argument: $1"
 				shift
@@ -548,16 +553,23 @@ _create_nvmet_ns() {
 		esac
 	done
 
-	subsys_path="${NVMET_CFS}/subsystems/${nvmet_subsystem}"
+	subsys_path="${NVMET_CFS}/subsystems/${subsysnqn}"
 	ns_path="${subsys_path}/namespaces/${nsid}"
-
 	mkdir "${ns_path}"
 	printf "%s" "${blkdev}" > "${ns_path}/device_path"
-	printf "%s" "${uuid}" > "${ns_path}/device_uuid"
 	if [[ -f "${ns_path}/resv_enable" && "${resv_enable}" = true ]] ; then
 		printf 1 > "${ns_path}/resv_enable"
 	fi
+	if [[ -n "${uuid}" ]]; then
+		printf "%s" "${uuid}" > "${ns_path}/device_uuid"
+	else
+		uuid=$(cat "${ns_path}/device_uuid")
+	fi
+	if (( grpid != 1 )); then
+		printf "%d" "${grpid}" > "${ns_path}/ana_grpid"
+	fi
 	printf 1 > "${ns_path}/enable"
+	echo "${uuid}"
 }
 
 _create_nvmet_subsystem() {
@@ -566,6 +578,7 @@ _create_nvmet_subsystem() {
 	local uuid="00000000-0000-0000-0000-000000000000"
 	local resv_enable=""
 	local cfs_path=""
+	local -a ARGS
 
 	while [[ $# -gt 0 ]]; do
 		case $1 in
@@ -595,11 +608,15 @@ _create_nvmet_subsystem() {
 	cfs_path="${NVMET_CFS}/subsystems/${nvmet_subsystem}"
 	mkdir -p "${cfs_path}"
 	echo 0 > "${cfs_path}/attr_allow_any_host"
-	_create_nvmet_ns --subsysnqn "${nvmet_subsystem}" \
-			 --nsid "1" \
-			 --blkdev "${blkdev}" \
-			 --uuid "${uuid}" \
-			 ${resv_enable}
+	ARGS+=(--subsysnqn "${nvmet_subsystem}")
+	ARGS+=(--blkdev "${blkdev}")
+	if [[ -n "$uuid" ]]; then
+		ARGS+=(--uuid "${uuid}")
+	fi
+	if [[ -n "$resv_enable" ]]; then
+		ARGS+=("${resv_enable}")
+	fi
+	_create_nvmet_ns "${ARGS[@]}" > /dev/null
 }
 
 _add_nvmet_allow_hosts() {
