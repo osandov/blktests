@@ -331,7 +331,15 @@ _nvme_connect_subsys() {
 
 	ARGS=(--transport "${nvme_trtype}" --nqn "${subsysnqn}")
 	if [[ "${nvme_trtype}" == "fc" ]] ; then
-		ARGS+=(--traddr "${def_traddr}" --host-traddr "${def_host_traddr}")
+		local ports
+		_get_nvmet_ports "${subsysnqn}" ports
+		if ((${#ports[@]} != 1)); then
+			echo only one port is supported at this moment...
+			exit 1
+		fi
+		local port=${ports[0]}
+		ARGS+=(--traddr "$(_fc_traddr "$port")")
+		ARGS+=(--host-traddr "$(_fc_host_traddr "$port")")
 	elif [[ "${nvme_trtype}" != "loop" ]]; then
 		ARGS+=(--traddr "${def_traddr}" --trsvcid "${def_trsvcid}")
 	fi
@@ -413,6 +421,38 @@ _nvme_ns_ready() {
 	return 0
 }
 
+_local_wwnn() {
+	local -i port=${1}
+
+	printf "0x%08x" $(( def_local_wwnn + port ))
+}
+
+_local_wwpn() {
+	local -i port=${1}
+
+	printf "0x%08x" $(( def_local_wwpn + port ))
+}
+
+_remote_wwnn() {
+	local -i port=${1}
+
+	printf "0x%08x" $(( def_remote_wwnn + port ))
+}
+
+_remote_wwpn() {
+	local -i port=${1}
+
+	printf "0x%08x" $(( def_remote_wwpn + port ))
+}
+
+_fc_traddr() {
+	printf "nn-%s:pn-%s" "$(_remote_wwnn "$1")" "$(_remote_wwpn "$1")"
+}
+
+_fc_host_traddr() {
+	printf "nn-%s:pn-%s" "$(_local_wwnn "$1")" "$(_local_wwpn "$1")"
+}
+
 _create_nvmet_port() {
 	local trtype="${1:-$nvme_trtype}"
 	local traddr="${2:-$def_traddr}"
@@ -435,24 +475,9 @@ _create_nvmet_port() {
 		traddr="${port}"
 		adrfam="loop"
 	elif [[ "${trtype}" == "fc" ]]; then
-		local local_wwnn
-		local local_wwpn
-		local remote_wwnn
-		local remote_wwpn
-
-		local_wwnn=$(printf "0x%08x" $(( def_local_wwnn + port )) )
-		local_wwpn=$(printf "0x%08x" $(( def_local_wwpn + port )) )
-		remote_wwnn=$(printf "0x%08x" $(( def_remote_wwnn + port )) )
-		remote_wwpn=$(printf "0x%08x" $(( def_remote_wwpn + port )) )
-		_setup_fcloop "${local_wwnn}" "${local_wwpn}" \
-			      "${remote_wwnn}" "${remote_wwpn}"
-
-		traddr=$(printf "nn-%s:pn-%s" \
-				"${remote_wwnn}" \
-				"${remote_wwpn}")
-		def_host_traddr=$(printf "nn-%s:pn-%s" \
-					 "${local_wwnn}" \
-					 "${local_wwpn}")
+		_setup_fcloop "$(_local_wwnn $port)" "$(_local_wwpn $port)" \
+			      "$(_remote_wwnn $port)" "$(_remote_wwpn $port)"
+		traddr=$(_fc_traddr $port)
 		adrfam="fc"
 	fi
 	echo "${trtype}" > "${portcfs}/addr_trtype"
