@@ -690,22 +690,41 @@ _get_nvmet_port_params() {
 	local port="$1"
 	local -n args="$2"
 	local cfs_path="${NVMET_CFS}/ports/${port}"
-	local trtype
+	local trtype="${nvme_trtype}"
 	local traddr
-	local trsvcid
+	local trsvcid="${def_trsvcid}"
 
-	[[ -d "${cfs_path}" ]] || exit 1
-	trtype=$(cat "${cfs_path}/addr_trtype")
+	# When port is specified, get port dependent parameter values
+	if [[ $port != none ]]; then
+		[[ -d "${cfs_path}" ]] || exit 1
+		trtype=$(cat "${cfs_path}/addr_trtype")
+		traddr=$(cat "${cfs_path}/addr_traddr")
+		args+=(--traddr "${traddr}")
+		if [[ "${trtype}" == "tcp" ]] || [[ "${trtype}" == "rdma" ]]; then
+			trsvcid=$(cat "${cfs_path}/addr_trsvcid")
+		fi
+	fi
+
+	# Prepare parameter options
 	args+=(--transport "${trtype}")
-	traddr=$(cat "${cfs_path}/addr_traddr")
-	args+=(--traddr "${traddr}")
-	if [[ "${trtype}" == "tcp" ]] || [[ "${trtype}" == "rdma" ]]; then
-		trsvcid=$(cat "${cfs_path}/addr_trsvcid")
+	case ${trtype} in
+	loop)
+		;;
+	rdma | tcp)
+		if [[ $port == none ]]; then
+			args+=(--traddr "${def_traddr}")
+		fi
 		args+=(--trsvcid "${trsvcid}")
-	elif [[ "${trtype}" == "fc" ]]; then
+		;;
+	fc)
 		args+=(--traddr "$(_fc_traddr "$port")")
 		args+=(--host-traddr "$(_fc_host_traddr "$port")")
-	fi
+		;;
+	*)
+		echo Unexpected transport type: "${trtype}"
+		exit
+		;;
+	esac
 }
 
 _find_nvme_dev() {

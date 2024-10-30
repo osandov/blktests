@@ -28,7 +28,8 @@ test() {
 
 	_nvmet_target_setup
 
-	_nvme_connect_subsys --subsysnqn "nqn.2014-08.org.nvmexpress.discovery"
+	_nvme_connect_subsys --port none \
+			     --subsysnqn "nqn.2014-08.org.nvmexpress.discovery"
 
 	# This is ugly but checking for the absence of error messages is ...
 	sleep 10
