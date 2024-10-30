@@ -8,10 +8,10 @@
 def_traddr="127.0.0.1"
 def_adrfam="ipv4"
 def_trsvcid="4420"
-def_remote_wwnn="0x10001100aa000001"
-def_remote_wwpn="0x20001100aa000001"
-def_local_wwnn="0x10001100aa000002"
-def_local_wwpn="0x20001100aa000002"
+def_remote_wwnn="0x10001100ab000001"
+def_remote_wwpn="0x20001100ab000001"
+def_local_wwnn="0x10001100aa000001"
+def_local_wwpn="0x20001100aa000001"
 def_hostid="0f01fb42-9f7f-4856-b0b3-51e60b8de349"
 def_hostnqn="nqn.2014-08.org.nvmexpress:uuid:${def_hostid}"
 export def_subsysnqn="blktests-subsystem-1"
@@ -248,15 +248,6 @@ _setup_nvmet() {
 	fi
 	if [[ "${nvme_trtype}" = "fc" ]]; then
 		modprobe -q nvme-fcloop
-		_setup_fcloop "${def_local_wwnn}" "${def_local_wwpn}" \
-			      "${def_remote_wwnn}" "${def_remote_wwpn}"
-
-		def_traddr=$(printf "nn-%s:pn-%s" \
-				    "${def_remote_wwnn}" \
-				    "${def_remote_wwpn}")
-		def_host_traddr=$(printf "nn-%s:pn-%s" \
-					 "${def_local_wwnn}" \
-					 "${def_local_wwpn}")
 	fi
 }
 
@@ -438,6 +429,32 @@ _create_nvmet_port() {
 
 	portcfs="${NVMET_CFS}/ports/${port}"
 	mkdir "${portcfs}"
+	if [[ "${trtype}" == "tcp" ]] || [[ "${trtype}" == "rdma" ]]; then
+		trsvcid=$(printf "%d" $(( trsvcid + port )) )
+	elif [[ "${trtype}" == "loop" ]]; then
+		traddr="${port}"
+		adrfam="loop"
+	elif [[ "${trtype}" == "fc" ]]; then
+		local local_wwnn
+		local local_wwpn
+		local remote_wwnn
+		local remote_wwpn
+
+		local_wwnn=$(printf "0x%08x" $(( def_local_wwnn + port )) )
+		local_wwpn=$(printf "0x%08x" $(( def_local_wwpn + port )) )
+		remote_wwnn=$(printf "0x%08x" $(( def_remote_wwnn + port )) )
+		remote_wwpn=$(printf "0x%08x" $(( def_remote_wwpn + port )) )
+		_setup_fcloop "${local_wwnn}" "${local_wwpn}" \
+			      "${remote_wwnn}" "${remote_wwpn}"
+
+		traddr=$(printf "nn-%s:pn-%s" \
+				"${remote_wwnn}" \
+				"${remote_wwpn}")
+		def_host_traddr=$(printf "nn-%s:pn-%s" \
+					 "${local_wwnn}" \
+					 "${local_wwpn}")
+		adrfam="fc"
+	fi
 	echo "${trtype}" > "${portcfs}/addr_trtype"
 	echo "${traddr}" > "${portcfs}/addr_traddr"
 	echo "${adrfam}" > "${portcfs}/addr_adrfam"
