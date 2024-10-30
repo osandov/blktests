@@ -222,15 +222,16 @@ _nvme_calc_rand_io_size() {
 
 _nvme_discover() {
 	local trtype="$1"
-	local traddr="${2:-$def_traddr}"
-	local host_traddr="${3:-$def_host_traddr}"
-	local trsvcid="${3:-$def_trsvcid}"
+	local port="$2"
+	local traddr="$def_traddr"
+	local trsvcid="$def_trsvcid"
 
 	ARGS=(--transport "${trtype}")
 	ARGS+=(--hostnqn="${def_hostnqn}")
 	ARGS+=(--hostid="${def_hostid}")
 	if [[ "${trtype}" = "fc" ]]; then
-		ARGS+=(--traddr "${traddr}" --host-traddr "${host_traddr}")
+		ARGS+=(--traddr "$(_fc_traddr "$port")")
+		ARGS+=(--host-traddr "$(_fc_host_traddr "$port")")
 	elif [[ "${trtype}" != "loop" ]]; then
 		ARGS+=(--traddr "${traddr}" --trsvcid "${trsvcid}")
 	fi
@@ -463,16 +464,19 @@ _nvmet_passthru_target_cleanup() {
 }
 
 _discovery_genctr() {
-	_nvme_discover "${nvme_trtype}" |
+	local port=${1}
+
+	_nvme_discover "${nvme_trtype}" "${port}" |
 		sed -n -e 's/^.*Generation counter \([0-9]\+\).*$/\1/p'
 }
 
 _check_genctr() {
 	local last=$1
-	local msg=$2
+	local port=$2
+	local msg=$3
 	local genctr
 
-	genctr=$(_discovery_genctr)
+	genctr=$(_discovery_genctr "$port")
 	if (( "${genctr}" <= "${last}" )); then
 		echo "Generation counter not incremented when ${msg} (${genctr} <= ${last})"
 	fi

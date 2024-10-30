@@ -39,7 +39,8 @@ test() {
 		_add_nvmet_subsys_to_port "${port}" "blktests-subsystem-$i"
 	done
 
-	genctr=$(_check_genctr "${genctr}" "adding a subsystem to a port")
+	genctr=$(_check_genctr "${genctr}" "$port" \
+			       "adding a subsystem to a port")
 
 	for ((i = iterations - 1; i >= 0; i--)); do
 		_remove_nvmet_subsystem_from_port "${port}" "blktests-subsystem-$i"

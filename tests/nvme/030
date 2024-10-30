@@ -35,26 +35,29 @@ test() {
 	_add_nvmet_subsys_to_port "${port}" "${subsys}1"
 	_create_nvmet_host "${subsys}1" "${def_hostnqn}"
 
-	genctr=$(_discovery_genctr)
+	genctr=$(_discovery_genctr "$port")
 
 	_create_nvmet_subsystem --subsysnqn "${subsys}2" \
 				--blkdev "$(losetup -f)"
 	_add_nvmet_subsys_to_port "${port}" "${subsys}2"
 
-	genctr=$(_check_genctr "${genctr}" "adding a subsystem to a port")
+	genctr=$(_check_genctr "${genctr}" "$port" \
+			       "adding a subsystem to a port")
 
 	_add_nvmet_allow_hosts "${subsys}2" "${def_hostnqn}"
 
-	genctr=$(_check_genctr "${genctr}" "adding host to allow_hosts")
+	genctr=$(_check_genctr "${genctr}" "$port" "adding host to allow_hosts")
 
 	_remove_nvmet_allow_hosts "${subsys}2" "${def_hostnqn}"
 
-	genctr=$(_check_genctr "${genctr}" "removing host from allow_hosts")
+	genctr=$(_check_genctr "${genctr}" "$port" \
+			       "removing host from allow_hosts")
 
 	_remove_nvmet_subsystem_from_port "${port}" "${subsys}2"
 	_remove_nvmet_subsystem "${subsys}2"
 
-	genctr=$(_check_genctr "${genctr}" "removing a subsystem from a port")
+	genctr=$(_check_genctr "${genctr}" "$port" \
+			       "removing a subsystem from a port")
 
 	_remove_nvmet_subsystem_from_port "${port}" "${subsys}1"
 	_remove_nvmet_subsystem "${subsys}1"
