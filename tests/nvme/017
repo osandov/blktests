@@ -24,6 +24,7 @@ test() {
 
 	local port
 	local iterations="${NVME_NUM_ITER}"
+	local nsid
 
 	truncate -s "${NVME_IMG_SIZE}" "$(_nvme_def_file_path)"
 
@@ -32,7 +33,8 @@ test() {
 	_create_nvmet_subsystem --blkdev "$(_nvme_def_file_path)"
 
 	for ((i = 2; i <= iterations; i++)); do
-		_create_nvmet_ns --nsid "${i}" \
+		nsid=$((def_nsid + i - 1))
+		_create_nvmet_ns --nsid "${nsid}" \
 				 --blkdev "$(_nvme_def_file_path)" > /dev/null
 	done
 
@@ -46,7 +48,8 @@ test() {
 	_remove_nvmet_port "${port}"
 
 	for ((i = iterations; i > 1; i--)); do
-		_remove_nvmet_ns "${def_subsysnqn}" "$i"
+		nsid=$((def_nsid + i - 1))
+		_remove_nvmet_ns "${def_subsysnqn}" "${nsid}"
 	done
 
 	_remove_nvmet_subsystem "${def_subsysnqn}"

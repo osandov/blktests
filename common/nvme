@@ -16,6 +16,7 @@ def_hostid="0f01fb42-9f7f-4856-b0b3-51e60b8de349"
 def_hostnqn="nqn.2014-08.org.nvmexpress:uuid:${def_hostid}"
 export def_subsysnqn="blktests-subsystem-1"
 export def_subsys_uuid="91fdba0d-f87b-4c25-b80f-db7be1418b9e"
+export def_nsid="1"
 _check_conflict_and_set_default NVMET_TRTYPES nvme_trtype "loop"
 _check_conflict_and_set_default NVME_IMG_SIZE nvme_img_size 1G
 _check_conflict_and_set_default NVME_NUM_ITER nvme_num_iter 1000
@@ -512,7 +513,7 @@ _remove_nvmet_port() {
 
 _create_nvmet_ns() {
 	local subsysnqn="${def_subsysnqn}"
-	local nsid="1"
+	local nsid="${def_nsid}"
 	local grpid="1"
 	local blkdev
 	local uuid
@@ -667,7 +668,7 @@ _remove_nvmet_subsystem() {
 	local nvmet_subsystem="$1"
 	local subsys_path="${NVMET_CFS}/subsystems/${nvmet_subsystem}"
 
-	_remove_nvmet_ns "${nvmet_subsystem}" "1"
+	_remove_nvmet_ns "${nvmet_subsystem}" "${def_nsid}"
 	rm -f "${subsys_path}"/allowed_hosts/*
 	rmdir "${subsys_path}"
 }

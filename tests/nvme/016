@@ -25,6 +25,7 @@ test() {
 	local port
 	local iterations="${NVME_NUM_ITER}"
 	local loop_dev
+	local nsid
 
 	loop_dev="$(losetup -f)"
 	local genctr=1
@@ -32,7 +33,8 @@ test() {
 	_create_nvmet_subsystem --blkdev "${loop_dev}"
 
 	for ((i = 2; i <= iterations; i++)); do
-		_create_nvmet_ns --nsid "${i}" \
+		nsid=$((def_nsid + i - 1))
+		_create_nvmet_ns --nsid "${nsid}" \
 				 --blkdev "${loop_dev}" > /dev/null
 	done
 
@@ -46,7 +48,8 @@ test() {
 	_remove_nvmet_port "${port}"
 
 	for ((i = iterations; i > 1; i--)); do
-		_remove_nvmet_ns "${def_subsysnqn}" "$i"
+		nsid=$((def_nsid + i - 1))
+		_remove_nvmet_ns "${def_subsysnqn}" "${nsid}"
 	done
 
 	_remove_nvmet_subsystem "${def_subsysnqn}"

@@ -33,7 +33,7 @@ test() {
 	_setup_nvmet
 
 	_nvmet_target_setup
-	ns="${NVMET_CFS}subsystems/${def_subsysnqn}/namespaces/1"
+	ns="${NVMET_CFS}subsystems/${def_subsysnqn}/namespaces/${def_nsid}"
 
 	# fire off two enable/disable loops concurrently and wait
 	# for them to complete...

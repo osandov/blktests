@@ -52,38 +52,38 @@ test() {
 	_setup_nvmet
 
 	local iterations=20
-	local uuid
+	local uuid nsid filepath
 
 	_nvmet_target_setup
 
 	_nvme_connect_subsys
 
-	# start iteration from ns-id 2 because ns-id 1 is created
-	# by default when nvme target is setup. Also ns-id 1 is
+	# start iteration from def_nsid+1 because def_nsid is created
+	# by default when nvme target is setup. Also def_nsid is
 	# deleted when nvme target is cleaned up.
 	for ((i = 2; i <= iterations; i++)); do {
-		truncate -s "${NVME_IMG_SIZE}" "$(_nvme_def_file_path).$i"
-
-		uuid=$(_create_nvmet_ns --blkdev "$(_nvme_def_file_path).$i" \
-					--nsid "${i}")
+		nsid=$((def_nsid + i - 1))
+		filepath="$(_nvme_def_file_path).${nsid}"
+		truncate -s "${NVME_IMG_SIZE}" "$filepath"
+		uuid=$(_create_nvmet_ns --blkdev "$filepath" --nsid "${nsid}")
 
 		# wait until async request is processed and ns is created
 		if ! nvmf_wait_for_ns "${uuid}" created; then
 			echo "FAIL"
-			rm "$(_nvme_def_file_path).$i"
+			rm "$filepath"
 			break
 		fi
 
-		_remove_nvmet_ns "${def_subsysnqn}" "${i}"
+		_remove_nvmet_ns "${def_subsysnqn}" "${nsid}"
 
 		# wait until async request is processed and ns is removed
 		if ! nvmf_wait_for_ns "${uuid}" removed; then
 			echo "FAIL"
-			rm "$(_nvme_def_file_path).$i"
+			rm "$filepath"
 			break
 		fi
 
-		rm "$(_nvme_def_file_path).$i"
+		rm "$filepath"
 	}
 	done
 
