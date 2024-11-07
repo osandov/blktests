@@ -784,6 +784,76 @@ _find_nvme_ns() {
 	return 1
 }
 
+_nvmet_target_setup() {
+	local blkdev_type="${nvmet_blkdev_type}"
+	local blkdev
+	local ctrlkey=""
+	local hostkey=""
+	local subsysnqn="${def_subsysnqn}"
+	local subsys_uuid
+	local port
+	local -a ARGS
+
+	while [[ $# -gt 0 ]]; do
+		case $1 in
+			--blkdev)
+				blkdev_type="$2"
+				shift 2
+				;;
+			--ctrlkey)
+				ctrlkey="$2"
+				shift 2
+				;;
+			--hostkey)
+				hostkey="$2"
+				shift 2
+				;;
+			--subsysnqn)
+				subsysnqn="$2"
+				shift 2
+				;;
+			--subsys-uuid)
+				subsys_uuid="$2"
+				shift 2
+				;;
+			--resv_enable)
+				resv_enable="--resv_enable"
+				shift 1
+				;;
+			*)
+				echo "WARNING: unknown argument: $1"
+				shift
+				;;
+		esac
+	done
+
+	if [[ "${blkdev_type}" != "none" ]]; then
+		truncate -s "${NVME_IMG_SIZE}" "$(_nvme_def_file_path)"
+		if [[ "${blkdev_type}" == "device" ]]; then
+			blkdev="$(losetup -f --show "$(_nvme_def_file_path)")"
+		else
+			blkdev="$(_nvme_def_file_path)"
+		fi
+	fi
+
+	ARGS=(--subsysnqn "${subsysnqn}")
+	if [[ -n "${blkdev}" ]]; then
+		ARGS+=(--blkdev "${blkdev}")
+	fi
+	if [[ -n "${subsys_uuid}" ]]; then
+		ARGS+=(--uuid "${subsys_uuid}")
+	fi
+	if [[ -n "${resv_enable}" ]]; then
+		ARGS+=("${resv_enable}")
+	fi
+	_create_nvmet_subsystem "${ARGS[@]}"
+
+	port="$(_create_nvmet_port)"
+	_add_nvmet_subsys_to_port "${port}" "${subsysnqn}"
+	_create_nvmet_host "${subsysnqn}" "${def_hostnqn}" \
+			"${hostkey}" "${ctrlkey}"
+}
+
 _nvmet_target_cleanup() {
 	local ports
 	local port
