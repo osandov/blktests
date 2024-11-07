@@ -361,11 +361,13 @@ _nvmet_target_setup() {
 		esac
 	done
 
-	truncate -s "${NVME_IMG_SIZE}" "$(_nvme_def_file_path)"
-	if [[ "${blkdev_type}" == "device" ]]; then
-		blkdev="$(losetup -f --show "$(_nvme_def_file_path)")"
-	else
-		blkdev="$(_nvme_def_file_path)"
+	if [[ "${blkdev_type}" != "none" ]]; then
+		truncate -s "${NVME_IMG_SIZE}" "$(_nvme_def_file_path)"
+		if [[ "${blkdev_type}" == "device" ]]; then
+			blkdev="$(losetup -f --show "$(_nvme_def_file_path)")"
+		else
+			blkdev="$(_nvme_def_file_path)"
+		fi
 	fi
 
 	ARGS=(--subsysnqn "${subsysnqn}")
