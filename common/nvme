@@ -430,10 +430,10 @@ _fc_host_traddr() {
 }
 
 _create_nvmet_port() {
-	local trtype="${1:-$nvme_trtype}"
-	local traddr="${2:-$def_traddr}"
-	local adrfam="${3:-$def_adrfam}"
-	local trsvcid="${4:-$def_trsvcid}"
+	local trtype="${nvme_trtype}"
+	local traddr="${def_traddr}"
+	local adrfam="${def_adrfam}"
+	local trsvcid="${def_trsvcid}"
 	local portcfs
 
 	local port
