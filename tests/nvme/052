@@ -51,17 +51,14 @@ test() {
 
 	_setup_nvmet
 
-	local iterations=20
+	local i iterations=20
 	local uuid nsid filepath
 
-	_nvmet_target_setup
+	_nvmet_target_setup --blkdev none
 
 	_nvme_connect_subsys
 
-	# start iteration from def_nsid+1 because def_nsid is created
-	# by default when nvme target is setup. Also def_nsid is
-	# deleted when nvme target is cleaned up.
-	for ((i = 2; i <= iterations; i++)); do {
+	for ((i = 1; i <= iterations; i++)); do
 		nsid=$((def_nsid + i - 1))
 		filepath="$(_nvme_def_file_path).${nsid}"
 		truncate -s "${NVME_IMG_SIZE}" "$filepath"
@@ -84,7 +81,6 @@ test() {
 		fi
 
 		rm "$filepath"
-	}
 	done
 
 	_nvme_disconnect_subsys >> "${FULL}" 2>&1
