@@ -23,16 +23,16 @@ test() {
 	_setup_nvmet
 
 	local port
-	local iterations="${NVME_NUM_ITER}"
+	local i iterations="${NVME_NUM_ITER}"
 	local loop_dev
 	local nsid
 
 	loop_dev="$(losetup -f)"
 	local genctr=1
 
-	_create_nvmet_subsystem --blkdev "${loop_dev}"
+	_create_nvmet_subsystem
 
-	for ((i = 2; i <= iterations; i++)); do
+	for ((i = 1; i <= iterations; i++)); do
 		nsid=$((def_nsid + i - 1))
 		_create_nvmet_ns --nsid "${nsid}" \
 				 --blkdev "${loop_dev}" > /dev/null
