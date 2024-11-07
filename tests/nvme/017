@@ -23,16 +23,16 @@ test() {
 	_setup_nvmet
 
 	local port
-	local iterations="${NVME_NUM_ITER}"
+	local i iterations="${NVME_NUM_ITER}"
 	local nsid
 
 	truncate -s "${NVME_IMG_SIZE}" "$(_nvme_def_file_path)"
 
 	local genctr=1
 
-	_create_nvmet_subsystem --blkdev "$(_nvme_def_file_path)"
+	_create_nvmet_subsystem
 
-	for ((i = 2; i <= iterations; i++)); do
+	for ((i = 1; i <= iterations; i++)); do
 		nsid=$((def_nsid + i - 1))
 		_create_nvmet_ns --nsid "${nsid}" \
 				 --blkdev "$(_nvme_def_file_path)" > /dev/null
