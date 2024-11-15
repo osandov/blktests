@@ -10,6 +10,8 @@
 
 THROTL_DIR=$(echo "$TEST_NAME" | tr '/' '_')
 THROTL_DEV=dev_nullb
+declare THROTL_CLEAR_BASE_SUBTREE_CONTROL_IO
+declare THROTL_CLEAR_CGROUP2_DIR_CONTROL_IO
 
 group_requires() {
 	_have_root
@@ -31,8 +33,16 @@ _set_up_throtl() {
 		return 1
 	fi
 
-	echo "+io" > "$(_cgroup2_base_dir)/cgroup.subtree_control"
-	echo "+io" > "$CGROUP2_DIR/cgroup.subtree_control"
+	THROTL_CLEAR_BASE_SUBTREE_CONTROL_IO=
+	THROTL_CLEAR_CGROUP2_DIR_CONTROL_IO=
+	if ! grep -q io "$(_cgroup2_base_dir)/cgroup.subtree_control"; then
+		echo "+io" > "$(_cgroup2_base_dir)/cgroup.subtree_control"
+		THROTL_CLEAR_BASE_SUBTREE_CONTROL_IO=true
+	fi
+	if ! grep -q io "$CGROUP2_DIR/cgroup.subtree_control"; then
+		echo "+io" > "$CGROUP2_DIR/cgroup.subtree_control"
+		THROTL_CLEAR_CGROUP2_DIR_CONTROL_IO=true
+	fi
 
 	mkdir -p "$CGROUP2_DIR/$THROTL_DIR"
 	return 0;
@@ -40,8 +50,12 @@ _set_up_throtl() {
 
 _clean_up_throtl() {
 	rmdir "$CGROUP2_DIR/$THROTL_DIR"
-	echo "-io" > "$CGROUP2_DIR/cgroup.subtree_control"
-	echo "-io" > "$(_cgroup2_base_dir)/cgroup.subtree_control"
+	if [[ $THROTL_CLEAR_CGROUP2_DIR_CONTROL_IO == true ]]; then
+		echo "-io" > "$CGROUP2_DIR/cgroup.subtree_control"
+	fi
+	if [[ $THROTL_CLEAR_BASE_SUBTREE_CONTROL_IO == true ]]; then
+		echo "-io" > "$(_cgroup2_base_dir)/cgroup.subtree_control"
+	fi
 
 	_exit_cgroup2
 	_exit_null_blk
