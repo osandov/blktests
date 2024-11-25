@@ -37,7 +37,7 @@ inject_unrec_read_on_read()
 	# Inject a 'Unrecovered Read Error' (0x281) status error on a READ
 	_nvme_enable_err_inject "$1" 0 100 1 0x281 1
 
-	dd if=/dev/"$1" of=/dev/null bs=512 count=1 iflag=direct \
+	dd if=/dev/"$1" of=/dev/null bs="${LB_SZ}" count=1 iflag=direct \
 	    2> /dev/null 1>&2
 
 	_nvme_disable_err_inject "$1"
@@ -57,7 +57,7 @@ inject_invalid_status_on_read()
 	# Inject an invalid status (0x375) on a READ
 	_nvme_enable_err_inject "$1" 0 100 1 0x375 1
 
-	dd if=/dev/"$1" of=/dev/null bs=512 count=1 iflag=direct \
+	dd if=/dev/"$1" of=/dev/null bs="${LB_SZ}" count=1 iflag=direct \
 	    2> /dev/null 1>&2
 
 	_nvme_disable_err_inject "$1"
@@ -77,7 +77,7 @@ inject_write_fault_on_write()
 	# Inject a 'Write Fault' 0x280 status error on a WRITE
 	_nvme_enable_err_inject "$1" 0 100 1 0x280 1
 
-	dd if=/dev/zero of=/dev/"$1" bs=512 count=1 oflag=direct \
+	dd if=/dev/zero of=/dev/"$1" bs="${LB_SZ}" count=1 oflag=direct \
 	    2> /dev/null 1>&2
 
 	_nvme_disable_err_inject "$1"
@@ -119,7 +119,7 @@ inject_invalid_admin_cmd()
 	# Inject a 'Invalid Command Opcode' (0x1) on an invalid command (0x96)
 	 _nvme_enable_err_inject "$1" 0 100 1 0x1 1
 
-	nvme admin-passthru /dev/"$1" --opcode=0x96 --data-len=4096 \
+	nvme admin-passthru /dev/"$1" --opcode=0x96 --data-len="${LB_SZ}" \
 	    --cdw10=1 -r 2> /dev/null 1>&2
 
 	_nvme_disable_err_inject "$1"
@@ -145,7 +145,7 @@ inject_invalid_io_cmd_passthru()
 	_nvme_enable_err_inject "$ns_dev" 0 100 1 0x1 1
 
 	nvme io-passthru /dev/"$1" --opcode=0x02 --namespace-id="$ns" \
-		--data-len=512 --read --cdw10=0 --cdw11=0 --cdw12="$2" 2> /dev/null 1>&2
+		--data-len="${LB_SZ}" --read --cdw10=0 --cdw11=0 --cdw12="$2" 2> /dev/null 1>&2
 
 	_nvme_disable_err_inject "$1"
 	if ${nvme_verbose_errors}; then
@@ -173,6 +173,8 @@ test_device() {
 
 	ns_dev=${TEST_DEV##*/}
 	ctrl_dev=${ns_dev%n*}
+
+	LB_SZ=$(blockdev --getss "${TEST_DEV}")
 
 	_nvme_err_inject_setup "${ns_dev}" "${ctrl_dev}"
 
