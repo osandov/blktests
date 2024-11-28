@@ -55,6 +55,14 @@ test() {
 		echo "Configuring null_blk failed (2/2)"
 		return 1
 	fi
+	# enable io_uring when it is disabled
+	local io_uring_disabled=0
+	if [ -f /proc/sys/kernel/io_uring_disabled ]; then
+		io_uring_disabled=$(cat /proc/sys/kernel/io_uring_disabled)
+		if [ "$io_uring_disabled" != 0 ]; then
+			echo 0 > /proc/sys/kernel/io_uring_disabled
+		fi
+	fi
 	local fio_output=${RESULTS_DIR}/block/fio-output-block-035.txt
 	fio --rw=randwrite --ioengine=io_uring --iodepth=64 \
 		--direct=1 --runtime="${runtime}" --time_based=1 \
@@ -66,6 +74,10 @@ test() {
 	local fio_status=$?
 	rmdir /sys/kernel/config/nullb/nullb*
 	_exit_null_blk
+	# reset io_uring setting before exits test
+	if [ "$io_uring_disabled" != 0 ]; then
+		echo "$io_uring_disabled" > /proc/sys/kernel/io_uring_disabled
+	fi
 	if [ $fio_status != 0 ]; then
 		echo "Failed (fio status = $fio_status)"
 		return
