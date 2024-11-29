@@ -330,6 +330,37 @@ _set_nvmet_dhgroup() {
 	     "${cfs_path}/dhchap_dhgroup"
 }
 
+_enable_nvmet_ns() {
+	local subsysnqn="${def_subsysnqn}"
+	local nsid="${1:-1}"
+
+	cfs_path="${NVMET_CFS}/subsystems/${subsysnqn}"
+	ns_path="${cfs_path}/namespaces/${nsid}"
+
+	echo 1 > "${ns_path}/enable"
+}
+
+_disable_nvmet_ns() {
+	local subsysnqn="${def_subsysnqn}"
+	local nsid="${1:-1}"
+
+	cfs_path="${NVMET_CFS}/subsystems/${subsysnqn}"
+	ns_path="${cfs_path}/namespaces/${nsid}"
+
+	echo 0 > "${ns_path}/enable"
+}
+
+_set_nvmet_ns_uuid() {
+	local subsysnqn="${def_subsysnqn}"
+	local nsid="${1:-1}"
+	local uuid="${2:-$(uuidgen)}"
+
+	cfs_path="${NVMET_CFS}/subsystems/${subsysnqn}"
+	ns_path="${cfs_path}/namespaces/${nsid}"
+
+	printf "%s" "${uuid}" > "${ns_path}/device_uuid"
+}
+
 _find_nvme_passthru_loop_dev() {
 	local subsys=$1
 	local nsid
