@@ -75,11 +75,11 @@ test() {
 	local dev
 	dev="/dev/$(_find_nvme_ns "${def_subsys_uuid}")"
 	test_user_io "$dev" 1 512 > "$FULL" 2>&1 || echo FAIL
-	test_user_io "$dev" 1 511 > "$FULL" 2>&1 || echo FAIL
-	test_user_io "$dev" 1 513 > "$FULL" 2>&1 || echo FAIL
-	test_user_io "$dev" 511 1024 > "$FULL" 2>&1 || echo FAIL
-	test_user_io "$dev" 511 1023 > "$FULL" 2>&1 || echo FAIL
-	test_user_io "$dev" 511 1025 > "$FULL" 2>&1 || echo FAIL
+	test_user_io "$dev" 1 511 >> "$FULL" 2>&1 || echo FAIL
+	test_user_io "$dev" 1 513 >> "$FULL" 2>&1 || echo FAIL
+	test_user_io "$dev" 511 1024 >> "$FULL" 2>&1 || echo FAIL
+	test_user_io "$dev" 511 1023 >> "$FULL" 2>&1 || echo FAIL
+	test_user_io "$dev" 511 1025 >> "$FULL" 2>&1 || echo FAIL
 
 	if [[ ${reset_nr_hugepages} = true ]]; then
 		echo 0 > /proc/sys/vm/nr_hugepages
