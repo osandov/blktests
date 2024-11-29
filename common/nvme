@@ -862,8 +862,9 @@ _nvmet_target_setup() {
 	local hostkey=""
 	local subsysnqn="${def_subsysnqn}"
 	local subsys_uuid
-	local port
+	local port p
 	local resv_enable=""
+	local num_ports=1
 	local -a ARGS
 
 	while [[ $# -gt 0 ]]; do
@@ -891,6 +892,10 @@ _nvmet_target_setup() {
 			--resv_enable)
 				resv_enable="--resv_enable"
 				shift 1
+				;;
+			--ports)
+				num_ports="$2"
+				shift 2
 				;;
 			*)
 				echo "WARNING: unknown argument: $1"
@@ -936,8 +941,12 @@ _nvmet_target_setup() {
 	fi
 	_create_nvmet_subsystem "${ARGS[@]}"
 
-	port="$(_create_nvmet_port)"
-	_add_nvmet_subsys_to_port "${port}" "${subsysnqn}"
+	p=0
+	while (( p < num_ports )); do
+		port="$(_create_nvmet_port)"
+		_add_nvmet_subsys_to_port "${port}" "${subsysnqn}"
+		p=$(( p + 1 ))
+	done
 	_create_nvmet_host "${subsysnqn}" "${def_hostnqn}" \
 			"${hostkey}" "${ctrlkey}"
 }
