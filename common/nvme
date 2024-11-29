@@ -8,6 +8,8 @@
 def_traddr="127.0.0.1"
 def_adrfam="ipv4"
 def_trsvcid="4420"
+def_anagrpid="1"
+def_anastate="optimized"
 def_remote_wwnn="0x10001100ab000001"
 def_remote_wwpn="0x20001100ab000001"
 def_local_wwnn="0x10001100aa000001"
@@ -506,6 +508,23 @@ _create_nvmet_port() {
 	fi
 
 	echo "${port}"
+}
+
+_setup_nvmet_port_ana() {
+	local port="$1"
+	local anagrpid="${2:-$def_anagrpid}"
+	local anastate="${3:-$def_anastate}"
+	local cfsport="${NVMET_CFS}/ports/${port}"
+	local anaport="${cfsport}/ana_groups/${anagrpid}"
+
+	if [[ ! -d "${anaport}" ]] ; then
+		if [[ "${anagrpid}" -eq 1 ]]; then
+			echo "FAIL target setup failed, ANA not supported"
+			exit 1
+		fi
+		mkdir "${anaport}"
+	fi
+	echo "${anastate}" > "${anaport}/ana_state"
 }
 
 _remove_nvmet_port() {
