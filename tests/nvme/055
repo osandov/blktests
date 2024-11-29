@@ -104,7 +104,7 @@ test() {
 		fi
 
 		# disable target namespace and write to it
-		echo 0 > ${ns_path}/enable
+		echo 0 > "${ns_path}/enable"
 		nvme write --start-block=1 --block-count=0 \
 			--data-size=512 --data="/dev/urandom" "$disk" 2>>"$FULL"
 

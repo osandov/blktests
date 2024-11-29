@@ -33,13 +33,13 @@ test() {
 	local ctrlkey
 	local ctrldev
 
-	hostkey="$(nvme gen-dhchap-key -n ${def_subsysnqn} 2> /dev/null)"
+	hostkey="$(nvme gen-dhchap-key -n "${def_subsysnqn}" 2> /dev/null)"
 	if [ -z "$hostkey" ] ; then
 		echo "failed to generate host key"
 		return 1
 	fi
 
-	ctrlkey="$(nvme gen-dhchap-key -n ${def_subsysnqn} 2> /dev/null)"
+	ctrlkey="$(nvme gen-dhchap-key -n "${def_subsysnqn}" 2> /dev/null)"
 	if [ -z "$ctrlkey" ] ; then
 		echo "failed to generate ctrl key"
 		return 1

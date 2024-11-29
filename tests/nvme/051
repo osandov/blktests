@@ -37,8 +37,8 @@ test() {
 
 	# fire off two enable/disable loops concurrently and wait
 	# for them to complete...
-	ns_enable_disable_loop $ns &
-	ns_enable_disable_loop $ns &
+	ns_enable_disable_loop "$ns" &
+	ns_enable_disable_loop "$ns" &
 	wait
 
 	_nvmet_target_cleanup
