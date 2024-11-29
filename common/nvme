@@ -529,6 +529,8 @@ _setup_nvmet_port_ana() {
 
 _remove_nvmet_port() {
 	local port="$1"
+	local cfsport="${NVMET_CFS}/ports/${port}"
+	local a
 
 	if [[ "${nvme_trtype}" == "fc" ]]; then
 		_nvme_fcloop_del_tport "$(_remote_wwnn "$port")" \
@@ -537,7 +539,11 @@ _remove_nvmet_port() {
 				       "$(_remote_wwnn "$port")" \
 				       "$(_remote_wwpn "$port")"
 	fi
-	rmdir "${NVMET_CFS}/ports/${port}"
+	for a in "${cfsport}/ana_groups/"*; do
+		[[ "${a##*/}" == "1" ]] && continue
+		rmdir "${a}"
+	done
+	rmdir "${cfsport}"
 }
 
 # Wait for the namespace with specified uuid to fulfill the specified condtion,
