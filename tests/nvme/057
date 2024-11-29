@@ -1,0 +1,97 @@
+#!/bin/bash
+# SPDX-License-Identifier: GPL-3.0+
+# Copyright (C) 2024 Hannes Reinecke (SUSE) <hare@suse.de>
+#
+# Test nvme fabrics controller ANA failover during I/O
+
+. tests/nvme/rc
+
+DESCRIPTION="test nvme fabrics controller ANA failover during I/O"
+
+requires() {
+	_nvme_requires
+	_have_loop
+	_have_fio
+	_require_nvme_trtype_is_fabrics
+}
+
+set_conditions() {
+	_set_nvme_trtype "$@"
+}
+
+failback() {
+	local portno=0
+
+	for port in "$@"; do
+		if (( portno == 0 )); then
+			_setup_nvmet_port_ana "${port}" 1 "optimized"
+		elif (( portno == 1 )); then
+			_setup_nvmet_port_ana "${port}" 1 "non-optimized"
+		else
+			_setup_nvmet_port_ana "${port}" 1 "inaccessible"
+		fi
+		portno=$(( portno + 1 ))
+	done
+}
+
+failover() {
+	local portno=0
+
+	for port in "$@"; do
+		if (( portno == 2 )); then
+			_setup_nvmet_port_ana "${port}" 1 "optimized"
+		elif (( portno == 3 )); then
+			_setup_nvmet_port_ana "${port}" 1 "non-optimized"
+		else
+			_setup_nvmet_port_ana "${port}" 1 "inaccessible"
+		fi
+		portno=$(( portno + 1))
+	done
+}
+
+test() {
+	local fio_pid
+	local -a ports
+	local port
+	local ns
+
+	echo "Running ${TEST_NAME}"
+
+	_setup_nvmet
+
+	_nvmet_target_setup --ports 4
+
+	_get_nvmet_ports "${def_subsysnqn}" ports
+	failback "${ports[@]}"
+
+	for port in "${ports[@]}"; do
+		_nvme_connect_subsys --port "${port}"
+	done
+
+	# start fio job
+	ns=$(_find_nvme_ns "$def_subsys_uuid")
+	_run_fio_verify_io --filename="/dev/${ns}" \
+			   --group_reporting --ramp_time=5 \
+			   --time_based --runtime=1m &> "$FULL" &
+	fio_pid=$!
+	sleep 5
+
+	# switch port status
+	echo "ANA failover"
+	failover "${ports[@]}"
+
+	sleep 10
+
+	# switch back to original state
+	echo "ANA failback"
+	failback "${ports[@]}"
+
+	sleep 10
+
+	{ kill "${fio_pid}"; wait; } &> /dev/null
+
+	_nvme_disconnect_subsys
+	_nvmet_target_cleanup
+
+	echo "Test complete"
+}
