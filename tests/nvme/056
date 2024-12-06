@@ -1,0 +1,269 @@
+#!/bin/bash
+# SPDX-License-Identifier: GPL-3.0+
+# Copyright (C) 2024 Aurelien Aptel <aaptel@nvidia.com>
+#
+# Test zero-copy offload. This test requires hardware that supports the ULP DDP
+# infrastructure.
+
+. tests/nvme/rc
+
+DESCRIPTION="enable zero copy offload and run rw traffic"
+TIMED=1
+
+iface_idx=""
+
+# these vars get updated after each call to connect_run_disconnect()
+nb_packets=0
+nb_bytes=0
+nb_offload_packets=0
+nb_offload_bytes=0
+offload_bytes_ratio=0
+offload_packets_ratio=0
+
+requires() {
+	_nvme_requires
+	_require_remote_nvme_target
+	_require_nvme_trtype tcp
+	_have_kernel_option ULP_DDP
+	# require nvme-tcp as a module to be able to change the ddp_offload param
+	_have_module nvme_tcp && _have_module_param nvme_tcp ddp_offload
+	_have_fio
+	_have_program ip
+	_have_program ethtool
+	_have_kernel_source && _have_program python3 && have_netlink_cli
+	have_iface
+}
+
+have_netlink_cli() {
+	local cli
+	cli="${KERNELSRC}/tools/net/ynl/cli.py"
+
+	if ! [ -f "$cli" ]; then
+		SKIP_REASONS+=("Kernel sources do not have tools/net/ynl/cli.py")
+		return 1
+	fi
+
+	if ! "$cli" -h &> /dev/null; then
+		SKIP_REASONS+=("Cannot run the kernel tools/net/ynl/cli.py")
+		return 1;
+	fi
+
+	if ! [ -f "${KERNELSRC}/Documentation/netlink/specs/ulp_ddp.yaml" ]; then
+		SKIP_REASONS+=("Kernel sources do not have the ULP DDP netlink specs")
+		return 1
+	fi
+}
+
+have_iface() {
+	if [ -z "${NVME_IFACE}" ]; then
+		SKIP_REASONS+=("NVME_IFACE not set")
+		return 1
+	fi
+	return 0
+}
+
+set_conditions() {
+	_set_nvme_trtype "$@"
+}
+
+netlink_cli() {
+	"${KERNELSRC}/tools/net/ynl/cli.py" \
+		--spec "${KERNELSRC}/Documentation/netlink/specs/ulp_ddp.yaml" \
+		"$@"
+}
+
+eth_stat() {
+	ethtool -S "${NVME_IFACE}" | awk "/ $1:/ { print \$2 }"
+}
+
+ddp_stat() {
+	netlink_cli --do stats-get --json "{\"ifindex\": $iface_idx}" \
+		| awk -F: "/'$1'/{print \$2;}" | tr -d '{},'
+}
+
+ddp_caps() {
+	local out
+	out="$(netlink_cli --do caps-get --json "{\"ifindex\": $iface_idx}")"
+	echo "$out" | tr '{},' '\n' | tr -d ' '| awk -F: "/$1/ { print \$2 }"
+}
+
+configure_ddp() {
+	local mod_param
+	local cap
+
+	mod_param=$1
+	cap=$2
+
+	echo "=== configured with ddp_offload=$mod_param and caps=$cap ==="
+
+	# set ddp_offload module param
+	modprobe -q -r nvme-tcp
+	modprobe -q nvme-tcp ddp_offload="$mod_param"
+
+	# set capabilities
+	netlink_cli --do caps-set --json "{\"ifindex\": $iface_idx, \"wanted\": $cap, \"wanted_mask\": 3}" >> "$FULL" 2>&1
+}
+
+connect_run_disconnect() {
+	local io_size nvme_dev
+
+	# offload stat counters
+	# sockets
+	local beg_sk_add beg_sk_add_fail beg_sk_del
+	local end_sk_add end_sk_add_fail end_sk_del
+	# loss
+	local beg_drop beg_resync
+	local end_drop end_resync
+	# bw stats
+	local beg_off_bytes beg_eth_bytes beg_off_packets beg_eth_packets
+	local end_off_bytes end_eth_bytes end_off_packets end_eth_packets
+	# pdu offload setup/teardown
+	local end_setup beg_setup_fail end_setup_fail end_teardown
+
+	local nb_drop drop_ratio
+	local nb_resync resync_ratio
+
+	io_size=$1
+
+	beg_sk_add=$(ddp_stat rx-nvme-tcp-sk-add)
+	beg_sk_add_fail=$(ddp_stat rx-nvme-tcp-sk-add-fail)
+	beg_sk_del=$(ddp_stat rx-nvme-tcp-sk-del)
+	beg_setup_fail=$(ddp_stat rx-nvme-tcp-setup-fail)
+	beg_drop=$(ddp_stat rx-nvme-tcp-drop)
+	beg_resync=$(ddp_stat rx-nvme-tcp-resync)
+	beg_off_packets=$(ddp_stat rx-nvme-tcp-packets)
+	beg_off_bytes=$(ddp_stat rx-nvme-tcp-bytes)
+	beg_eth_packets=$(eth_stat rx_packets)
+	beg_eth_bytes=$(eth_stat rx_bytes)
+	_nvme_connect_subsys --hdr-digest --data-digest --nr-io-queues 8
+
+	nvme_dev="/dev/$(_find_nvme_ns "${def_subsys_uuid}")"
+
+	local common_args=(
+		--blocksize_range="$io_size"
+		--rw=randrw
+		--numjobs=8
+		--iodepth=128
+		--name=randrw
+		--ioengine=libaio
+		--time_based
+		--runtime="$TIMEOUT"
+		--direct=1
+		--invalidate=1
+		--randrepeat=1
+		--norandommap
+		--filename="$nvme_dev"
+	)
+
+	echo "IO size: $io_size"
+
+	_run_fio "${common_args[@]}"
+	_nvme_disconnect_subsys >> "$FULL" 2>&1
+
+	end_sk_add=$(ddp_stat rx-nvme-tcp-sk-add)
+	end_sk_add_fail=$(ddp_stat rx-nvme-tcp-sk-add-fail)
+	end_sk_del=$(ddp_stat rx-nvme-tcp-sk-del)
+	end_setup=$(ddp_stat rx-nvme-tcp-setup)
+	end_setup_fail=$(ddp_stat rx-nvme-tcp-setup-fail)
+	end_teardown=$(ddp_stat rx-nvme-tcp-teardown)
+	end_drop=$(ddp_stat rx-nvme-tcp-drop)
+	end_resync=$(ddp_stat rx-nvme-tcp-resync)
+	end_off_packets=$(ddp_stat rx-nvme-tcp-packets)
+	end_eth_packets=$(eth_stat rx_packets)
+	end_off_bytes=$(ddp_stat rx-nvme-tcp-bytes)
+	end_eth_bytes=$(eth_stat rx_bytes)
+
+	echo "Offloaded sockets: $((end_sk_add - beg_sk_add))"
+	echo "Failed sockets:    $((end_sk_add_fail - beg_sk_add_fail))"
+	echo "Unoffloaded sockets:   $((end_sk_del - beg_sk_del))"
+	echo "Offload packet leaked: $((end_setup - end_teardown))"
+	echo "Failed packet setup:   $((end_setup_fail - beg_setup_fail))"
+
+	# global var results
+	nb_drop=$(( end_drop - beg_drop ))
+	nb_resync=$(( end_resync - beg_resync ))
+	nb_packets=$(( end_eth_packets - beg_eth_packets ))
+	nb_offload_packets=$(( end_off_packets - beg_off_packets ))
+	nb_bytes=$(( end_eth_bytes - beg_eth_bytes ))
+	nb_offload_bytes=$(( end_off_bytes - beg_off_bytes ))
+
+	offload_packets_ratio=0
+	offload_bytes_ratio=0
+
+	# sanity check and avoid div by zero in ratio calculation
+	if [[ nb_bytes -eq 0 || nb_packets -eq 0 ]]; then
+		echo "No traffic: $nb_bytes bytes, $nb_packets packets"
+		return
+	fi
+
+	offload_packets_ratio=$(( nb_offload_packets*100/nb_packets ))
+	offload_bytes_ratio=$(( nb_offload_bytes*100/nb_bytes ))
+
+	drop_ratio=$(( nb_drop*100/nb_packets ))
+	resync_ratio=$(( nb_resync*100/nb_packets ))
+	[[ drop_ratio -gt 5 ]] && echo "High drop ratio: $drop_ratio %"
+	[[ resync_ratio -gt 5 ]] && echo "High resync ratio: $resync_ratio %"
+}
+
+test() {
+	local starting_ddp
+	local starting_cap
+
+	: "${TIMEOUT:=30}"
+
+	echo "Running ${TEST_NAME}"
+
+	# get iface index
+	iface_idx=$(ip address | awk -F: "/${NVME_IFACE}/ { print \$1; exit; }")
+
+	# check hw supports ddp
+	if [[ $(( $(ddp_caps hw) & 3)) -ne 3 ]]; then
+		SKIP_REASONS+=("${NVME_IFACE} does not support nvme-tcp ddp offload")
+		return
+	fi
+
+	_setup_nvmet
+	_nvmet_target_setup
+
+	starting_ddp="$(cat "/sys/module/nvme_tcp/parameters/ddp_offload")"
+	starting_cap="$(ddp_caps active)"
+
+	# if any of the offload knobs are disabled, no offload should occur
+	# and offloaded packets & bytes should be zero
+
+	configure_ddp N 0
+	connect_run_disconnect 32k-1M
+	echo "Offloaded packets: $nb_offload_packets"
+	echo "Offloaded bytes: $nb_offload_bytes"
+
+	configure_ddp N 3
+	connect_run_disconnect 32k-1M
+	echo "Offloaded packets: $nb_offload_packets"
+	echo "Offloaded bytes: $nb_offload_bytes"
+
+	configure_ddp Y 0
+	connect_run_disconnect 32k-1M
+	echo "Offloaded packets: $nb_offload_packets"
+	echo "Offloaded bytes: $nb_offload_bytes"
+
+	# if everything is enabled, the offload should happen for large IOs only
+	configure_ddp Y 3
+
+	connect_run_disconnect 32k-1M
+	[[ nb_offload_packets -lt 100 ]] && echo "Low offloaded packets: $nb_offload_packets"
+	[[ nb_offload_bytes -lt 32768 ]] && echo "Low offloaded bytes: $nb_offload_bytes"
+	[[ offload_bytes_ratio -lt 90 ]] && echo "Low offloaded bytes ratio: $offload_bytes_ratio %"
+	[[ offload_packets_ratio -lt 95 ]] && echo "Low offloaded packets ratio: $offload_packets_ratio %"
+
+	# small IO should be under the offload threshold, ratio should be zero
+	connect_run_disconnect 4k-16k
+	echo "Offload bytes ratio: $offload_bytes_ratio %"
+	echo "Offload packets ratio: $offload_packets_ratio %"
+
+	_nvmet_target_cleanup
+
+	# restore starting config
+	configure_ddp "$starting_ddp" "$starting_cap" > /dev/null
+
+	echo "Test complete"
+}

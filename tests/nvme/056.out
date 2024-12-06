@@ -1,0 +1,44 @@
+Running nvme/056
+=== configured with ddp_offload=N and caps=0 ===
+IO size: 32k-1M
+Offloaded sockets: 0
+Failed sockets:    0
+Unoffloaded sockets:   0
+Offload packet leaked: 0
+Failed packet setup:   0
+Offloaded packets: 0
+Offloaded bytes: 0
+=== configured with ddp_offload=N and caps=3 ===
+IO size: 32k-1M
+Offloaded sockets: 0
+Failed sockets:    0
+Unoffloaded sockets:   0
+Offload packet leaked: 0
+Failed packet setup:   0
+Offloaded packets: 0
+Offloaded bytes: 0
+=== configured with ddp_offload=Y and caps=0 ===
+IO size: 32k-1M
+Offloaded sockets: 0
+Failed sockets:    0
+Unoffloaded sockets:   0
+Offload packet leaked: 0
+Failed packet setup:   0
+Offloaded packets: 0
+Offloaded bytes: 0
+=== configured with ddp_offload=Y and caps=3 ===
+IO size: 32k-1M
+Offloaded sockets: 8
+Failed sockets:    0
+Unoffloaded sockets:   8
+Offload packet leaked: 0
+Failed packet setup:   0
+IO size: 4k-16k
+Offloaded sockets: 8
+Failed sockets:    0
+Unoffloaded sockets:   8
+Offload packet leaked: 0
+Failed packet setup:   0
+Offload bytes ratio: 0 %
+Offload packets ratio: 0 %
+Test complete

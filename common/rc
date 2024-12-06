@@ -148,6 +148,14 @@ _have_loop() {
 	_have_driver loop && _have_program losetup
 }
 
+_have_kernel_source() {
+	if [ -z "${KERNELSRC}" ]; then
+		SKIP_REASONS+=("KERNELSRC not set")
+		return 1
+	fi
+	return 0
+}
+
 _have_blktrace() {
 	# CONFIG_BLK_DEV_IO_TRACE might still be disabled, but this is easier
 	# to check. We can fix it if someone complains.

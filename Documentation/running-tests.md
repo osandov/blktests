@@ -124,6 +124,15 @@ The NVMe tests can be additionally parameterized via environment variables.
   be skipped and this script gets called. This makes it possible to run
   the fabric nvme tests against a real target.
 
+#### NVMe-TCP zero-copy offload
+
+The NVMe-TCP ZC offload tests use a couple more variables.
+
+- KERNELSRC: Path to running kernel sources.
+  Needed for the script to configure the offload.
+- NVME_IFACE: Name of the interface the offload should be enabled on.
+  This should be the same interface the NVMe connection is made with.
+
 ### Running nvme-rdma and SRP tests
 
 These tests will use the siw (soft-iWARP) driver by default. The rdma_rxe

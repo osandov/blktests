@@ -30,6 +30,7 @@ Some tests require the following:
 - nbd-client and nbd-server (Debian) or nbd (Fedora, openSUSE, Arch Linux)
 - dmsetup (Debian) or device-mapper (Fedora, openSUSE, Arch Linux)
 - rublk (`cargo install --version=^0.1 rublk`) for ublk test
+- python3, ethtool, iproute2 for nvme-tcp zero-copy offload test
 
 Build blktests with `make`. Optionally, install it to a known location with
 `make install` (`/usr/local/blktests` by default, but this can be changed by
