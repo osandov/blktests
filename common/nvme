@@ -22,6 +22,7 @@ _check_conflict_and_set_default NVME_IMG_SIZE nvme_img_size 1G
 _check_conflict_and_set_default NVME_NUM_ITER nvme_num_iter 1000
 nvmet_blkdev_type=${nvmet_blkdev_type:-"device"}
 NVMET_BLKDEV_TYPES=${NVMET_BLKDEV_TYPES:-"device file"}
+nvme_target_control="${NVME_TARGET_CONTROL:-}"
 NVMET_CFS="/sys/kernel/config/nvmet/"
 nvme_trtype=${nvme_trtype:-}
 nvme_adrfam=${nvme_adrfam:-}
@@ -157,6 +158,10 @@ _cleanup_nvmet() {
 		fi
 	done
 
+	if [[ -n "${nvme_target_control}" ]]; then
+		return
+	fi
+
 	for port in "${NVMET_CFS}"/ports/*; do
 		name=$(basename "${port}")
 		echo "WARNING: Test did not clean up port: ${name}"
@@ -208,6 +213,17 @@ _cleanup_nvmet() {
 
 _setup_nvmet() {
 	_register_test_cleanup _cleanup_nvmet
+
+	if [[ -n "${nvme_target_control}" ]]; then
+		def_hostnqn="$(${nvme_target_control} config --show-hostnqn)"
+		def_hostid="$(${nvme_target_control} config --show-hostid)"
+		def_traddr="$(${nvme_target_control} config --show-traddr)"
+		def_trsvcid="$(${nvme_target_control} config --show-trsvid)"
+		def_subsys_uuid="$(${nvme_target_control} config --show-subsys-uuid)"
+		def_subsysnqn="$(${nvme_target_control} config --show-subsysnqn)"
+		return
+	fi
+
 	modprobe -q nvmet
 	if [[ "${nvme_trtype}" != "loop" ]]; then
 		modprobe -q nvmet-"${nvme_trtype}"
@@ -320,17 +336,23 @@ _nvme_connect_subsys() {
 		esac
 	done
 
-	if [[ -z "${port}" ]]; then
-		local ports
-
-		_get_nvmet_ports "${subsysnqn}" ports
-		port="${ports[0]##*/}"
+	if [[ -n "${nvme_target_control}" && -z "${port}" ]]; then
+		ARGS+=(--transport "$(${nvme_target_control} config --show-trtype)")
+		ARGS+=(--traddr "${def_traddr}")
+		ARGS+=(--trsvcid "${def_trsvcid}")
+	else
 		if [[ -z "${port}" ]]; then
-			echo "WARNING: no port found"
-			return 1
+			local ports
+
+			_get_nvmet_ports "${subsysnqn}" ports
+			port="${ports[0]##*/}"
+			if [[ -z "${port}" ]]; then
+				echo "WARNING: no port found"
+				return 1
+			fi
 		fi
+		_get_nvmet_port_params "${port}" ARGS
 	fi
-	_get_nvmet_port_params "${port}" ARGS
 	ARGS+=(--nqn "${subsysnqn}")
 	ARGS+=(--hostnqn="${hostnqn}")
 	ARGS+=(--hostid="${hostid}")
@@ -793,6 +815,7 @@ _nvmet_target_setup() {
 	local subsysnqn="${def_subsysnqn}"
 	local subsys_uuid
 	local port
+	local resv_enable=""
 	local -a ARGS
 
 	while [[ $# -gt 0 ]]; do
@@ -837,6 +860,22 @@ _nvmet_target_setup() {
 		fi
 	fi
 
+	if [[ -n "${nvme_target_control}" ]]; then
+		if [[ -n "${hostkey}" ]]; then
+			ARGS+=(--hostkey "${hostkey}")
+		fi
+		if [[ -n "${ctrlkey}" ]]; then
+			ARGS+=(--ctrkey "${ctrlkey}")
+		fi
+
+		"${nvme_target_control}" setup \
+					 --subsysnqn "${subsysnqn}" \
+					 --subsys-uuid "${subsys_uuid:-$def_subsys_uuid}" \
+					 --hostnqn "${def_hostnqn}" \
+					 "${ARGS[@]}" &> /dev/null
+		return
+	fi
+
 	ARGS=(--subsysnqn "${subsysnqn}")
 	if [[ -n "${blkdev}" ]]; then
 		ARGS+=(--blkdev "${blkdev}")
@@ -878,6 +917,13 @@ _nvmet_target_cleanup() {
 				;;
 		esac
 	done
+
+	if [[ -n "${nvme_target_control}" ]]; then
+		"${nvme_target_control}" cleanup \
+			--subsysnqn "${subsysnqn}" \
+			> /dev/null
+		return
+	fi
 
 	_get_nvmet_ports "${subsysnqn}" ports
 

@@ -603,6 +603,10 @@ _run_group() {
 	# shellcheck disable=SC1090
 	. "tests/${group}/rc"
 
+	if declare -fF group_setup >/dev/null; then
+		group_setup
+	fi
+
 	if declare -fF group_requires >/dev/null; then
 		group_requires
 		if [[ -v SKIP_REASONS ]]; then

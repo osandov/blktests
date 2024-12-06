@@ -113,6 +113,13 @@ _nvme_requires() {
 	return 0
 }
 
+group_setup() {
+	if [[ -n "${nvme_target_control}" ]]; then
+		NVMET_TRTYPES="$(${nvme_target_control} config --show-trtype)"
+		NVMET_BLKDEV_TYPES="$(${nvme_target_control} config --show-blkdev-type)"
+	fi
+}
+
 group_requires() {
 	_have_root
 	_NVMET_TRTYPES_is_valid
@@ -391,6 +398,13 @@ _nvmet_passthru_target_cleanup() {
 				;;
 		esac
 	done
+
+	if [[ -n "${nvme_target_control}" ]]; then
+		eval "${nvme_target_control}" cleanup \
+			--subsysnqn "${subsysnqn}" \
+			> /dev/null
+		return
+	fi
 
 	_get_nvmet_ports "${subsysnqn}" ports
 

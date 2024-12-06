@@ -120,6 +120,9 @@ The NVMe tests can be additionally parameterized via environment variables.
 - NVME_NUM_ITER: 1000 (default)
   The number of iterations a test should do. This parameter had an old name
   'nvme_num_iter'. The old name is still usable, but not recommended.
+- NVME_TARGET_CONTROL: When defined, the generic target setup/cleanup code will
+  be skipped and this script gets called. This makes it possible to run
+  the fabric nvme tests against a real target.
 
 ### Running nvme-rdma and SRP tests
 
@@ -167,3 +170,33 @@ if ! findmnt -t configfs /sys/kernel/config > /dev/null; then
 	mount -t configfs configfs /sys/kernel/config
 fi
 ```
+### NVME_TARGET_CONTROL
+
+When NVME_TARGET_CONTROL is set, blktests will call the script which the
+environment variable points to, to fetch the configuration values to be used for
+the runs, e.g subsysnqn or hostnqn. This allows the blktest to be run against
+external configured/setup targets.
+
+The blktests expects that the script interface implements following
+commands:
+
+config:
+  --show-blkdev-type
+  --show-trtype
+  --show-hostnqn
+  --show-hostid
+  --show-host-traddr
+  --show-traddr
+  --show-trsvid
+  --show-subsys-uuid
+  --show-subsysnqn
+
+setup:
+  --subsysnqn SUBSYSNQN
+  --subsys-uuid SUBSYS_UUID
+  --hostnqn HOSTNQN
+  --ctrlkey CTRLKEY
+  --hostkey HOSTKEY
+
+cleanup:
+  --subsysnqn SUBSYSNQN
