@@ -1,0 +1,119 @@
+#!/bin/bash
+# SPDX-License-Identifier: GPL-3.0+
+# Copyright (C) 2024 Nilay Shroff
+#
+# Regression test for commit 505363957fad ("nvmet: fix nvme
+# status code when namespace is disabled"). We may hit this
+# regression using nvme/052 however that depends on the udev
+# rules which triggers the IO to a ns after it's enabled.
+# The udev rules could change from one distro to another and
+# it's not in our control. So we implemented this test where
+# we have full control of the test.
+
+. tests/nvme/rc
+
+DESCRIPTION="Test nvme write to a loop target ns just after ns is disabled"
+
+QUICK=1
+
+requires() {
+	_nvme_requires
+	_have_loop
+	_require_nvme_trtype_is_loop
+	_have_kernel_option DEBUG_ATOMIC_SLEEP
+}
+
+set_conditions() {
+	_set_nvme_trtype "$@"
+}
+
+nvmf_disable_ns_change_aen() {
+
+	local disk="$1"
+	local timeout="5"
+	local aen_conf mask_ns_change start_time end_time
+
+	# get async event configuration value
+	aen_conf=$(nvme get-feature "$disk" --feature-id=0xB | cut -d':' -f3)
+
+	# mask async ns change event notfication
+	mask_ns_change=$(( aen_conf & 0xFEFF ))
+
+	# stop receiving aen event for ns change from target
+	nvme set-feature "$disk" --feature-id=0xB \
+			--value="$mask_ns_change" 2>>"$FULL" 1>&2
+
+	start_time=$(date +%s)
+
+	while true; do
+		aen_conf=$(nvme get-feature "$disk" \
+			--feature-id=0xB | cut -d':' -f3)
+
+		# Validate whether ns-changed notification is masked or not;
+		# If it's already masked then break and return success
+		if ! (( aen_conf & 0x100 )); then
+			break
+		fi
+
+		sleep 1
+
+		end_time=$(date +%s)
+
+		if (( end_time - start_time > timeout )); then
+			echo "can't mask ns-changed async event "\
+				"notification within $timeout seconds"
+			return 1
+		fi
+	done
+
+	return 0
+}
+
+test() {
+	echo "Running ${TEST_NAME}"
+
+	local iteration=1 i=0
+	local subsys_path ns_path disk
+
+	_setup_nvmet
+
+	_nvmet_target_setup
+
+	_nvme_connect_subsys
+
+	subsys_path="${NVMET_CFS}/subsystems/${def_subsysnqn}"
+	ns_path="${subsys_path}/namespaces/${def_nsid}"
+
+	while (( i < iteration )); do
+		# Wait until async request is processed and default ns
+		# is created
+		if ! _nvmf_wait_for_ns "${def_subsys_uuid}" created; then
+			echo "FAIL"
+			break
+		fi
+
+		disk="/dev/$(_find_nvme_ns "${def_subsys_uuid}")"
+
+		# Mask ns change async event notification from target. It
+		# would ensure that when we disable the target ns, the host
+		# would not receive ns removal notification from target and
+		# so from host we can attempt writing to a disabled ns.
+		if ! nvmf_disable_ns_change_aen "${disk}"; then
+			echo "FAIL"
+			break
+		fi
+
+		# disable target namespace and write to it
+		echo 0 > ${ns_path}/enable
+		nvme write --start-block=1 --block-count=0 \
+			--data-size=512 --data="/dev/urandom" "$disk" 2>>"$FULL"
+
+		((i++))
+	done
+
+	_nvme_disconnect_subsys >> "$FULL" 2>&1
+
+	_nvmet_target_cleanup
+
+	echo "Test complete"
+}
