@@ -472,12 +472,22 @@ static struct ublk_dev *ublk_ctrl_init()
 	return dev;
 }
 
-static int ublk_queue_cmd_buf_sz(struct ublk_queue *q)
+static int __ublk_queue_cmd_buf_sz(unsigned depth)
 {
-	int size =  q->q_depth * sizeof(struct ublksrv_io_desc);
+	int size =  depth * sizeof(struct ublksrv_io_desc);
 	unsigned int page_sz = getpagesize();
 
 	return round_up(size, page_sz);
+}
+
+static int ublk_queue_max_cmd_buf_sz(void)
+{
+	return __ublk_queue_cmd_buf_sz(UBLK_MAX_QUEUE_DEPTH);
+}
+
+static int ublk_queue_cmd_buf_sz(struct ublk_queue *q)
+{
+	return __ublk_queue_cmd_buf_sz(q->q_depth);
 }
 
 static void ublk_queue_deinit(struct ublk_queue *q)
@@ -516,8 +526,7 @@ static int ublk_queue_init(struct ublk_queue *q)
 	q->tid = gettid();
 
 	cmd_buf_size = ublk_queue_cmd_buf_sz(q);
-	off = UBLKSRV_CMD_BUF_OFFSET +
-		q->q_id * (UBLK_MAX_QUEUE_DEPTH * sizeof(struct ublksrv_io_desc));
+	off = UBLKSRV_CMD_BUF_OFFSET + q->q_id * ublk_queue_max_cmd_buf_sz();
 	q->io_cmd_buf = (char *)mmap(0, cmd_buf_size, PROT_READ,
 			MAP_SHARED | MAP_POPULATE, dev->fds[0], off);
 	if (q->io_cmd_buf == MAP_FAILED) {
