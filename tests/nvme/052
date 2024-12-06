@@ -20,32 +20,6 @@ set_conditions() {
 	_set_nvme_trtype "$@"
 }
 
-# Wait for the namespace with specified uuid to fulfill the specified condtion,
-# "created" or "removed".
-nvmf_wait_for_ns() {
-	local ns
-	local timeout="5"
-	local uuid="$1"
-	local condition="$2"
-
-	ns=$(_find_nvme_ns "${uuid}" 2>> "$FULL")
-
-	start_time=$(date +%s)
-	while [[ -z "$ns" && "$condition" == created ]] ||
-		      [[ -n "$ns" && "$condition" == removed ]]; do
-		sleep .1
-		end_time=$(date +%s)
-		if (( end_time - start_time > timeout )); then
-			echo "namespace with uuid \"${uuid}\" not " \
-				"${condition} within ${timeout} seconds"
-			return 1
-		fi
-		ns=$(_find_nvme_ns "${uuid}" 2>> "$FULL")
-	done
-
-	return 0
-}
-
 test() {
 	echo "Running ${TEST_NAME}"
 
@@ -65,7 +39,7 @@ test() {
 		uuid=$(_create_nvmet_ns --blkdev "$filepath" --nsid "${nsid}")
 
 		# wait until async request is processed and ns is created
-		if ! nvmf_wait_for_ns "${uuid}" created; then
+		if ! _nvmf_wait_for_ns "${uuid}" created; then
 			echo "FAIL"
 			rm "$filepath"
 			break
@@ -74,7 +48,7 @@ test() {
 		_remove_nvmet_ns "${def_subsysnqn}" "${nsid}"
 
 		# wait until async request is processed and ns is removed
-		if ! nvmf_wait_for_ns "${uuid}" removed; then
+		if ! _nvmf_wait_for_ns "${uuid}" removed; then
 			echo "FAIL"
 			rm "$filepath"
 			break

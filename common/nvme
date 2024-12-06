@@ -483,6 +483,32 @@ _remove_nvmet_port() {
 	rmdir "${NVMET_CFS}/ports/${port}"
 }
 
+# Wait for the namespace with specified uuid to fulfill the specified condtion,
+# "created" or "removed".
+_nvmf_wait_for_ns() {
+	local ns
+	local timeout="5"
+	local uuid="$1"
+	local condition="$2"
+
+	ns=$(_find_nvme_ns "${uuid}" 2>> "$FULL")
+
+	start_time=$(date +%s)
+	while [[ -z "$ns" && "$condition" == created ]] ||
+		      [[ -n "$ns" && "$condition" == removed ]]; do
+		sleep .1
+		end_time=$(date +%s)
+		if (( end_time - start_time > timeout )); then
+			echo "namespace with uuid \"${uuid}\" not " \
+			     "${condition} within ${timeout} seconds"
+			return 1
+		fi
+		ns=$(_find_nvme_ns "${uuid}" 2>> "$FULL")
+	done
+
+	return 0
+}
+
 _create_nvmet_ns() {
 	local subsysnqn="${def_subsysnqn}"
 	local nsid="${def_nsid}"
