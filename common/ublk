@@ -30,6 +30,8 @@ _get_ublk_daemon_pid() {
 }
 
 _init_ublk() {
+	_io_uring_enable
+
 	_remove_ublk_devices > /dev/null 2>&1
 
 	modprobe -rq ublk_drv
@@ -45,4 +47,5 @@ _exit_ublk() {
 	_remove_ublk_devices
 	udevadm settle
 	modprobe -r -q ublk_drv
+	_io_uring_restore
 }
