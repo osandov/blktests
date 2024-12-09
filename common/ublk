@@ -38,6 +38,9 @@ _init_ublk() {
 	fi
 
 	udevadm settle
+
+	_io_uring_enable
+
 	return 0
 }
 
@@ -45,4 +48,5 @@ _exit_ublk() {
 	_remove_ublk_devices
 	udevadm settle
 	modprobe -r -q ublk_drv
+	_io_uring_restore
 }
