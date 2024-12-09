@@ -542,3 +542,21 @@ _check_conflict_and_set_default()
 
 	eval "${new_name_checked}=true"
 }
+
+_io_uring_enable()
+{
+	# enable io_uring when it is disabled
+	io_uring_disabled=0
+	if [ -f /proc/sys/kernel/io_uring_disabled ]; then
+		io_uring_disabled=$(cat /proc/sys/kernel/io_uring_disabled)
+		if [ "$io_uring_disabled" != 0 ]; then
+			echo 0 > /proc/sys/kernel/io_uring_disabled
+		fi
+	fi
+}
+_io_uring_restore()
+{
+	if [ "$io_uring_disabled" != 0 ]; then
+		echo "$io_uring_disabled" > /proc/sys/kernel/io_uring_disabled
+	fi
+}
