@@ -1,0 +1,78 @@
+#!/bin/bash
+# SPDX-License-Identifier: GPL-2.0+
+# Copyright (C) 2024 Google LLC
+#
+# Test concurrent requeuing of zoned writes and request queue freezing. It
+# triggers a hang in the kernel 6.10..6.12 zone write plugging implementation.
+
+. tests/zbd/rc
+. common/scsi_debug
+
+DESCRIPTION="test requeuing of zoned writes and queue freezing"
+TIMED=1
+
+requires() {
+	_have_fio_zbd_zonemode
+}
+
+toggle_iosched() {
+	local iosched
+
+	while true; do
+		for iosched in none mq-deadline; do
+			echo "${iosched}" > "/sys/class/block/$(basename "$zdev")/queue/scheduler"
+			sleep .1
+		done
+	done
+}
+
+test() {
+	echo "Running ${TEST_NAME}"
+
+	# To do: make this test pass for qd > 1.
+	local qd=1
+	echo "$qd"
+	local scsi_debug_params=(
+		delay=0
+		dev_size_mb=1024
+		every_nth=$((2 * qd))
+		max_queue="${qd}"
+		opts=0x8000          # SDEBUG_OPT_HOST_BUSY
+		sector_size=4096
+		zbc=host-managed
+		zone_nr_conv=0
+		zone_size_mb=4
+	)
+	_init_scsi_debug "${scsi_debug_params[@]}" &&
+		local zdev="/dev/${SCSI_DEBUG_DEVICES[0]}" fail &&
+		ls -ld "${zdev}" >>"${FULL}" &&
+		{ toggle_iosched & } &&
+		toggle_iosched_pid=$! &&
+		local fail &&
+		local fio_args=(
+			--direct=1
+			--filename="${zdev}"
+			--iodepth="${qd}"
+			--ioengine=io_uring
+			--ioscheduler=none
+			--name="requeuing-and-queue-freezing-${qd}"
+			--runtime="${TIMEOUT:-30}"
+			--rw=randwrite
+			--time_based
+			--zonemode=zbd
+		)
+	if ! fio "${fio_args[@]}" >>"${FULL}" 2>&1; then
+		fail=true
+	fi
+	if [ -n "${toggle_iosched_pid}" ]; then
+		kill "${toggle_iosched_pid}" >>"${FULL}" 2>&1
+	fi
+	_exit_scsi_debug >>"${FULL}" 2>&1
+
+	if [ -z "$fail" ]; then
+		echo "Test complete"
+	else
+		echo "Test failed"
+		return 1
+	fi
+}
