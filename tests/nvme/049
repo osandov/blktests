@@ -37,7 +37,7 @@ test_device() {
 	# check security permission
 	if ! fio_output=$(fio --name=check --size=4k --filename="$ngdev" \
 			    --rw=read --ioengine=io_uring_cmd 2>&1) &&
-			grep -qe "Permission denied" <<< "$fio_output"; then
+			grep -qe "Operation not permitted" <<< "$fio_output"; then
 		SKIP_REASONS+=("IORING_OP_URING_CMD is not allowed for $ngdev")
 		return
 	fi
