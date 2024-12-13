@@ -1136,9 +1136,14 @@ static int ublk_stop_io_daemon(const struct ublk_dev *dev)
 static int __cmd_dev_del(int number, bool log)
 {
 	struct ublk_dev *dev;
-	int ret;
+	int ret = -ENODEV;
 
 	dev = ublk_ctrl_init();
+	if (!dev) {
+		ublk_err("del dev %d failed\n", number);
+		goto fail;
+	}
+
 	dev->dev_info.dev_id = number;
 
 	ret = ublk_ctrl_get_info(dev);
@@ -1208,8 +1213,14 @@ static int cmd_dev_del(int argc, char *argv[])
 
 static int __cmd_dev_list(int number, bool log)
 {
-	struct ublk_dev *dev = ublk_ctrl_init();
-	int ret;
+	struct ublk_dev *dev;
+	int ret = -ENODEV;
+
+	dev = ublk_ctrl_init();
+	if (!dev) {
+		ublk_err("list dev %d failed\n", number);
+		goto exit;
+	}
 
 	dev->dev_info.dev_id = number;
 
@@ -1223,7 +1234,7 @@ static int __cmd_dev_list(int number, bool log)
 	}
 
 	ublk_ctrl_deinit(dev);
-
+exit:
 	return ret;
 }
 
