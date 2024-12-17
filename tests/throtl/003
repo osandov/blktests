@@ -13,7 +13,11 @@ QUICK=1
 test() {
 	echo "Running ${TEST_NAME}"
 
-	if ! _set_up_throtl max_sectors=8; then
+	local page_size max_secs
+	page_size=$(getconf PAGE_SIZE)
+	max_secs=$((page_size / 512))
+
+	if ! _set_up_throtl max_sectors="${max_secs}"; then
 		return 1;
 	fi
 
