@@ -21,16 +21,13 @@ test() {
 	_throtl_set_limits wbps=$((1024 * 1024))
 
 	{
-		sleep 0.1
+		echo "$BASHPID" > "$CGROUP2_DIR/$THROTL_DIR/cgroup.procs"
 		_throtl_issue_io write 10M 1
 	} &
 
-	local pid=$!
-	echo "$pid" > "$CGROUP2_DIR/$THROTL_DIR/cgroup.procs"
-
 	sleep 0.6
 	echo 0 > "/sys/kernel/config/nullb/$THROTL_DEV/power"
-	wait "$pid"
+	wait $!
 
 	_clean_up_throtl
 	echo "Test complete"

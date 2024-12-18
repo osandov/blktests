@@ -20,16 +20,13 @@ test() {
 	_throtl_set_limits wbps=$((512 * 1024))
 
 	{
-		sleep 0.1
+		echo "$BASHPID" > "$CGROUP2_DIR/$THROTL_DIR/cgroup.procs"
 		_throtl_issue_io write 1M 1
 	} &
 
-	local pid=$!
-	echo "$pid" > "$CGROUP2_DIR/$THROTL_DIR/cgroup.procs"
-
 	sleep 1
 	_throtl_set_limits wbps=$((256 * 1024))
-	wait $pid
+	wait $!
 	_throtl_remove_limits
 
 	_clean_up_throtl

@@ -97,18 +97,15 @@ _throtl_issue_io() {
 # IO and then print time elapsed to the second, blk-throttle limits should be
 # set before this function.
 _throtl_test_io() {
-	local pid
 
 	{
 		local rw=$1
 		local bs=$2
 		local count=$3
 
-		sleep 0.1
+		echo "$BASHPID" > "$CGROUP2_DIR/$THROTL_DIR/cgroup.procs"
 		_throtl_issue_io "$rw" "$bs" "$count"
 	} &
 
-	pid=$!
-	echo "$pid" > "$CGROUP2_DIR/$THROTL_DIR/cgroup.procs"
-	wait $pid
+	wait $!
 }
