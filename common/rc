@@ -12,6 +12,8 @@ shopt -s extglob
 . common/cgroup
 . common/dm
 
+declare IO_URING_DISABLED
+
 # If a test runs multiple "subtests", then each subtest should typically run
 # for TIMEOUT / number of subtests.
 _divide_timeout() {
@@ -549,4 +551,22 @@ _check_conflict_and_set_default()
 	fi
 
 	eval "${new_name_checked}=true"
+}
+
+_io_uring_enable()
+{
+	# enable io_uring when it is disabled
+	IO_URING_DISABLED=0
+	if [ -f /proc/sys/kernel/io_uring_disabled ]; then
+		IO_URING_DISABLED=$(cat /proc/sys/kernel/io_uring_disabled)
+		if [ "$IO_URING_DISABLED" != 0 ]; then
+			echo 0 > /proc/sys/kernel/io_uring_disabled
+		fi
+	fi
+}
+_io_uring_restore()
+{
+	if [ "$IO_URING_DISABLED" != 0 ]; then
+		echo "$IO_URING_DISABLED" > /proc/sys/kernel/io_uring_disabled
+	fi
 }
