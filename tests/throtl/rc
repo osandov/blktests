@@ -71,6 +71,10 @@ _throtl_remove_limits() {
 		"$CGROUP2_DIR/$THROTL_DIR/io.max"
 }
 
+_throtl_get_max_io_size() {
+	cat "/sys/block/$THROTL_DEV/queue/max_sectors_kb"
+}
+
 _throtl_issue_io() {
 	local start_time
 	local end_time

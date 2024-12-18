@@ -14,6 +14,9 @@ test() {
 	echo "Running ${TEST_NAME}"
 
 	local page_size max_secs
+	local io_size_kb block_size
+	local iops=256
+
 	page_size=$(getconf PAGE_SIZE)
 	max_secs=$((page_size / 512))
 
@@ -21,12 +24,15 @@ test() {
 		return 1;
 	fi
 
-	_throtl_set_limits wiops=256
-	_throtl_test_io write 1M 1
+	io_size_kb=$(($(_throtl_get_max_io_size) * 1024))
+	block_size=$((iops * io_size_kb))
+
+	_throtl_set_limits wiops="${iops}"
+	_throtl_test_io write "${block_size}" 1
 	_throtl_remove_limits
 
-	_throtl_set_limits riops=256
-	_throtl_test_io read 1M 1
+	_throtl_set_limits riops="${iops}"
+	_throtl_test_io read "${block_size}" 1
 	_throtl_remove_limits
 
 	_clean_up_throtl
