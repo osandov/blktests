@@ -79,6 +79,8 @@ _have_module() {
 }
 
 _have_module_param() {
+	 _have_driver "$1" || return
+
 	if [ -d "/sys/module/$1" ]; then
 		if [ -e "/sys/module/$1/parameters/$2" ]; then
 			return 0
@@ -97,10 +99,6 @@ _have_module_param_value() {
 	local param="$2"
 	local expected_value="$3"
 	local value
-
-	if ! _have_driver "$modname"; then
-		return 1;
-	fi
 
 	if ! _have_module_param "$modname" "$param"; then
 		return 1
