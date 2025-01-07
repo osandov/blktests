@@ -1,0 +1,39 @@
+#!/bin/bash
+# SPDX-License-Identifier: GPL-3.0+
+# Copyright (c) 2024 FUJITSU LIMITED. All Rights Reserved.
+#
+# Basic RNBD test
+#
+. tests/rnbd/rc
+
+DESCRIPTION="Start Stop RNBD"
+CHECK_DMESG=1
+QUICK=1
+
+requires() {
+	_have_rnbd
+	_have_loop
+}
+
+test_start_stop()
+{
+	_setup_rnbd || return
+
+	local loop_dev
+	loop_dev="$(losetup -f)"
+
+	if _start_rnbd_client "${loop_dev}"; then
+		sleep 0.5
+		_stop_rnbd_client || echo "Failed to disconnect rnbd"
+	else
+		echo "Failed to connect rnbd"
+	fi
+
+	_cleanup_rnbd
+}
+
+test() {
+	echo "Running ${TEST_NAME}"
+	test_start_stop
+	echo "Test complete"
+}

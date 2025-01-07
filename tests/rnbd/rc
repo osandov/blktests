@@ -1,0 +1,52 @@
+#!/bin/bash
+# SPDX-License-Identifier: GPL-3.0+
+# Copyright (c) 2024 FUJITSU LIMITED. All Rights Reserved.
+#
+# RNBD tests.
+
+. common/rc
+. common/multipath-over-rdma
+
+_have_rnbd() {
+	if [[ "$USE_RXE" != 1 ]]; then
+		SKIP_REASONS+=("Only USE_RXE=1 is supported")
+	fi
+	_have_driver rdma_rxe
+	_have_driver rnbd_server
+	_have_driver rnbd_client
+}
+
+_setup_rnbd() {
+	start_soft_rdma || return $?
+
+	for i in $(rdma_network_interfaces)
+	do
+		ipv4_addr=$(get_ipv4_addr "$i")
+		if [[ -n "${ipv4_addr}" ]]; then
+			def_traddr=${ipv4_addr}
+		fi
+	done
+}
+
+_cleanup_rnbd()
+{
+	stop_soft_rdma
+}
+
+_stop_rnbd_client() {
+	local s sessions
+
+	sessions=$(ls -d /sys/block/rnbd* 2>/dev/null)
+	for s in $sessions
+	do
+		grep -qx blktest "$s"/rnbd/session && echo "normal" > "$s"/rnbd/unmap_device
+	done
+}
+
+_start_rnbd_client() {
+	local blkdev=$1
+
+	# Stop potential remaining blktest sessions first
+	_stop_rnbd_client
+	echo "sessname=blktest path=ip:$def_traddr device_path=$blkdev" > /sys/devices/virtual/rnbd-client/ctl/map_device
+}
