@@ -1,0 +1,47 @@
+#!/bin/bash
+# SPDX-License-Identifier: GPL-3.0+
+# Copyright (c) 2024 FUJITSU LIMITED. All Rights Reserved.
+#
+# Commit 667db86bcbe8 ("RDMA/rtrs: Register ib event handler") introduced a
+# new element .deinit but never used it at all that lead to a
+# 'list_add corruption' kernel warning.
+#
+# This test is intended to check whether the current kernel is affected.
+# The following patch resolves this issue.
+#  RDMA/rtrs: Add missing deinit() call
+#
+. tests/rnbd/rc
+
+DESCRIPTION="Start Stop RNBD repeatedly"
+CHECK_DMESG=1
+QUICK=1
+
+requires() {
+	_have_rnbd
+	_have_loop
+}
+
+test_start_stop_repeatedly()
+{
+	_setup_rnbd || return
+
+	local loop_dev i j=0
+	loop_dev="$(losetup -f)"
+
+	for ((i=0;i<100;i++))
+	do
+		_start_rnbd_client "${loop_dev}" &>/dev/null
+		# Always stop it so that the next start has change to work
+		_stop_rnbd_client &>/dev/null && ((j++))
+	done
+
+	TEST_RUN["start/stop success ratio"]="${j}/${i}"
+
+	_cleanup_rnbd
+}
+
+test() {
+	echo "Running ${TEST_NAME}"
+	test_start_stop_repeatedly
+	echo "Test complete"
+}
