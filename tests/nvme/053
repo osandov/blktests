@@ -12,8 +12,15 @@ DESCRIPTION="test controller rescan under I/O load"
 TIMED=1
 : "${TIMEOUT:=60}"
 
+get_sleep_time() {
+	local duration=$((RANDOM % 50 + 1))
+
+	echo "$((duration / 10)).$((duration % 10))"
+}
+
 rescan_controller() {
-	local path
+	local path finish
+
 	path="$1/rescan_controller"
 
 	[[ -f "$path" ]] || {
@@ -21,24 +28,12 @@ rescan_controller() {
 		return 1
 	}
 
-	awk -f "$TMPDIR/rescan.awk" \
-	    -v path="$path" -v timeout="$TIMEOUT" -v seed="$2" &
-}
-
-create_rescan_script() {
-	cat >"$TMPDIR/rescan.awk" <<EOF
-@load "time"
-
-BEGIN {
-    srand(seed);
-    finish = gettimeofday() + strtonum(timeout);
-    while (gettimeofday() < finish) {
-	sleep(0.1 + 5 * rand());
-	printf("1\n") > path;
-	close(path);
-    }
-}
-EOF
+	finish=$(($(date +%s) + TIMEOUT))
+	while [[ $(date +%s) -le $finish ]]; do
+		# sleep interval between 0.1 and 5s
+		sleep "$(get_sleep_time)"
+		echo 1 >"$path"
+	done
 }
 
 test_device() {
@@ -46,7 +41,6 @@ test_device() {
 	local i st line
 
 	echo "Running ${TEST_NAME}"
-	create_rescan_script
 
 	while IFS= read -r line; do
 		ctrls+=("$line")
