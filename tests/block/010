@@ -15,7 +15,8 @@ TIMED=1
 CAN_BE_ZONED=1
 
 requires() {
-	_have_null_blk && _have_module_param null_blk shared_tags && _have_fio
+	_have_null_blk && _have_module_param null_blk shared_tags
+	_have_fio
 }
 
 run_fio_job() {

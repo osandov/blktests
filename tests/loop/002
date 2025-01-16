@@ -15,7 +15,9 @@ DESCRIPTION="try various loop device block sizes"
 QUICK=1
 
 requires() {
-	_have_program xfs_io && _have_src_program loblksize && _have_loop_set_block_size
+	_have_program xfs_io
+	_have_src_program loblksize
+	_have_loop_set_block_size
 }
 
 test() {

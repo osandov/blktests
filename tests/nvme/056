@@ -30,7 +30,9 @@ requires() {
 	_have_fio
 	_have_program ip
 	_have_program ethtool
-	_have_kernel_source && _have_program python3 && have_netlink_cli
+	_have_kernel_source
+	_have_program python3
+	have_netlink_cli
 	have_iface
 }
 

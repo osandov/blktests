@@ -11,7 +11,8 @@ DESCRIPTION="perform a SG_DXFER_FROM_DEV from the /dev/sg read-write interface"
 QUICK=1
 
 requires() {
-	_have_scsi_generic && _have_src_program sg/dxfer-from-dev
+	_have_scsi_generic
+	_have_src_program sg/dxfer-from-dev
 }
 
 test_device() {

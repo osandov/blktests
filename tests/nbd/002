@@ -17,7 +17,8 @@ DESCRIPTION="tests on partition handling for an nbd device"
 QUICK=1
 
 requires() {
-	_have_nbd_netlink && _have_program parted
+	_have_nbd_netlink
+	_have_program parted
 }
 
 test() {

@@ -11,7 +11,9 @@ DESCRIPTION="resize a connected nbd device"
 QUICK=1
 
 requires() {
-	_have_nbd && _have_program parted && _have_src_program nbdsetsize
+	_have_nbd
+	_have_program parted
+	_have_src_program nbdsetsize
 }
 
 test() {
