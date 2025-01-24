@@ -58,18 +58,20 @@ test() {
 
 	local d i n port
 	local -a ports
+	local blkdev
+	local -a blkdevs
 	local num_namespaces=3
 
 	_nvmet_target_setup --ports 6 --blkdev none
 
 	for ((d = 1; d <= num_namespaces; d++)); do
 		local file_path
-		local blkdev
 		local uuid
 
 		file_path="${TMPDIR}/img${d}"
 		truncate -s "${NVME_IMG_SIZE}" "${file_path}"
 		blkdev="$(losetup -f --show "${file_path}")"
+		blkdevs+=("$blkdev")
 		uuid="$(uuidgen)"
 		_create_nvmet_ns --nsid "${d}" --blkdev "${blkdev}" \
 				 --uuid "${uuid}" --grpid "${d}" > /dev/null
@@ -99,6 +101,11 @@ test() {
 	done
 
 	_nvme_disconnect_subsys
+
+	for blkdev in "${blkdevs[@]}"; do
+		losetup --detach "$blkdev"
+	done
+
 	_nvmet_target_cleanup
 
 	echo "Test complete"
