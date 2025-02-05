@@ -61,6 +61,7 @@ group_requires() {
 	_have_module scsi_debug
 	_have_module target_core_iblock
 	_have_module target_core_mod
+	_module_not_in_use scsi_transport_srp
 
 	for p in mkfs.ext4 mkfs.xfs multipath multipathd pidof rdma \
 		 sg_reset fio; do

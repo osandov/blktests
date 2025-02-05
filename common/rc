@@ -78,6 +78,19 @@ _have_module() {
 	return 0
 }
 
+_module_not_in_use() {
+	local refcnt
+
+	_have_module "$1" || return
+
+	if [ -d "/sys/module/$1" ]; then
+		refcnt="$(cat /sys/module/"$1"/refcnt)"
+		if [ "$refcnt" -ne "0" ]; then
+			SKIP_REASONS+=("module $1 is in use")
+		fi
+	fi
+}
+
 _have_module_param() {
 	 _have_driver "$1" || return
 
