@@ -6,6 +6,22 @@
 
 . common/shellcheck
 
+_have_xfs_io_atomic_write() {
+	local s
+
+	_have_program xfs_io || return $?
+
+	# If the pwrite command supports the -A option then this version
+	# of xfs_io supports atomic writes.
+	s=$(xfs_io -c help | grep pwrite | awk '{ print $4}')
+	if [[ $s == *"A"* ]];
+	then
+		return 0
+	fi
+	SKIP_REASONS+=("xfs_io does not support the -A option")
+	return 1
+}
+
 _have_xfs() {
 	_have_fs xfs && _have_program mkfs.xfs
 }
@@ -51,4 +67,46 @@ _xfs_run_fio_verify_io() {
 	rm -fr "${mount_dir}"
 
 	return "${rc}"
+}
+
+# Use xfs_io to perform a non-atomic write using pwritev2().
+# Args:    $1 - device to write to
+#          $2 - number of bytes to write
+# Returns: Number of bytes written
+run_xfs_io_pwritev2() {
+	local dev=$1
+	local bytes_to_write=$2
+	local bytes_written
+
+	# Perform write and extract out bytes written from xfs_io output
+	bytes_written=$(xfs_io -d -C \
+		"pwrite -b ${bytes_to_write} -V 1 -D 0 ${bytes_to_write}" \
+		"$dev" | grep "wrote" | sed 's/\// /g' | awk '{ print $2 }')
+	echo "$bytes_written"
+}
+
+# Use xfs_io to perform an atomic write using pwritev2().
+# Args:    $1 - device to write to
+#          $2 - number of bytes to write
+# Returns: Number of bytes written
+run_xfs_io_pwritev2_atomic() {
+	local dev=$1
+	local bytes_to_write=$2
+	local bytes_written
+
+	# Perform atomic write and extract out bytes written from xfs_io output
+	bytes_written=$(xfs_io -d -C \
+		"pwrite -b ${bytes_to_write} -V 1 -A -D 0 ${bytes_to_write}" \
+		"$dev" | grep "wrote" | sed 's/\// /g' | awk '{ print $2 }')
+	echo "$bytes_written"
+}
+
+run_xfs_io_xstat() {
+	local dev=$1
+	local field=$2
+	local statx_output
+
+	statx_output=$(xfs_io -c "statx -r -m 0x00010000" "$dev" | \
+		grep "$field" | awk '{ print $3 }')
+	echo "$statx_output"
 }

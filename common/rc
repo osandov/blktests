@@ -305,6 +305,14 @@ _require_test_dev_can_discard() {
 	return 0
 }
 
+_require_device_support_atomic_writes() {
+	_require_test_dev_sysfs queue/atomic_write_max_bytes
+	if (( $(< "${TEST_DEV_SYSFS}"/queue/atomic_write_max_bytes) == 0 )); then
+		SKIP_REASONS+=("${TEST_DEV} does not support atomic write")
+		return 1
+	fi
+}
+
 _test_dev_queue_get() {
 	if [[ $1 = scheduler ]]; then
 		sed -e 's/.*\[//' -e 's/\].*//' "${TEST_DEV_SYSFS}/queue/scheduler"
