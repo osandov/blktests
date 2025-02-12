@@ -408,6 +408,32 @@ _test_dev_is_partition() {
 	[[ -n ${TEST_DEV_PART_SYSFS} ]]
 }
 
+_min_io() {
+	local path_or_dev=$1
+	local min_io
+
+	if [ -z "$path_or_dev" ]; then
+		echo "path for min_io does not exist"
+		return 1
+	fi
+
+	if [ -c "$path_or_dev" ]; then
+		if [[ "$path_or_dev" == /dev/ng* ]]; then
+			path_or_dev="${path_or_dev/ng/nvme}"
+		fi
+	fi
+
+	if [ -e "$path_or_dev" ]; then
+		min_io=$(stat --printf=%o "$path_or_dev")
+		# Keep 4K minimum IO size for historical consistency
+		((min_io < 4096)) && min_io=4096
+		echo "$min_io"
+	else
+		echo "Error: '$path_or_dev' does not exist or is not accessible"
+		return 1
+	fi
+}
+
 # Return max open zones or max active zones of the test target device.
 # If the device has both, return smaller value.
 _test_dev_max_open_active_zones() {
