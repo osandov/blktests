@@ -29,10 +29,18 @@ _have_xfs() {
 _xfs_mkfs_and_mount() {
 	local bdev=$1
 	local mount_dir=$2
+	local bs
+	local xfs_logsize="64m"
+
+	bs=$(_min_io "$bdev")
+
+	if [[ $bs -gt 4096 ]]; then
+		xfs_logsize="128m"
+	fi
 
 	mkdir -p "${mount_dir}"
 	umount --quiet "${mount_dir}"
-	mkfs.xfs -l size=64m -f "${bdev}" || return $?
+	mkfs.xfs -l size=$xfs_logsize -f "${bdev}" -b size="$bs" || return $?
 	mount "${bdev}" "${mount_dir}"
 }
 
