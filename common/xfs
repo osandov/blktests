@@ -26,6 +26,17 @@ _have_xfs() {
 	_have_fs xfs && _have_program mkfs.xfs
 }
 
+_test_dev_suits_xfs() {
+	local logical_block_size
+
+	logical_block_size=$(_test_dev_queue_get logical_block_size)
+	if ((logical_block_size > 32768 )); then
+		SKIP_REASONS+=("sector size ${logical_block_size} is larger than max XFS sector size 32768")
+		return 1
+	fi
+	return 0
+}
+
 _xfs_mkfs_and_mount() {
 	local bdev=$1
 	local mount_dir=$2
