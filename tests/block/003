@@ -18,10 +18,14 @@ device_requires() {
 }
 
 test_device() {
+	local test_dev_bs
+
+	test_dev_bs=$(_min_io "$TEST_DEV")
+
 	echo "Running ${TEST_NAME}"
 
 	FIO_PERF_FIELDS=("trim iops")
-	_fio_perf --bsrange=4k-4g --rw=randtrim --norandommap --name=discards \
+	_fio_perf --bsrange="${test_dev_bs}"-4g --rw=randtrim --norandommap --name=discards \
 		--filename="$TEST_DEV" --number_ios=200k
 
 	echo "Test complete"

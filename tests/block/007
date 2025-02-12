@@ -31,13 +31,16 @@ cleanup_fallback_device() {
 }
 
 run_fio_job() {
+	local test_dev_bs
+
+	test_dev_bs=$(_min_io "$TEST_DEV")
 	if _test_dev_is_rotational; then
 		size="32m"
 	else
 		size="1g"
 	fi
 
-	_fio_perf --bs=4k --rw=randread --norandommap --name=reads \
+	_fio_perf --bs="$test_dev_bs" --rw=randread --norandommap --name=reads \
 		--filename="$TEST_DEV" --size="$size" --direct=1 \
 		--ioengine=pvsync2 --hipri="$1"
 }

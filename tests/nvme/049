@@ -19,10 +19,16 @@ test_device() {
 	echo "Running ${TEST_NAME}"
 
 	local ngdev=${TEST_DEV/nvme/ng}
-	local common_args=(
+	local test_dev_bs
+	local target_size=4096
+	local common_args=()
+	local fio_output
+
+	test_dev_bs=$(_min_io "$ngdev")
+	common_args=(
 		--size=1M
 		--filename="$ngdev"
-		--bs=4k
+		--bs="$test_dev_bs"
 		--rw=randread
 		--numjobs=1
 		--iodepth=16
@@ -32,10 +38,11 @@ test_device() {
 		--time_based
 		--runtime=2
 	)
-	local fio_output
+
+	((test_dev_bs > target_size)) && target_size=$test_dev_bs
 
 	# check security permission
-	if ! fio_output=$(fio --name=check --size=4k --filename="$ngdev" \
+	if ! fio_output=$(fio --name=check --bs="$test_dev_bs" --size="$target_size" --filename="$ngdev" \
 			    --rw=read --ioengine=io_uring_cmd 2>&1) &&
 			grep -q -e "Operation not permitted" \
 				-e "Permission denied" <<< "$fio_output"; then
