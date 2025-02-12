@@ -20,15 +20,22 @@ requires() {
 test() {
 	echo "Running ${TEST_NAME}"
 
+	local ret
+
 	if ! _init_scsi_debug dev_size_mb=300; then
 		return 1
 	fi
 
 	mkdir -p "${TMPDIR}/mnt"
-	_xfs_mkfs_and_mount "/dev/${SCSI_DEBUG_DEVICES[0]}" "${TMPDIR}/mnt" > /dev/null 2>&1
+	if ! _xfs_mkfs_and_mount "/dev/${SCSI_DEBUG_DEVICES[0]}" "${TMPDIR}/mnt" >> "$FULL"; then
+		ret=$?
+		echo "_xfs_mkfs_and_mount failed"
+		_exit_scsi_debug
+		return $ret
+	fi
 	echo 1 > "/sys/block/${SCSI_DEBUG_DEVICES[0]}/device/delete"
-	sleep 2
-	umount "${TMPDIR}/mnt"
+	udevadm settle
+	umount "${TMPDIR}/mnt" || return $?
 
 	_exit_scsi_debug
 
