@@ -31,7 +31,7 @@ _xfs_mkfs_and_mount() {
 	local mount_dir=$2
 
 	mkdir -p "${mount_dir}"
-	umount "${mount_dir}"
+	umount --quiet "${mount_dir}"
 	mkfs.xfs -l size=64m -f "${bdev}" || return $?
 	mount "${bdev}" "${mount_dir}"
 }
