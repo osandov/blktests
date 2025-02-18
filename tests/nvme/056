@@ -218,6 +218,12 @@ test() {
 	# get iface index
 	iface_idx=$(ip address | awk -F: "/${NVME_IFACE}/ { print \$1; exit; }")
 
+	# check if $(ddp_caps hw) is not empty
+	if [[ -z "$(ddp_caps hw)" ]]; then
+		SKIP_REASONS+=("No ddp capabilities found for ${NVME_IFACE}")
+		return
+	fi
+
 	# check hw supports ddp
 	if [[ $(( $(ddp_caps hw) & 3)) -ne 3 ]]; then
 		SKIP_REASONS+=("${NVME_IFACE} does not support nvme-tcp ddp offload")
