@@ -11,6 +11,14 @@ _have_xfs_io_atomic_write() {
 
 	_have_program xfs_io || return $?
 
+	# Determine if the statx command returns the atomic writes fields.
+	s=$(xfs_io -c "statx -r -m 0x00010000" /dev/null | grep atomic_write_unit_min)
+	if [[ $s == "" ]];
+	then
+		SKIP_REASONS+=("xfs_io does not support the statx atomic write fields")
+		return 1
+	fi
+
 	# If the pwrite command supports the -A option then this version
 	# of xfs_io supports atomic writes.
 	s=$(xfs_io -c help | grep pwrite | awk '{ print $4}')
