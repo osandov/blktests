@@ -59,7 +59,6 @@ test() {
 				--filename="${zdev}"
 				--iodepth="${qd}"
 				--ioengine="${ioengine}"
-				--ioscheduler=none
 				--name="requeuing-and-queue-freezing-${qd}"
 				--runtime=$((${TIMEOUT:-30}/5))
 				--rw=randwrite
