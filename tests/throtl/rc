@@ -75,6 +75,25 @@ _throtl_get_max_io_size() {
 	cat "/sys/block/$THROTL_DEV/queue/max_sectors_kb"
 }
 
+_throtl_issue_fs_io() {
+	local path=$1
+	local start_time
+	local end_time
+	local elapsed
+
+	start_time=$(date +%s.%N)
+
+	if [ "$2" == "read" ]; then
+		dd if="${path}" of=/dev/null bs="$3" count="$4" iflag=direct status=none
+	elif [ "$2" == "write" ]; then
+		dd of="${path}" if=/dev/zero bs="$3" count="$4" oflag=direct conv=fdatasync status=none
+	fi
+
+	end_time=$(date +%s.%N)
+	elapsed=$(echo "$end_time - $start_time" | bc)
+	printf "%.0f\n" "$elapsed"
+}
+
 _throtl_issue_io() {
 	local start_time
 	local end_time

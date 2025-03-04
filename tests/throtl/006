@@ -1,0 +1,64 @@
+#!/bin/bash
+# SPDX-License-Identifier: GPL-3.0+
+# Copyright (C) 2025 Ming Lei
+#
+# Test prioritized meta IO when IO throttling, regression test for
+# commit 29390bb5661d ("blk-throttle: support prioritized processing of metadata")
+
+. tests/throtl/rc
+
+DESCRIPTION="test if meta IO has higher priority than data IO"
+QUICK=1
+
+requires() {
+	_have_program mkfs.ext4
+	_have_driver ext4
+}
+
+test_meta_io() {
+	local path="$1"
+	local start_time
+	local end_time
+	local elapsed
+
+	start_time=$(date +%s.%N)
+	mkdir "${path}"/xxx
+	touch "${path}"/xxx/1
+	sync "${path}"/xxx
+
+	end_time=$(date +%s.%N)
+	elapsed=$(echo "$end_time - $start_time" | bc)
+	printf "%.0f\n" "$elapsed"
+}
+
+test() {
+	echo "Running ${TEST_NAME}"
+
+	if ! _set_up_throtl memory_backed=1; then
+		return 1;
+	fi
+
+	mkdir --parents "${TMPDIR}/mnt"
+	mkfs.ext4 -E lazy_itable_init=0,lazy_journal_init=0 \
+		  -F "/dev/${THROTL_DEV}" >> "$FULL" 2>&1
+	mount "/dev/${THROTL_DEV}" "${TMPDIR}/mnt" >> "$FULL" 2>&1
+
+	_throtl_set_limits wbps=$((1024 * 1024))
+	{
+		local jbd2_pid
+
+		jbd2_pid=$(ps -eo pid,comm | pgrep -f "jbd2/${THROTL_DEV}" | awk '{print $1}')
+		echo "$BASHPID" > "$CGROUP2_DIR/$THROTL_DIR/cgroup.procs"
+		echo "$jbd2_pid" > "$CGROUP2_DIR/$THROTL_DIR/cgroup.procs"
+		_throtl_issue_fs_io  "${TMPDIR}/mnt/test.img" write 4M 1 &
+		sleep 2
+		test_meta_io "${TMPDIR}/mnt"
+		wait
+	} &
+	wait $!
+
+	umount "${TMPDIR}/mnt" || return $?
+	_throtl_remove_limits
+	_clean_up_throtl
+	echo "Test complete"
+}
