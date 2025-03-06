@@ -168,8 +168,7 @@ _cleanup_nvmet() {
 		name=$(basename "${port}")
 		echo "WARNING: Test did not clean up port: ${name}"
 		if [[ "${nvme_trtype}" == "fc" ]]; then
-			_nvme_fcloop_del_rport "$(_local_wwnn "$name")" \
-					       "$(_local_wwpn "$name")" \
+			_nvme_fcloop_del_rport "${def_local_wwnn}" "${def_local_wwpn}" \
 					       "$(_remote_wwnn "$name")" \
 					       "$(_remote_wwpn "$name")"
 			_nvme_fcloop_del_tport "$(_remote_wwnn "$name")" \
