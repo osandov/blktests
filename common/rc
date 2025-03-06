@@ -500,6 +500,17 @@ _have_writeable_kmsg() {
 	return 0
 }
 
+_have_systemctl_unit() {
+	local unit="$1"
+
+	_have_program systemctl || return 1
+	if ! grep -qe "$unit" < <(systemctl list-unit-files); then
+		SKIP_REASONS+=("systemctl unit '${unit}' is missing")
+		return 1
+	fi
+	return 0
+}
+
 # Run the given command as NORMAL_USER
 _run_user() {
 	su "$NORMAL_USER" -c "$1"
