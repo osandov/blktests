@@ -1,11 +1,11 @@
 H := \#
 
 HAVE_C_HEADER = $(shell if echo "$(H)include <$(1)>" |		\
-		$(CC) -E - > /dev/null 2>&1; then echo "$(2)";	\
+		$(CC) $(CFLAGS) -E - > /dev/null 2>&1; then echo "$(2)";	\
 		else echo "$(3)"; fi)
 
 HAVE_C_MACRO = $(shell if echo "$(H)include <$(1)>" |	\
-		$(CC) -E - 2>&1 /dev/null | grep $(2) > /dev/null 2>&1; \
+		$(CC) $(CFLAGS) -E - 2>&1 /dev/null | grep $(2) > /dev/null 2>&1; \
 		then echo 1;else echo 0; fi)
 
 C_TARGETS := \
