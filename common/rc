@@ -13,6 +13,7 @@ shopt -s extglob
 . common/dm
 
 declare IO_URING_DISABLED
+declare -a SYSTEMCTL_UNITS_TO_STOP
 
 # If a test runs multiple "subtests", then each subtest should typically run
 # for TIMEOUT / number of subtests.
@@ -509,6 +510,26 @@ _have_systemctl_unit() {
 		return 1
 	fi
 	return 0
+}
+
+_systemctl_start() {
+	local unit="$1"
+
+	if systemctl is-active --quiet "$unit"; then
+		return
+	fi
+
+	if systemctl start "$unit"; then
+		SYSTEMCTL_UNITS_TO_STOP+=("$unit")
+	fi
+}
+
+_systemctl_stop() {
+	local unit
+
+	for unit in "${SYSTEMCTL_UNITS_TO_STOP[@]}"; do
+		systemctl stop "$unit"
+	done
 }
 
 # Run the given command as NORMAL_USER
