@@ -617,3 +617,16 @@ _have_systemd_tlshd_service() {
 		SKIP_REASONS+=("Install ktls-utils for tlshd")
 	fi
 }
+
+_have_libnvme_ver() {
+	local ver
+
+	_have_program nvme || return $?
+	ver="$(nvme --version | grep libnvme | cut --delimiter ' ' --fields 3 | sed 's/-.*//')"
+
+	if _compare_three_version_numbers "$ver" "$1" "$2" "$3"; then
+		SKIP_REASONS+=("libnvme version is older than ${1}.${2}.${3:-0}")
+		return 1
+	fi
+	return 0
+}
