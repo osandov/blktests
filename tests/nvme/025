@@ -24,15 +24,15 @@ test() {
 
 	_setup_nvmet
 
-	local ns
+	local nvmedev
 
 	_nvmet_target_setup
 
 	_nvme_connect_subsys
 
-	ns=$(_find_nvme_ns "${def_subsys_uuid}")
+	nvmedev=$(_find_nvme_dev "${def_subsysnqn}")
 
-	if ! nvme effects-log "/dev/${ns}" >> "$FULL" 2>&1; then
+	if ! nvme effects-log "/dev/${nvmedev}" >> "$FULL" 2>&1; then
 		echo "ERROR: effects-log failed"
 	fi
 
