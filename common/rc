@@ -226,15 +226,28 @@ _have_kernel_option() {
 	return 0
 }
 
+# Compare the version string in $1 in "a.b.c" format with "$2.$3.$4".
+# If "a.b.c" is smaller than "$2.$3.$4", return true. Otherwise, return
+# false.
+_compare_three_version_numbers() {
+	local -i a b c d e f
+
+	IFS='.' read -r a b c <<< "$1"
+	d=${2:0}
+	e=${3:0}
+	f=${4:0}
+	if ((a * 65536 + b * 256 + c < d * 65536 + e * 256 + f)); then
+		return 0
+	fi
+	return 1
+}
+
 # Check whether the version of the running kernel is greater than or equal to
 # $1.$2.$3
 _have_kver() {
-	local d=$1 e=$2 f=$3
-
-	IFS='.' read -r a b c < <(uname -r | sed 's/-.*//;s/[^.0-9]//')
-	if [ $((a * 65536 + b * 256 + c)) -lt $((d * 65536 + e * 256 + f)) ];
-	then
-		SKIP_REASONS+=("Kernel version too old")
+	if _compare_three_version_numbers \
+	     "$(uname -r | sed 's/-.*//;s/[^.0-9]//')" "$1" "$2" "$3"; then
+		SKIP_REASONS+=("Kernel version is older than ${1}.${2}.${3}")
 		return 1
 	fi
 }
