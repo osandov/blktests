@@ -597,3 +597,23 @@ _nvme_reset_ctrl() {
 _nvme_delete_ctrl() {
 	echo 1 > /sys/class/nvme/"$1"/delete_controller
 }
+
+# Check whether the version of the fio is greater than or equal to $1.$2.$3
+_have_tlshd_ver() {
+	_have_program tlshd || return $?
+
+	if _compare_three_version_numbers \
+		   "$(tlshd --version |& sed 's/.*utils \([0-9^.]*\).*/\1/')" \
+		   "$1" "$2" "$3"; then
+		SKIP_REASONS+=("tlshd version is older than ${1}.${2}.${3}")
+		return 1
+	fi
+	return 0
+}
+
+_have_systemd_tlshd_service() {
+	_have_tlshd_ver 1 0 0
+	if ! _have_systemctl_unit tlshd; then
+		SKIP_REASONS+=("Install ktls-utils for tlshd")
+	fi
+}
