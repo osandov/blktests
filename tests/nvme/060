@@ -1,0 +1,64 @@
+#!/bin/bash
+# SPDX-License-Identifier: GPL-3.0+
+# Copyright (C) 2025 Daniel Wagner, SUSE Labs
+#
+# Test nvme fabrics controller reset/disconnect/reconnect.
+
+. tests/nvme/rc
+
+DESCRIPTION="test nvme fabrics target reset"
+
+requires() {
+	_nvme_requires
+	_have_loop
+	_require_nvme_trtype tcp rdma fc
+	_have_kernel_option NVME_TARGET_DEBUGFS
+}
+
+set_conditions() {
+	_set_nvme_trtype "$@"
+}
+
+nvmet_debug_trigger_reset() {
+	local nvmet_subsystem="$1"
+	local dfs_path="${NVMET_DFS}/${nvmet_subsystem}"
+
+	find "${dfs_path}" -maxdepth 1 -type d -name 'ctrl*' -exec sh -c 'echo "fatal" > "$1/state"' _ {} \;
+}
+
+nvmet_reset_loop() {
+	while true; do
+		nvmet_debug_trigger_reset "${def_subsysnqn}"
+		sleep 2
+	done
+}
+
+test() {
+	echo "Running ${TEST_NAME}"
+
+	_setup_nvmet
+
+	local reset_loop_pid i
+
+	_nvmet_target_setup
+
+	nvmet_reset_loop &
+	reset_loop_pid=$!
+
+	# Reset the host in different states e.g when the host is in the
+	# connected or connecting state.
+	#
+	# The target reset is triggered with an even number timeout, while the
+	# host reconnects with an odd number timeout.
+	for ((i = 0; i <= 5; i++)); do
+		_nvme_connect_subsys --keep-alive-tmo 1 --reconnect-delay 1
+		sleep 3
+		_nvme_disconnect_subsys >> "$FULL" 2>&1
+	done
+
+	{ kill "${reset_loop_pid}"; wait; } &> /dev/null
+
+	_nvmet_target_cleanup
+
+	echo "Test complete"
+}
