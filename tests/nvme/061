@@ -1,0 +1,66 @@
+#!/bin/bash
+# SPDX-License-Identifier: GPL-3.0+
+# Copyright (C) 2025 Daniel Wagner, SUSE Labs
+#
+# Test if the host keeps running IO when the target is forcefully removed and
+# added back.
+
+. tests/nvme/rc
+
+DESCRIPTION="test fabric target teardown and setup during I/O"
+TIMED=1
+
+requires() {
+	_nvme_requires
+	_have_loop
+	_have_fio
+	_require_nvme_trtype tcp rdma fc
+}
+
+set_conditions() {
+	_set_nvme_trtype "$@"
+}
+
+test() {
+	echo "Running ${TEST_NAME}"
+
+	_setup_nvmet
+
+	local ns fio_pid
+
+	_nvmet_target_setup
+
+	_nvme_connect_subsys --keep-alive-tmo 1 --reconnect-delay 1
+
+	ns=$(_find_nvme_ns "${def_subsys_uuid}")
+
+	_run_fio_rand_io --filename="/dev/${ns}" \
+		--group_reporting \
+		--time_based --runtime=1d &> /dev/null &
+	fio_pid=$!
+	sleep 1
+
+	nvmedev=$(_find_nvme_dev "${def_subsysnqn}")
+	state_file="/sys/class/nvme-fabrics/ctl/${nvmedev}/state"
+	for ((i = 0; i <= 5; i++)); do
+		echo "iteration $i"
+
+		_nvmet_target_cleanup
+
+		_nvmf_wait_for_state "${def_subsysnqn}" "connecting" || return 1
+		echo "state: $(cat "${state_file}")"
+
+		_nvmet_target_setup
+
+		_nvmf_wait_for_state "${def_subsysnqn}" "live" || return 1
+		echo "state: $(cat "${state_file}")"
+	done
+
+	{ kill "${fio_pid}"; wait; } &> /dev/null
+
+	_nvme_disconnect_subsys
+
+	_nvmet_target_cleanup
+
+	echo "Test complete"
+}

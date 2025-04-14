@@ -1,0 +1,21 @@
+Running nvme/061
+iteration 0
+state: connecting
+state: live
+iteration 1
+state: connecting
+state: live
+iteration 2
+state: connecting
+state: live
+iteration 3
+state: connecting
+state: live
+iteration 4
+state: connecting
+state: live
+iteration 5
+state: connecting
+state: live
+disconnected 1 controller(s)
+Test complete
