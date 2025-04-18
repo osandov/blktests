@@ -1,0 +1,54 @@
+#!/bin/bash
+# SPDX-License-Identifier: GPL-3.0+
+# Copyright (C) 2025 Western Digital Corporation or its affiliates.
+#
+# Confirm that concurrent set_blocksize() calls and read paths do not race.
+# This is the regression test to confirm the fix by the commit c0e473a0d226
+# ("block: fix race between set_blocksize and read paths").
+
+. tests/block/rc
+. common/null_blk
+
+DESCRIPTION="test race between set_blocksize and read paths"
+TIMED=1
+CAN_BE_ZONED=1
+
+requires() {
+	_have_fio
+}
+
+change_blocksize() {
+	local deadline
+
+	deadline=$(( $(_uptime_s) + TIMEOUT))
+
+	while (($(_uptime_s) < deadline)); do
+		blockdev --setbsz 4096 /dev/nullb1
+		sleep .1
+		blockdev --setbsz 8192 /dev/nullb1
+		sleep .1
+	done
+}
+
+test() {
+	echo "Running ${TEST_NAME}"
+
+	if ! _configure_null_blk nullb1 power=1; then
+		return 1
+	fi
+
+	if ! blockdev --setbsz 8192 /dev/nullb1; then
+		SKIP_REASONS+=("kernel does not support block size larger than 4kb")
+		_exit_null_blk
+		return
+	fi
+
+	: "${TIMEOUT:=10}"
+	change_blocksize &
+	_run_fio --rw=randread --bs=4K --filename=/dev/nullb1 --name=nullb1
+	wait
+
+	_exit_null_blk
+
+	echo "Test complete"
+}
