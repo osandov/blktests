@@ -9,10 +9,14 @@
 
 DESCRIPTION="Test the NVMe reservation feature"
 QUICK=1
-nvme_trtype="loop"
 
 requires() {
 	_nvme_requires
+	_require_nvme_trtype_is_fabrics
+}
+
+set_conditions() {
+	_set_nvme_trtype "$@"
 }
 
 resv_report() {
