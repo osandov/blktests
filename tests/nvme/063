@@ -93,7 +93,7 @@ test() {
 	_nvme_connect_subsys --dhchap-secret "${hostkey}" --concat
 
 	ctrl=$(_find_nvme_dev "${def_subsysnqn}")
-	if _nvme_ctrl_tls_key "$ctrl" > /dev/null ; then
+	if ! _nvme_ctrl_tls_key "$ctrl" > /dev/null ; then
 		echo "WARNING: connection is not encrypted"
 		_systemctl_stop
 		return 1
