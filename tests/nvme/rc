@@ -177,7 +177,7 @@ _require_nvme_cli_auth() {
 
 _require_nvme_cli_tls() {
 	if ! nvme gen-tls-key --subsysnqn nvmf-test-subsys > /dev/null 2>&1; then
-		SKIP_REASON+=("nvme gen-tls-key command missing")
+		SKIP_REASONS+=("nvme gen-tls-key command missing")
 		return 1
 	fi
 	return 0
