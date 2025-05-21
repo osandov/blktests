@@ -177,6 +177,7 @@ _run_fio() {
 		args+=("--runtime=$TIMEOUT")
 	fi
 
+	echo "fio ${args[*]} $*" >>"$FULL"
 	fio "${args[@]}" "$@"
 	local rc=$?
 	if [ $rc != 0 ]; then
